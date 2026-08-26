@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// =========================================
+// HỌC SINH
+// =========================================
+model Student {
+  id        Int       @id @default(autoincrement())
+  hoTen     String
+  tenGoi    String?
+  ngaySinh  DateTime?
+  gioiTinh  String    @default("Nam") // "Nam" | "Nữ"
+  to        Int       // 1-4
+  lop       String    @default("11AT3")
+  ghiChu    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  feeCollections FeeCollection[]
+  attendances    Attendance[]
+  dutyRosters    DutyRoster[]
+  eventMembers   EventMember[]
+
+  @@index([to])
+  @@index([hoTen])
+}
+
+// =========================================
+// THU QUỸ
+// =========================================
+model FeeCollection {
+  id           Int       @id @default(autoincrement())
+  studentId    Int
+  kyThu        String    // "HK1" | "HK2" | "Cả Năm"
+  soTien       Float
+  hinhThucDong String    @default("Tiền Mặt") // "Tiền Mặt" | "Chuyển Khoản"
+  trangThai    String    @default("Chưa Đóng") // "Đã Đóng" | "Chưa Đóng"
+  ngayDong     DateTime?
+  ghiChu       String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, kyThu])
+  @@index([kyThu])
+  @@index([trangThai])
+}
+
+// =========================================
+// CHI QUỸ
+// =========================================
+model Expense {
+  id          Int      @id @default(autoincrement())
+  danhSachChi String
+  hangMucChi  String   // "Văn phòng phẩm" | "Hoạt động trường" | ...
+  soLuong     Float    @default(1)
+  donGia      Float
+  thanhTien   Float    // = soLuong x donGia
+  ngayChi     DateTime
+  ghiChu      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([hangMucChi])
+  @@index([ngayChi])
+}
+
+// =========================================
+// ĐIỂM DANH
+// (AttendanceSession cho mobile sẽ thêm ở giai đoạn 2
+//  mà không cần sửa bảng này)
+// =========================================
+model Attendance {
+  id          Int      @id @default(autoincrement())
+  studentId   Int
+  ngay        DateTime
+  loai        String   // "Vắng có phép" | "Vắng không phép" | "Đi trễ"
+  ghiChu      String?
+  submittedBy Int?     // userId nộp (null nếu import)
+  toId        Int      // tổ của học sinh - denormalized để lọc nhanh
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, ngay, loai])
+  @@index([ngay])
+  @@index([toId])
+  @@index([studentId])
+}
+
+// =========================================
+// LỊCH TRỰC NHẬT
+// =========================================
+model DutyRoster {
+  id        Int      @id @default(autoincrement())
+  tuan      String   // "2025-W34" hoặc khoảng ngày "21/08-25/08/2025"
+  thu       String   // "Thứ 2" | "Thứ 3" | "Thứ 4" | "Thứ 5" | "Thứ 6"
+  thuOrder  Int      // 2-6 để sort đúng thứ tự
+  studentId Int
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([tuan])
+  @@index([studentId])
+}
+
+// =========================================
+// SỰ KIỆN
+// =========================================
+model Event {
+  id                Int       @id @default(autoincrement())
+  tenSuKien         String
+  hangMuc           String?
+  chiTiet           String?
+  deadline          DateTime?
+  ketHoachTrienKhai String?
+  trangThai         String    @default("Sắp diễn ra") // "Sắp diễn ra" | "Đang diễn ra" | "Đã xong"
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  members EventMember[]
+
+  @@index([deadline])
+  @@index([trangThai])
+}
+
+model EventMember {
+  id        Int    @id @default(autoincrement())
+  eventId   Int
+  studentId Int
+  vaiTro    String @default("Support") // "Lead" | "Support" | "User"
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, studentId])
+  @@index([studentId])
+}
+
+// =========================================
+// USER & PHÂN QUYỀN
+// =========================================
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  hoTen        String
+  roleLabel    String   @default("")
+  assignedLop  String   @default("11AT3")
+  isSuperAdmin Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  permissions UserPermission[]
+
+  @@index([username])
+  @@index([isSuperAdmin])
+}
+
+// Phân quyền chi tiết theo module/user
+// Mỗi user tối đa 6 dòng (1 dòng / module)
+// Module không có dòng = mặc định "khong_co_quyen"
+model UserPermission {
+  id         Int    @id @default(autoincrement())
+  userId     Int
+  module     String // "hoc_sinh"|"diem_danh"|"su_kien"|"bao_cao"|"quy"|"lich_truc"
+  level      String @default("khong_co_quyen") // "khong_co_quyen"|"chi_xem"|"toan_quyen"
+  scope      String @default("toan_lop")       // "toan_lop"|"theo_to"
+  scopeToIds String @default("[]")             // JSON: "[1,2,3,4]"
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, module])
+  @@index([userId])
+}
