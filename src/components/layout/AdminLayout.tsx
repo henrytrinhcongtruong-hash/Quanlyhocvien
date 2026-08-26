@@ -25,7 +25,7 @@ import {
 const NAV_BASE = [
   { href: "/admin", icon: BarChart3, label: "Tổng quan", exact: true },
   { href: "/admin/hoc-sinh", icon: Users, label: "Học sinh", module: "hoc_sinh" },
-  { href: "/admin/lich-thi", icon: GraduationCap, label: "Lịch thi & KT" },
+  { href: "/admin/lich-thi", icon: GraduationCap, label: "Lịch thi & KT", module: "lich_thi" },
   { href: "/admin/diem-danh", icon: BookOpen, label: "Điểm danh", module: "diem_danh" },
   { href: "/admin/quy", icon: Wallet, label: "Quỹ lớp", module: "quy" },
   { href: "/admin/lich-truc", icon: Calendar, label: "Lịch trực", module: "lich_truc" },

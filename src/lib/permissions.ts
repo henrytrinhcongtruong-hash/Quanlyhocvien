@@ -13,7 +13,8 @@ export type Module =
   | "su_kien"
   | "bao_cao"
   | "quy"
-  | "lich_truc";
+  | "lich_truc"
+  | "lich_thi";
 
 export type PermissionLevel = "khong_co_quyen" | "chi_xem" | "toan_quyen";
 export type PermissionScope = "toan_lop" | "theo_to";
