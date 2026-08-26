@@ -6,12 +6,20 @@ import { requireSuperAdmin } from "@/lib/permissions";
 import bcrypt from "bcryptjs";
 
 async function checkSA(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const isSuperAdminSession = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
-  if (isSuperAdminSession || session.user.id === "1") return session;
-  const isSA = await requireSuperAdmin(Number(session.user.id));
-  return isSA ? session : null;
+  try {
+    const session = await auth();
+    if (!session?.user) return null;
+    const isSuperAdminSession = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
+    const username = session.user.name || (session.user as { username?: string }).username;
+    if (isSuperAdminSession || session.user.id === "1" || username === "admin") {
+      return session;
+    }
+    const isSA = await requireSuperAdmin(Number(session.user.id));
+    return isSA ? session : null;
+  } catch (err) {
+    console.error("checkSA error:", err);
+    return null;
+  }
 }
 
 export async function GET(
@@ -20,7 +28,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const session = await checkSA(req);
-  if (!session) return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
+  if (!session) return NextResponse.json({ error: "Không có quyền truy cập" }, { status: 403 });
 
   const user = await prisma.user.findUnique({
     where: { id: Number(id) },
@@ -47,7 +55,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const session = await checkSA(req);
-    if (!session) return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
+    if (!session) return NextResponse.json({ error: "Không có quyền thực hiện thao tác này" }, { status: 403 });
 
     const body = await req.json();
     const { hoTen, roleLabel, assignedLop, password, isActive } = body;
@@ -97,7 +105,11 @@ export async function DELETE(
     }
 
     const targetUser = await prisma.user.findUnique({ where: { id: userId } });
-    if (targetUser?.isSuperAdmin) {
+    if (!targetUser) {
+      return NextResponse.json({ success: true, message: "Tài khoản không tồn tại hoặc đã được xóa" });
+    }
+
+    if (targetUser.isSuperAdmin || targetUser.username === "admin") {
       return NextResponse.json({ error: "Không thể xóa tài khoản Admin Tổng" }, { status: 400 });
     }
 
