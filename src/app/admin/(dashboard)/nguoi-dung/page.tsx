@@ -254,15 +254,27 @@ export default function AdminNguoiDungPage() {
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm("Bạn có chắc chắn muốn xóa tài khoản này?")) return;
-    const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      showToast("Đã xóa người dùng");
-      loadData();
-    } else {
-      const err = await res.json();
-      showToast(err.error || "Lỗi khi xóa", "error");
+  // Delete State
+  const [deleteUser, setDeleteUser] = useState<UserItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleConfirmDelete() {
+    if (!deleteUser) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/users/${deleteUser.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || "Đã xóa người dùng thành công");
+        setDeleteUser(null);
+        loadData();
+      } else {
+        showToast(data.error || "Lỗi khi xóa người dùng", "error");
+      }
+    } catch {
+      showToast("Lỗi kết nối máy chủ", "error");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -357,7 +369,7 @@ export default function AdminNguoiDungPage() {
                             <Key size={14} />
                           </button>
                           <button
-                            onClick={() => handleDelete(u.id)}
+                            onClick={() => setDeleteUser(u)}
                             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", padding: 4 }}
                             title="Xóa người dùng"
                           >
@@ -610,6 +622,89 @@ export default function AdminNguoiDungPage() {
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setModalOpen(false)}>Hủy</button>
               <button className="btn btn-primary" style={{ flex: 2, height: 42, fontSize: "0.95rem" }} onClick={handleSave} disabled={saving}>
                 {saving ? "Đang lưu..." : <><Save size={16} /> Lưu người dùng & phân quyền</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== DELETE USER CONFIRM MODAL ====== */}
+      {deleteUser !== null && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 10005 }}>
+          <div
+            style={{ position: "absolute", inset: 0, background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(3px)" }}
+            onClick={() => !deleting && setDeleteUser(null)}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%,-50%)",
+              background: "white",
+              borderRadius: 16,
+              boxShadow: "var(--shadow-xl)",
+              padding: "28px",
+              width: "100%",
+              maxWidth: 400,
+              animation: "fadeIn 0.2s ease",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <div style={{ textAlign: "center", marginBottom: 18 }}>
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  background: "#fee2e2",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 12px",
+                }}
+              >
+                <Trash2 size={26} color="#dc2626" />
+              </div>
+              <h3 style={{ fontSize: "1.2rem", color: "#1e293b", marginBottom: 6 }}>
+                Xóa tài khoản người dùng?
+              </h3>
+              <p style={{ color: "#64748b", fontSize: "0.875rem", margin: 0, lineHeight: 1.5 }}>
+                Bạn có chắc chắn muốn xóa tài khoản <strong style={{ color: "var(--primary)" }}>{deleteUser.username}</strong> ({deleteUser.hoTen})?
+              </p>
+            </div>
+
+            <div
+              style={{
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 10,
+                padding: "10px 14px",
+                marginBottom: 20,
+                fontSize: "0.8rem",
+                color: "#991b1b",
+                textAlign: "center",
+              }}
+            >
+              ⚠️ Toàn bộ phân quyền của tài khoản này sẽ bị thu hồi vĩnh viễn.
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setDeleteUser(null)}
+                disabled={deleting}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                className="btn"
+                style={{ flex: 1.4, background: "#dc2626", color: "white", borderColor: "#dc2626", fontWeight: 700 }}
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Đang xóa..." : "Xác nhận xóa"}
               </button>
             </div>
           </div>
