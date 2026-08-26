@@ -47,17 +47,21 @@ export async function DELETE(req: NextRequest) {
     });
     const studentIds = students.map((s) => s.id);
 
-    // 2. Xóa cascade toàn bộ dữ liệu liên quan (Thu quỹ, Điểm danh, Lịch trực, Phân công sự kiện, Học sinh)
+    // 2. Xóa cascade toàn bộ dữ liệu liên quan (Thu quỹ, Điểm danh, Lịch trực, Sự kiện, Lịch thi, Học sinh)
     if (studentIds.length > 0) {
       await prisma.$transaction([
         prisma.feeCollection.deleteMany({ where: { studentId: { in: studentIds } } }),
         prisma.attendance.deleteMany({ where: { studentId: { in: studentIds } } }),
         prisma.dutyRoster.deleteMany({ where: { studentId: { in: studentIds } } }),
         prisma.eventMember.deleteMany({ where: { studentId: { in: studentIds } } }),
+        prisma.examSchedule.deleteMany({ where: { lop } }),
         prisma.student.deleteMany({ where: { id: { in: studentIds } } }),
       ]);
     } else {
-      await prisma.student.deleteMany({ where: { lop } });
+      await prisma.$transaction([
+        prisma.examSchedule.deleteMany({ where: { lop } }),
+        prisma.student.deleteMany({ where: { lop } }),
+      ]);
     }
 
     // 3. Cập nhật lại tài khoản người dùng nếu đang gán lớp đã xóa

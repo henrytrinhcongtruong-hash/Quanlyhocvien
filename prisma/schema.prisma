@@ -148,6 +148,32 @@ model EventMember {
 }
 
 // =========================================
+// LỊCH THI & KIỂM TRA
+// =========================================
+model ExamSchedule {
+  id          Int      @id @default(autoincrement())
+  monHoc      String   // "Toán", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "GDCD", "Tin Học"...
+  tenKyThi    String   // "Kiểm tra 15 phút", "Kiểm tra 1 tiết", "Thi Giữa Kỳ I", "Thi Cuối Kỳ I"...
+  loaiKyThi   String   @default("Giữa Kỳ") // "15 Phút" | "1 Tiết" | "Giữa Kỳ" | "Cuối Kỳ" | "Thi Thử"
+  ngayThi     DateTime
+  gioThi      String   @default("07:30") // "07:30", "08:15", "13:30"...
+  thoiLuong   Int      @default(45)      // Thời lượng phút (15, 45, 60, 90, 120)
+  hinhThuc    String   @default("Trắc nghiệm") // "Trắc nghiệm" | "Tự luận" | "Trắc nghiệm + Tự luận" | "Thực hành" | "Vấn đáp"
+  phongThi    String?  // "Phòng 201", "Hội trường A", "Phòng Tin học 1"
+  giamThi     String?  // "Thầy Nguyễn Văn A"
+  phamViOnTap String?  // "Chương 1, 2 bài 1-8"
+  lop         String   @default("11AT3") // "11AT3" | "12T2" | "ALL"
+  ghiChu      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([lop])
+  @@index([ngayThi])
+  @@index([monHoc])
+  @@index([loaiKyThi])
+}
+
+// =========================================
 // USER & PHÂN QUYỀN
 // =========================================
 model User {
