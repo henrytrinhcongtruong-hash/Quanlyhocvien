@@ -174,8 +174,41 @@ export default function AdminNguoiDungPage() {
       ]);
       const d = await uRes.json();
       const c = await cRes.json();
-      setUsers(d.data || []);
+      const serverUsers: UserItem[] = d.data || [];
       if (c.data && c.data.length > 0) setClassList(c.data);
+
+      // 1. Read persistent local storage
+      let customUsers: UserItem[] = [];
+      let deletedUsernames: string[] = [];
+      try {
+        customUsers = JSON.parse(localStorage.getItem("admin_custom_users") || "[]");
+        deletedUsernames = JSON.parse(localStorage.getItem("admin_deleted_users") || "[]");
+      } catch {}
+
+      // 2. Filter out deleted users
+      let mergedUsers = serverUsers.filter(
+        (u) => !deletedUsernames.includes(u.username.toLowerCase())
+      );
+
+      // 3. Add any custom created users missing from the server
+      const existingUsernames = new Set(mergedUsers.map((u) => u.username.toLowerCase()));
+      const missingUsers = customUsers.filter(
+        (u) =>
+          !existingUsernames.has(u.username.toLowerCase()) &&
+          !deletedUsernames.includes(u.username.toLowerCase())
+      );
+
+      if (missingUsers.length > 0) {
+        mergedUsers = [...mergedUsers, ...missingUsers];
+        // Background sync to seed the current cold-start serverless container
+        fetch("/api/users/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customUsers: missingUsers }),
+        }).catch(() => {});
+      }
+
+      setUsers(mergedUsers);
     } catch {
       showToast("Lỗi tải danh sách người dùng", "error");
     } finally {
@@ -295,6 +328,22 @@ export default function AdminNguoiDungPage() {
           body: JSON.stringify({ permissions: permsPayload }),
         });
 
+        // Update in localStorage
+        try {
+          const stored: UserItem[] = JSON.parse(localStorage.getItem("admin_custom_users") || "[]");
+          const idx = stored.findIndex((u) => u.username.toLowerCase() === editingUser.username.toLowerCase());
+          if (idx >= 0) {
+            stored[idx] = {
+              ...stored[idx],
+              hoTen: form.hoTen.trim(),
+              roleLabel: form.roleLabel.trim(),
+              assignedLop: form.assignedLop.trim(),
+              permissions: permsPayload.map((p) => ({ ...p, scopeToIds: JSON.stringify(p.scopeToIds) })),
+            };
+            localStorage.setItem("admin_custom_users", JSON.stringify(stored));
+          }
+        } catch {}
+
         showToast("Đã cập nhật thông tin và quyền hạn thành công");
       } else {
         // Create new user with permissions
@@ -316,6 +365,33 @@ export default function AdminNguoiDungPage() {
           setSaving(false);
           return;
         }
+
+        const newUserItem: UserItem = {
+          id: Date.now(),
+          username: form.username.trim().toLowerCase(),
+          hoTen: form.hoTen.trim(),
+          roleLabel: form.roleLabel.trim(),
+          assignedLop: form.assignedLop.trim(),
+          isSuperAdmin: false,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          permissions: permsPayload.map((p) => ({ ...p, scopeToIds: JSON.stringify(p.scopeToIds) })),
+        };
+
+        try {
+          const stored: UserItem[] = JSON.parse(localStorage.getItem("admin_custom_users") || "[]");
+          const filtered = stored.filter((u) => u.username.toLowerCase() !== newUserItem.username);
+          filtered.push({ ...newUserItem, password: form.password } as any);
+          localStorage.setItem("admin_custom_users", JSON.stringify(filtered));
+
+          // Also remove from deleted list if previously deleted
+          const deleted: string[] = JSON.parse(localStorage.getItem("admin_deleted_users") || "[]");
+          localStorage.setItem(
+            "admin_deleted_users",
+            JSON.stringify(deleted.filter((uname) => uname !== newUserItem.username))
+          );
+        } catch {}
+
         showToast("Đã tạo tài khoản người dùng thành công");
       }
       setModalOpen(false);
@@ -334,6 +410,22 @@ export default function AdminNguoiDungPage() {
       const res = await fetch(`/api/users/${deleteUser.id}`, { method: "DELETE" });
       const data = await res.json();
       if (res.ok) {
+        // Update local storage
+        try {
+          const username = deleteUser.username.toLowerCase();
+          const stored: UserItem[] = JSON.parse(localStorage.getItem("admin_custom_users") || "[]");
+          localStorage.setItem(
+            "admin_custom_users",
+            JSON.stringify(stored.filter((u) => u.username.toLowerCase() !== username))
+          );
+
+          const deleted: string[] = JSON.parse(localStorage.getItem("admin_deleted_users") || "[]");
+          if (!deleted.includes(username)) {
+            deleted.push(username);
+            localStorage.setItem("admin_deleted_users", JSON.stringify(deleted));
+          }
+        } catch {}
+
         showToast(data.message || "Đã xóa người dùng thành công");
         setDeleteUser(null);
         loadData();

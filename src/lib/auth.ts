@@ -78,7 +78,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // 2. Custom User DB Lookup with Safe Error Handling
         try {
           const user = await prisma.user.findUnique({
-            where: { username: credentials.username as string },
+            where: { username: uname },
             select: {
               id: true,
               username: true,
