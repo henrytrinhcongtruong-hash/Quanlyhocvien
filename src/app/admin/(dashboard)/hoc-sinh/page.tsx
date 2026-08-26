@@ -73,6 +73,11 @@ export default function HocSinhPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Delete Class State
+  const [deleteClassModalOpen, setDeleteClassModalOpen] = useState(false);
+  const [classToDelete, setClassToDelete] = useState("");
+  const [deletingClass, setDeletingClass] = useState(false);
+
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
@@ -83,6 +88,33 @@ export default function HocSinhPage() {
   function showToast(msg: string, type: "success" | "error" = "success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  }
+
+  async function handleDeleteClass() {
+    if (!classToDelete) return;
+    setDeletingClass(true);
+    try {
+      const res = await fetch(`/api/classes?lop=${encodeURIComponent(classToDelete)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || `Đã xóa hoàn toàn lớp ${classToDelete}.`);
+        setDeleteClassModalOpen(false);
+        // Refresh class list & update filter
+        const cRes = await fetch("/api/classes");
+        const cData = await cRes.json();
+        const newClasses = cData.data || [];
+        setClassList(newClasses);
+        setFilterLop(newClasses[0] || "ALL");
+        fetchStudents();
+      } else {
+        showToast(data.error || "Có lỗi khi xóa lớp.", "error");
+      }
+    } catch {
+      showToast("Lỗi kết nối máy chủ.", "error");
+    }
+    setDeletingClass(false);
   }
 
   // Load distinct classes
@@ -301,6 +333,28 @@ export default function HocSinhPage() {
             <Plus size={14} />
             Thêm học sinh
           </button>
+          {filterLop !== "ALL" && (
+            <button
+              className="btn btn-sm"
+              style={{
+                background: "#fee2e2",
+                color: "#dc2626",
+                border: "1px solid #fca5a5",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+              onClick={() => {
+                setClassToDelete(filterLop);
+                setDeleteClassModalOpen(true);
+              }}
+              title={`Xóa bỏ hoàn toàn lớp ${filterLop} và dữ liệu liên quan`}
+            >
+              <Trash2 size={14} color="#dc2626" />
+              Xóa lớp {filterLop}
+            </button>
+          )}
         </div>
       </div>
 
@@ -564,6 +618,70 @@ export default function HocSinhPage() {
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setDeleteId(null)}>Hủy</button>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={handleDelete} disabled={deleting}>
                 {deleting ? "Đang xóa..." : "Xóa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== DELETE CLASS CONFIRM MODAL ====== */}
+      {deleteClassModalOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 250 }}>
+          <div
+            style={{ position: "absolute", inset: 0, background: "rgba(15, 23, 42, 0.65)", backdropFilter: "blur(4px)" }}
+            onClick={() => !deletingClass && setDeleteClassModalOpen(false)}
+          />
+          <div style={{
+            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+            background: "white", borderRadius: 18, boxShadow: "var(--shadow-xl)", padding: "28px 24px",
+            width: "100%", maxWidth: 440, animation: "fadeIn 0.2s ease", border: "1px solid var(--border)"
+          }}>
+            <div style={{ textAlign: "center", marginBottom: 18 }}>
+              <div style={{
+                width: 56, height: 56, background: "#fee2e2", borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px"
+              }}>
+                <Trash2 size={28} color="#dc2626" />
+              </div>
+              <h3 style={{ fontSize: "1.25rem", color: "#1e293b", marginBottom: 6 }}>
+                Xóa bỏ hoàn toàn Lớp <span style={{ color: "#dc2626" }}>{classToDelete}</span>?
+              </h3>
+              <p style={{ color: "#64748b", fontSize: "0.875rem", lineHeight: 1.5, margin: 0 }}>
+                Bạn đang yêu cầu ngừng quản lý và gỡ bỏ toàn bộ lớp này khỏi hệ thống.
+              </p>
+            </div>
+
+            <div style={{
+              background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12,
+              padding: "14px 16px", marginBottom: 22, fontSize: "0.825rem", color: "#991b1b"
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                <AlertCircle size={16} color="#dc2626" /> Toàn bộ dữ liệu sau sẽ bị xóa vĩnh viễn:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
+                <li>Danh sách toàn bộ học sinh lớp <strong>{classToDelete}</strong></li>
+                <li>Toàn bộ lịch sử <strong>Điểm danh & Chuyên cần</strong></li>
+                <li>Hồ sơ thu & đóng <strong>Quỹ lớp</strong></li>
+                <li>Lịch <strong>Trực nhật</strong> & Phân công sự kiện</li>
+              </ul>
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setDeleteClassModalOpen(false)}
+                disabled={deletingClass}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                className="btn"
+                style={{ flex: 1.4, background: "#dc2626", color: "white", borderColor: "#dc2626", fontWeight: 700 }}
+                onClick={handleDeleteClass}
+                disabled={deletingClass}
+              >
+                {deletingClass ? "Đang xóa dữ liệu..." : `Xác nhận xóa Lớp ${classToDelete}`}
               </button>
             </div>
           </div>
