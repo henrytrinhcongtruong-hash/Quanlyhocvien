@@ -1,9 +1,24 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { createPortal } from "react-dom";
 import {
-  UserCog, Plus, Shield, CheckCircle, AlertCircle, Edit2,
-  Trash2, Key, UserCheck, UserX, Save, X, School, Users,
+  UserCog,
+  Plus,
+  Shield,
+  CheckCircle,
+  AlertCircle,
+  Edit2,
+  Trash2,
+  Key,
+  Save,
+  X,
+  School,
+  Users,
+  Sparkles,
+  Lock,
+  User,
+  Layers,
+  Settings,
 } from "lucide-react";
 
 interface UserItem {
@@ -24,18 +39,20 @@ interface UserItem {
 }
 
 const MODULES = [
-  { key: "hoc_sinh", label: "Quản lý Học sinh" },
-  { key: "diem_danh", label: "Điểm danh" },
-  { key: "quy", label: "Quản lý Quỹ lớp" },
-  { key: "lich_truc", label: "Lịch trực nhật" },
-  { key: "su_kien", label: "Sự kiện & Công việc" },
-  { key: "bao_cao", label: "Báo cáo & Thống kê" },
+  { key: "hoc_sinh", label: "Quản lý Học sinh", desc: "Hồ sơ, danh sách, xuất nhập Excel" },
+  { key: "diem_danh", label: "Điểm danh", desc: "Điểm danh hàng ngày, theo dõi chuyên cần" },
+  { key: "quy", label: "Quản lý Quỹ lớp", desc: "Thu chi, đợt thu, sao kê dòng tiền" },
+  { key: "lich_truc", label: "Lịch trực nhật", desc: "Phân công trực ban, đổi ca" },
+  { key: "su_kien", label: "Sự kiện & Công việc", desc: "Kế hoạch, phân công công việc" },
+  { key: "bao_cao", label: "Báo cáo & Thống kê", desc: "Tổng hợp số liệu báo cáo định kỳ" },
 ];
 
 const PERMISSION_TEMPLATES = {
   gvcn: {
-    label: "GVCN",
+    label: "👑 Giáo Viên Chủ Nhiệm (GVCN)",
     desc: "Toàn quyền mọi module của lớp",
+    badge: "#dbeafe",
+    badgeColor: "#1d4ed8",
     perms: {
       hoc_sinh: { level: "toan_quyen", scope: "toan_lop" },
       diem_danh: { level: "toan_quyen", scope: "toan_lop" },
@@ -46,8 +63,10 @@ const PERMISSION_TEMPLATES = {
     },
   },
   lop_truong: {
-    label: "Lớp trưởng / Lớp phó",
+    label: "🌟 Lớp trưởng / Lớp phó",
     desc: "Điểm danh, trực nhật, sự kiện toàn lớp; Quỹ và Báo cáo chỉ xem",
+    badge: "#fef3c7",
+    badgeColor: "#b45309",
     perms: {
       hoc_sinh: { level: "chi_xem", scope: "toan_lop" },
       diem_danh: { level: "toan_quyen", scope: "toan_lop" },
@@ -58,15 +77,45 @@ const PERMISSION_TEMPLATES = {
     },
   },
   to_truong: {
-    label: "Tổ trưởng",
-    desc: "Chỉ điểm danh học sinh thuộc Tổ của mình",
+    label: "🛡️ Tổ trưởng",
+    desc: "Điểm danh và trực nhật trong tổ của mình; chỉ xem sự kiện & báo cáo",
+    badge: "#e0e7ff",
+    badgeColor: "#4338ca",
     perms: {
-      hoc_sinh: { level: "khong_co_quyen", scope: "theo_to" },
+      hoc_sinh: { level: "khong_co_quyen", scope: "toan_lop" },
       diem_danh: { level: "toan_quyen", scope: "theo_to" },
-      quy: { level: "khong_co_quyen", scope: "theo_to" },
-      lich_truc: { level: "chi_xem", scope: "theo_to" },
-      su_kien: { level: "chi_xem", scope: "theo_to" },
-      bao_cao: { level: "khong_co_quyen", scope: "theo_to" },
+      quy: { level: "khong_co_quyen", scope: "toan_lop" },
+      lich_truc: { level: "khong_co_quyen", scope: "toan_lop" },
+      su_kien: { level: "toan_quyen", scope: "toan_lop" },
+      bao_cao: { level: "chi_xem", scope: "theo_to" },
+    },
+  },
+  thu_quy: {
+    label: "💰 Thủ quỹ lớp",
+    desc: "Toàn quyền quản lý quỹ thu chi; chỉ xem danh sách học sinh",
+    badge: "#dcfce7",
+    badgeColor: "#15803d",
+    perms: {
+      hoc_sinh: { level: "chi_xem", scope: "toan_lop" },
+      diem_danh: { level: "khong_co_quyen", scope: "toan_lop" },
+      quy: { level: "toan_quyen", scope: "toan_lop" },
+      lich_truc: { level: "khong_co_quyen", scope: "toan_lop" },
+      su_kien: { level: "chi_xem", scope: "toan_lop" },
+      bao_cao: { level: "chi_xem", scope: "toan_lop" },
+    },
+  },
+  chi_xem: {
+    label: "👁️ Chỉ xem (Viewer)",
+    desc: "Chỉ được xem thông tin, không được sửa đổi",
+    badge: "#f1f5f9",
+    badgeColor: "#475569",
+    perms: {
+      hoc_sinh: { level: "chi_xem", scope: "toan_lop" },
+      diem_danh: { level: "chi_xem", scope: "toan_lop" },
+      quy: { level: "chi_xem", scope: "toan_lop" },
+      lich_truc: { level: "chi_xem", scope: "toan_lop" },
+      su_kien: { level: "chi_xem", scope: "toan_lop" },
+      bao_cao: { level: "chi_xem", scope: "toan_lop" },
     },
   },
 };
@@ -74,9 +123,7 @@ const PERMISSION_TEMPLATES = {
 type TemplateKey = keyof typeof PERMISSION_TEMPLATES;
 
 export default function AdminNguoiDungPage() {
-  const { data: session } = useSession();
-  const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
-
+  const [mounted, setMounted] = useState(false);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [classList, setClassList] = useState<string[]>(["11AT3", "12T2"]);
   const [loading, setLoading] = useState(true);
@@ -96,8 +143,16 @@ export default function AdminNguoiDungPage() {
     assignedLop: "12T2",
   });
 
-  // Permission Matrix State: Record<moduleKey, { level, scope, scopeToIds: number[] }>
+  // Permission Matrix State
   const [permMatrix, setPermMatrix] = useState<Record<string, { level: string; scope: string; scopeToIds: number[] }>>({});
+
+  // Delete State
+  const [deleteUser, setDeleteUser] = useState<UserItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   function showToast(msg: string, type: "success" | "error" = "success") {
     setToast({ msg, type });
@@ -152,6 +207,7 @@ export default function AdminNguoiDungPage() {
       roleLabel: "Giáo Viên Chủ Nhiệm",
       assignedLop: classList[0] || "12T2",
     });
+    // Default matrix: GVCN template
     applyTemplate("gvcn");
     setModalOpen(true);
   }
@@ -162,18 +218,24 @@ export default function AdminNguoiDungPage() {
       username: user.username,
       password: "",
       hoTen: user.hoTen,
-      roleLabel: user.roleLabel || "",
-      assignedLop: user.assignedLop || "11AT3",
+      roleLabel: user.roleLabel || "Thành viên",
+      assignedLop: user.assignedLop || classList[0] || "12T2",
     });
 
     const matrix: Record<string, { level: string; scope: string; scopeToIds: number[] }> = {};
     for (const m of MODULES) {
-      const existing = user.permissions.find(p => p.module === m.key);
-      if (existing) {
+      const p = user.permissions.find((x) => x.module === m.key);
+      if (p) {
+        let toIds: number[] = [];
+        try {
+          toIds = p.scopeToIds ? JSON.parse(p.scopeToIds) : [];
+        } catch {
+          toIds = [];
+        }
         matrix[m.key] = {
-          level: existing.level,
-          scope: existing.scope,
-          scopeToIds: JSON.parse(existing.scopeToIds || "[]"),
+          level: p.level,
+          scope: p.scope,
+          scopeToIds: toIds,
         };
       } else {
         matrix[m.key] = { level: "khong_co_quyen", scope: "toan_lop", scopeToIds: [] };
@@ -184,18 +246,23 @@ export default function AdminNguoiDungPage() {
   }
 
   async function handleSave() {
-    if (!form.username.trim() || !form.hoTen.trim()) {
-      showToast("Vui lòng điền đủ thông tin", "error");
+    if (!form.username.trim() && !editingUser) {
+      showToast("Vui lòng nhập tên đăng nhập", "error");
       return;
     }
-    if (!editingUser && !form.password) {
-      showToast("Vui lòng đặt mật khẩu", "error");
+    if (!form.password && !editingUser) {
+      showToast("Vui lòng nhập mật khẩu cho tài khoản mới", "error");
+      return;
+    }
+    if (!form.hoTen.trim()) {
+      showToast("Vui lòng nhập họ và tên", "error");
       return;
     }
 
     setSaving(true);
-    const permsPayload = Object.entries(permMatrix).map(([module, val]) => ({
-      module,
+
+    const permsPayload = Object.entries(permMatrix).map(([moduleKey, val]) => ({
+      module: moduleKey,
       level: val.level,
       scope: val.scope,
       scopeToIds: val.scopeToIds,
@@ -210,7 +277,7 @@ export default function AdminNguoiDungPage() {
           body: JSON.stringify({
             hoTen: form.hoTen.trim(),
             roleLabel: form.roleLabel.trim(),
-            assignedLop: form.assignedLop.trim() || "11AT3",
+            assignedLop: form.assignedLop.trim() || "12T2",
             ...(form.password ? { password: form.password } : {}),
           }),
         });
@@ -222,7 +289,7 @@ export default function AdminNguoiDungPage() {
           body: JSON.stringify({ permissions: permsPayload }),
         });
 
-        showToast("Đã cập nhật thông tin và quyền hạn");
+        showToast("Đã cập nhật thông tin và quyền hạn thành công");
       } else {
         // Create new user with permissions
         const res = await fetch("/api/users", {
@@ -233,7 +300,7 @@ export default function AdminNguoiDungPage() {
             password: form.password,
             hoTen: form.hoTen.trim(),
             roleLabel: form.roleLabel.trim(),
-            assignedLop: form.assignedLop.trim() || "11AT3",
+            assignedLop: form.assignedLop.trim() || "12T2",
             permissions: permsPayload,
           }),
         });
@@ -243,20 +310,16 @@ export default function AdminNguoiDungPage() {
           setSaving(false);
           return;
         }
-        showToast("Đã tạo tài khoản thành công");
+        showToast("Đã tạo tài khoản người dùng thành công");
       }
       setModalOpen(false);
       loadData();
     } catch {
-      showToast("Có lỗi xảy ra", "error");
+      showToast("Có lỗi xảy ra khi lưu dữ liệu", "error");
     } finally {
       setSaving(false);
     }
   }
-
-  // Delete State
-  const [deleteUser, setDeleteUser] = useState<UserItem | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   async function handleConfirmDelete() {
     if (!deleteUser) return;
@@ -279,17 +342,26 @@ export default function AdminNguoiDungPage() {
   }
 
   return (
-    <div className="animate-fade-in">
+    <div>
       {/* Toast */}
       {toast && (
         <div
           style={{
-            position: "fixed", top: 20, right: 20, zIndex: 10000,
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "12px 18px", borderRadius: 10,
+            position: "fixed",
+            top: 20,
+            right: 20,
+            zIndex: 100000,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "12px 18px",
+            borderRadius: 10,
             background: toast.type === "success" ? "var(--success)" : "var(--danger)",
-            color: "white", fontWeight: 600, fontSize: "0.875rem",
+            color: "white",
+            fontWeight: 600,
+            fontSize: "0.875rem",
             boxShadow: "var(--shadow-lg)",
+            animation: "fadeIn 0.2s ease",
           }}
         >
           {toast.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
@@ -298,24 +370,36 @@ export default function AdminNguoiDungPage() {
       )}
 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          marginBottom: 22,
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: "1.4rem", marginBottom: 4 }}>Quản lý tài khoản & phân quyền lớp</h1>
+          <h1 style={{ fontSize: "1.4rem", marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+            <UserCog size={26} color="var(--primary)" />
+            Quản lý tài khoản & phân quyền lớp
+          </h1>
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
             Phân quyền chi tiết cho từng lớp học, GVCN, Ban cán sự và Tổ trưởng
           </p>
         </div>
         <button className="btn btn-primary btn-sm" onClick={openCreate}>
-          <Plus size={14} /> Thêm tài khoản mới
+          <Plus size={15} /> Thêm tài khoản mới
         </button>
       </div>
 
       {/* User Table */}
-      <div className="card" style={{ overflow: "hidden" }}>
+      <div className="card" style={{ overflow: "hidden", borderRadius: 14 }}>
         {loading ? (
           <div style={{ padding: 32 }}>
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="skeleton" style={{ height: 44, marginBottom: 8, borderRadius: 6 }} />
+              <div key={i} className="skeleton" style={{ height: 48, marginBottom: 8, borderRadius: 8 }} />
             ))}
           </div>
         ) : (
@@ -328,16 +412,18 @@ export default function AdminNguoiDungPage() {
                   <th>Lớp phụ trách</th>
                   <th>Chức danh</th>
                   <th>Quyền hạn tóm tắt</th>
-                  <th style={{ width: 100 }}>Thao tác</th>
+                  <th style={{ width: 110, textAlign: "right" }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map(u => (
+                {users.map((u) => (
                   <tr key={u.id}>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         {u.isSuperAdmin ? (
-                          <span className="badge badge-primary" style={{ padding: "3px 6px" }}><Shield size={12} /> Admin</span>
+                          <span className="badge badge-primary" style={{ padding: "3px 8px" }}>
+                            <Shield size={12} /> Admin
+                          </span>
                         ) : null}
                         <span style={{ fontWeight: 700, color: "var(--primary)" }}>{u.username}</span>
                       </div>
@@ -345,35 +431,53 @@ export default function AdminNguoiDungPage() {
                     <td style={{ fontWeight: 600 }}>{u.hoTen}</td>
                     <td>
                       <span className="badge badge-info" style={{ fontWeight: 700 }}>
-                        Lớp {u.assignedLop || "11AT3"}
+                        Lớp {u.assignedLop || "12T2"}
                       </span>
                     </td>
                     <td style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
                       {u.roleLabel || "Thành viên"}
                     </td>
-                    <td style={{ fontSize: "0.78rem", color: "var(--text-muted)", maxWidth: 280 }}>
+                    <td style={{ fontSize: "0.78rem", color: "var(--text-muted)", maxWidth: 300 }}>
                       {u.isSuperAdmin ? (
                         <span style={{ color: "var(--primary)", fontWeight: 700 }}>Toàn quyền hệ thống</span>
                       ) : (
-                        u.permissions.map(p => `${p.module} (${p.level === "toan_quyen" ? "Toàn quyền" : p.level === "chi_xem" ? "Chỉ xem" : "Không"})`).join(", ")
+                        u.permissions
+                          .map(
+                            (p) =>
+                              `${p.module} (${
+                                p.level === "toan_quyen"
+                                  ? "Toàn quyền"
+                                  : p.level === "chi_xem"
+                                  ? "Chỉ xem"
+                                  : "Không"
+                              })`
+                          )
+                          .join(", ")
                       )}
                     </td>
-                    <td>
+                    <td style={{ textAlign: "right" }}>
                       {!u.isSuperAdmin && (
-                        <div style={{ display: "flex", gap: 6 }}>
+                        <div style={{ display: "inline-flex", gap: 6, justifyContent: "flex-end" }}>
                           <button
                             onClick={() => openEdit(u)}
-                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: 4 }}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: "4px 8px" }}
                             title="Chỉnh sửa phân quyền"
                           >
-                            <Key size={14} />
+                            <Key size={13} />
                           </button>
                           <button
                             onClick={() => setDeleteUser(u)}
-                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", padding: 4 }}
+                            className="btn btn-sm"
+                            style={{
+                              background: "#fee2e2",
+                              color: "#dc2626",
+                              border: "1px solid #fca5a5",
+                              padding: "4px 8px",
+                            }}
                             title="Xóa người dùng"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       )}
@@ -386,330 +490,521 @@ export default function AdminNguoiDungPage() {
         )}
       </div>
 
-      {/* Add / Edit Modal with Matrix — Bulletproof Top-Aligned Overlay */}
-      {modalOpen && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "flex-start",
-            overflowY: "auto",
-            padding: "36px 16px 60px",
-            background: "rgba(0, 0, 0, 0.6)",
-            backdropFilter: "blur(6px)",
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setModalOpen(false);
-          }}
-        >
-          {/* Modal Card */}
+      {/* ====== BUNG RỘNG THOÁNG ĐÃNG: ADD / EDIT MODAL VIA PORTAL ====== */}
+      {mounted &&
+        modalOpen &&
+        createPortal(
           <div
             style={{
-              position: "relative",
-              background: "white",
-              borderRadius: 16,
-              boxShadow: "0 25px 60px rgba(0,0,0,0.35)",
-              padding: "28px 32px",
-              width: "100%",
-              maxWidth: 680,
-              zIndex: 10000,
-              animation: "fadeIn 0.2s ease",
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 99999,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: "20px 16px",
+              background: "rgba(15, 23, 42, 0.7)",
+              backdropFilter: "blur(8px)",
+              animation: "fadeIn 0.15s ease",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setModalOpen(false);
             }}
           >
-            {/* Modal Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22, borderBottom: "1px solid var(--border)", paddingBottom: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--primary-light)", color: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <UserCog size={20} />
+            {/* Expanded Modal Box */}
+            <div
+              style={{
+                position: "relative",
+                background: "#ffffff",
+                borderRadius: 20,
+                boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.4)",
+                width: "100%",
+                maxWidth: 960,
+                maxHeight: "92vh",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                border: "1px solid var(--border)",
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: "20px 28px",
+                  borderBottom: "1px solid var(--border)",
+                  background: "linear-gradient(to right, #f8fafc, #f1f5f9)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: "var(--primary)",
+                      color: "white",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 4px 10px rgba(16,90,188,0.25)",
+                    }}
+                  >
+                    <UserCog size={24} />
+                  </div>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "#0f172a" }}>
+                      {editingUser ? `Cập nhật tài khoản: ${editingUser.username}` : "Tạo tài khoản & Phân quyền mới"}
+                    </h2>
+                    <p style={{ margin: "2px 0 0", fontSize: "0.825rem", color: "var(--text-muted)" }}>
+                      Thiết lập thông tin đăng nhập và ma trận phân quyền chi tiết từng module
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setModalOpen(false)}
+                  style={{
+                    background: "#f1f5f9",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 8,
+                    borderRadius: "50%",
+                    color: "#64748b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.15s ease",
+                  }}
+                  aria-label="Đóng"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Scrollable Body */}
+              <div style={{ padding: "24px 28px", overflowY: "auto", flex: 1 }}>
+                {/* SECTION 1: ACCOUNT DETAILS */}
+                <div style={{ marginBottom: 24 }}>
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: 800,
+                      color: "var(--primary)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      marginBottom: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <User size={16} /> 1. Thông tin đăng nhập & hồ sơ
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+                    <div>
+                      <label className="label">Tên đăng nhập *</label>
+                      <input
+                        className="input"
+                        disabled={!!editingUser}
+                        value={form.username}
+                        onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                        placeholder="VD: gvcn_12t2 hoặc totruong1"
+                        style={{ background: editingUser ? "var(--bg-muted)" : "white" }}
+                      />
+                    </div>
+                    <div>
+                      <label className="label">
+                        Mật khẩu {editingUser ? "(Bỏ trống nếu giữ nguyên)" : "*"}
+                      </label>
+                      <input
+                        type="password"
+                        className="input"
+                        value={form.password}
+                        onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                        placeholder={editingUser ? "••••••••" : "Nhập mật khẩu..."}
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Họ và tên *</label>
+                      <input
+                        className="input"
+                        value={form.hoTen}
+                        onChange={(e) => setForm((f) => ({ ...f, hoTen: e.target.value }))}
+                        placeholder="VD: Nguyễn Văn Tuấn"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Lớp phụ trách *</label>
+                      <select
+                        className="select"
+                        style={{ fontWeight: 700, color: "var(--primary)" }}
+                        value={form.assignedLop}
+                        onChange={(e) => setForm((f) => ({ ...f, assignedLop: e.target.value }))}
+                      >
+                        {classList.map((c) => (
+                          <option key={c} value={c}>
+                            Lớp {c}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="label">Chức danh / Vai trò</label>
+                      <input
+                        className="input"
+                        value={form.roleLabel}
+                        onChange={(e) => setForm((f) => ({ ...f, roleLabel: e.target.value }))}
+                        placeholder="Giáo Viên Chủ Nhiệm..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 2: QUICK TEMPLATES */}
+                <div style={{ marginBottom: 24 }}>
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: 800,
+                      color: "var(--primary)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      marginBottom: 10,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Sparkles size={16} color="#d97706" /> 2. Chọn mẫu phân quyền nhanh
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                    {(Object.keys(PERMISSION_TEMPLATES) as TemplateKey[]).map((k) => {
+                      const t = PERMISSION_TEMPLATES[k];
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => applyTemplate(k)}
+                          style={{
+                            background: "#f8fafc",
+                            border: "1px solid var(--border)",
+                            borderRadius: 12,
+                            padding: "10px 14px",
+                            textAlign: "left",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 4,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = "var(--primary)";
+                            e.currentTarget.style.background = "#eff6ff";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = "var(--border)";
+                            e.currentTarget.style.background = "#f8fafc";
+                          }}
+                        >
+                          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1e293b" }}>{t.label}</div>
+                          <div style={{ fontSize: "0.725rem", color: "#64748b", lineHeight: 1.3 }}>{t.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* SECTION 3: PERMISSION MATRIX */}
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800 }}>
-                    {editingUser ? `Cập nhật quyền: ${editingUser.username}` : "Tạo tài khoản người dùng mới"}
-                  </h3>
-                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                    Điền thông tin tài khoản và thiết lập ma trận phân quyền
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: 800,
+                      color: "var(--primary)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      marginBottom: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Layers size={16} /> 3. Ma trận phân quyền chi tiết
+                  </div>
+
+                  <div
+                    style={{
+                      border: "1px solid var(--border)",
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                    }}
+                  >
+                    <table className="table" style={{ margin: 0 }}>
+                      <thead style={{ background: "#f8fafc" }}>
+                        <tr>
+                          <th style={{ width: "35%" }}>Module Chức năng</th>
+                          <th style={{ width: "25%" }}>Mức quyền</th>
+                          <th style={{ width: "20%" }}>Phạm vi</th>
+                          <th style={{ width: "20%" }}>Tổ áp dụng</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {MODULES.map((m) => {
+                          const current = permMatrix[m.key] || {
+                            level: "khong_co_quyen",
+                            scope: "toan_lop",
+                            scopeToIds: [],
+                          };
+                          return (
+                            <tr key={m.key} style={{ borderBottom: "1px solid var(--border)" }}>
+                              <td>
+                                <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#0f172a" }}>{m.label}</div>
+                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{m.desc}</div>
+                              </td>
+                              <td>
+                                <select
+                                  className="select"
+                                  style={{
+                                    height: 36,
+                                    fontSize: "0.85rem",
+                                    fontWeight: 600,
+                                    borderColor:
+                                      current.level === "toan_quyen"
+                                        ? "#86efac"
+                                        : current.level === "chi_xem"
+                                        ? "#93c5fd"
+                                        : "var(--border)",
+                                    background:
+                                      current.level === "toan_quyen"
+                                        ? "#f0fdf4"
+                                        : current.level === "chi_xem"
+                                        ? "#eff6ff"
+                                        : "white",
+                                    color:
+                                      current.level === "toan_quyen"
+                                        ? "#15803d"
+                                        : current.level === "chi_xem"
+                                        ? "#1d4ed8"
+                                        : "var(--text-muted)",
+                                  }}
+                                  value={current.level}
+                                  onChange={(e) => {
+                                    const lvl = e.target.value;
+                                    setPermMatrix((prev) => ({
+                                      ...prev,
+                                      [m.key]: { ...current, level: lvl },
+                                    }));
+                                  }}
+                                >
+                                  <option value="khong_co_quyen">🚫 Không có quyền</option>
+                                  <option value="chi_xem">👁️ Chỉ xem</option>
+                                  <option value="toan_quyen">⚡ Toàn quyền</option>
+                                </select>
+                              </td>
+                              <td>
+                                <select
+                                  className="select"
+                                  style={{ height: 36, fontSize: "0.85rem" }}
+                                  value={current.scope}
+                                  disabled={current.level === "khong_co_quyen"}
+                                  onChange={(e) => {
+                                    const scp = e.target.value;
+                                    setPermMatrix((prev) => ({
+                                      ...prev,
+                                      [m.key]: { ...current, scope: scp },
+                                    }));
+                                  }}
+                                >
+                                  <option value="toan_lop">🏫 Toàn lớp</option>
+                                  <option value="theo_to">👥 Theo tổ</option>
+                                </select>
+                              </td>
+                              <td>
+                                {current.scope === "theo_to" && current.level !== "khong_co_quyen" ? (
+                                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                                    {[1, 2, 3, 4].map((toNum) => {
+                                      const selected = current.scopeToIds.includes(toNum);
+                                      return (
+                                        <button
+                                          key={toNum}
+                                          type="button"
+                                          onClick={() => {
+                                            const nextIds = selected
+                                              ? current.scopeToIds.filter((id) => id !== toNum)
+                                              : [...current.scopeToIds, toNum];
+                                            setPermMatrix((prev) => ({
+                                              ...prev,
+                                              [m.key]: { ...current, scopeToIds: nextIds },
+                                            }));
+                                          }}
+                                          style={{
+                                            padding: "4px 8px",
+                                            borderRadius: 6,
+                                            border: selected ? "1px solid var(--primary)" : "1px solid var(--border)",
+                                            background: selected ? "var(--primary)" : "#f8fafc",
+                                            color: selected ? "white" : "#64748b",
+                                            fontWeight: 700,
+                                            fontSize: "0.75rem",
+                                            cursor: "pointer",
+                                          }}
+                                        >
+                                          T{toNum}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: 6, color: "var(--text-muted)" }}
-                aria-label="Đóng"
-              >
-                <X size={22} />
-              </button>
-            </div>
 
-            {/* Basic Info: Row 1 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
-              <div>
-                <label className="label">Tên đăng nhập *</label>
-                <input
-                  className="input"
-                  disabled={!!editingUser}
-                  value={form.username}
-                  onChange={(e) => setForm(f => ({ ...f, username: e.target.value }))}
-                  placeholder="VD: gvcn_12t2 hoặc totruong1"
-                />
-              </div>
-              <div>
-                <label className="label">Mật khẩu {editingUser ? "(Bỏ trống nếu không đổi)" : "*"}</label>
-                <input
-                  type="password"
-                  className="input"
-                  value={form.password}
-                  onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))}
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-
-            {/* Basic Info: Row 2 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 14, marginBottom: 22 }}>
-              <div>
-                <label className="label">Họ và tên *</label>
-                <input
-                  className="input"
-                  value={form.hoTen}
-                  onChange={(e) => setForm(f => ({ ...f, hoTen: e.target.value }))}
-                  placeholder="VD: Nguyễn Văn Tuấn"
-                />
-              </div>
-              <div>
-                <label className="label">Lớp phụ trách *</label>
-                <select
-                  className="select"
-                  style={{ fontWeight: 700, color: "var(--primary)" }}
-                  value={form.assignedLop}
-                  onChange={(e) => setForm(f => ({ ...f, assignedLop: e.target.value }))}
-                >
-                  {classList.map(c => (
-                    <option key={c} value={c}>
-                      Lớp {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="label">Chức danh</label>
-                <input
-                  className="input"
-                  value={form.roleLabel}
-                  onChange={(e) => setForm(f => ({ ...f, roleLabel: e.target.value }))}
-                  placeholder="Giáo Viên Chủ Nhiệm"
-                />
-              </div>
-            </div>
-
-            {/* Quick Templates */}
-            <div style={{ marginBottom: 16, background: "var(--bg-muted)", padding: "10px 14px", borderRadius: 10 }}>
-              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-secondary)", marginRight: 8 }}>
-                Áp dụng mẫu phân quyền nhanh:
-              </span>
-              <div style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-                {(Object.keys(PERMISSION_TEMPLATES) as TemplateKey[]).map(k => (
-                  <button
-                    key={k}
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    style={{ fontSize: "0.78rem", padding: "4px 10px", fontWeight: 600 }}
-                    onClick={() => applyTemplate(k)}
-                  >
-                    {PERMISSION_TEMPLATES[k].label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Permission Matrix */}
-            <h4 style={{ fontSize: "0.92rem", marginBottom: 10, fontWeight: 700 }}>
-              Ma trận phân quyền theo module:
-            </h4>
-            <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 24 }}>
-              <table className="table" style={{ fontSize: "0.82rem" }}>
-                <thead>
-                  <tr>
-                    <th>Module</th>
-                    <th style={{ width: 140 }}>Mức quyền</th>
-                    <th style={{ width: 130 }}>Phạm vi</th>
-                    <th>Tổ áp dụng</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {MODULES.map(m => {
-                    const current = permMatrix[m.key] || { level: "khong_co_quyen", scope: "toan_lop", scopeToIds: [] };
-                    return (
-                      <tr key={m.key}>
-                        <td style={{ fontWeight: 600 }}>{m.label}</td>
-                        <td>
-                          <select
-                            className="select"
-                            style={{ minHeight: 32, padding: "4px 24px 4px 8px", fontSize: "0.8rem" }}
-                            value={current.level}
-                            onChange={(e) => {
-                              const lvl = e.target.value;
-                              setPermMatrix(prev => ({
-                                ...prev,
-                                [m.key]: { ...current, level: lvl },
-                              }));
-                            }}
-                          >
-                            <option value="khong_co_quyen">Không có quyền</option>
-                            <option value="chi_xem">Chỉ xem</option>
-                            <option value="toan_quyen">Toàn quyền</option>
-                          </select>
-                        </td>
-                        <td>
-                          <select
-                            className="select"
-                            style={{ minHeight: 32, padding: "4px 24px 4px 8px", fontSize: "0.8rem" }}
-                            value={current.scope}
-                            disabled={current.level === "khong_co_quyen"}
-                            onChange={(e) => {
-                              const scp = e.target.value;
-                              setPermMatrix(prev => ({
-                                ...prev,
-                                [m.key]: { ...current, scope: scp },
-                              }));
-                            }}
-                          >
-                            <option value="toan_lop">Toàn lớp</option>
-                            <option value="theo_to">Theo tổ</option>
-                          </select>
-                        </td>
-                        <td>
-                          {current.scope === "theo_to" && (
-                            <div style={{ display: "flex", gap: 4 }}>
-                              {[1, 2, 3, 4].map(toNum => {
-                                const selected = current.scopeToIds.includes(toNum);
-                                return (
-                                  <button
-                                    key={toNum}
-                                    type="button"
-                                    onClick={() => {
-                                      const nextIds = selected
-                                        ? current.scopeToIds.filter(id => id !== toNum)
-                                        : [...current.scopeToIds, toNum];
-                                      setPermMatrix(prev => ({
-                                        ...prev,
-                                        [m.key]: { ...current, scopeToIds: nextIds },
-                                      }));
-                                    }}
-                                    className={`btn btn-sm ${selected ? "btn-primary" : "btn-secondary"}`}
-                                    style={{ padding: "2px 6px", fontSize: "0.72rem", minHeight: 24 }}
-                                  >
-                                    T{toNum}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div style={{ display: "flex", gap: 12 }}>
-              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setModalOpen(false)}>Hủy</button>
-              <button className="btn btn-primary" style={{ flex: 2, height: 42, fontSize: "0.95rem" }} onClick={handleSave} disabled={saving}>
-                {saving ? "Đang lưu..." : <><Save size={16} /> Lưu người dùng & phân quyền</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ====== DELETE USER CONFIRM MODAL ====== */}
-      {deleteUser !== null && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 10005 }}>
-          <div
-            style={{ position: "absolute", inset: 0, background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(3px)" }}
-            onClick={() => !deleting && setDeleteUser(null)}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%,-50%)",
-              background: "white",
-              borderRadius: 16,
-              boxShadow: "var(--shadow-xl)",
-              padding: "28px",
-              width: "100%",
-              maxWidth: 400,
-              animation: "fadeIn 0.2s ease",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <div style={{ textAlign: "center", marginBottom: 18 }}>
+              {/* Sticky Footer */}
               <div
                 style={{
-                  width: 52,
-                  height: 52,
-                  background: "#fee2e2",
-                  borderRadius: "50%",
+                  padding: "18px 28px",
+                  borderTop: "1px solid var(--border)",
+                  background: "#f8fafc",
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 12px",
+                  justifyContent: "flex-end",
+                  gap: 12,
                 }}
               >
-                <Trash2 size={26} color="#dc2626" />
+                <button
+                  className="btn btn-secondary"
+                  style={{ minWidth: 100, height: 42 }}
+                  onClick={() => setModalOpen(false)}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  className="btn btn-primary"
+                  style={{ minWidth: 220, height: 42, fontSize: "0.95rem", fontWeight: 700 }}
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? "Đang lưu..." : <><Save size={16} /> Lưu người dùng & phân quyền</>}
+                </button>
               </div>
-              <h3 style={{ fontSize: "1.2rem", color: "#1e293b", marginBottom: 6 }}>
-                Xóa tài khoản người dùng?
-              </h3>
-              <p style={{ color: "#64748b", fontSize: "0.875rem", margin: 0, lineHeight: 1.5 }}>
-                Bạn có chắc chắn muốn xóa tài khoản <strong style={{ color: "var(--primary)" }}>{deleteUser.username}</strong> ({deleteUser.hoTen})?
-              </p>
             </div>
+          </div>,
+          document.body
+        )}
 
+      {/* ====== DELETE USER CONFIRM MODAL VIA PORTAL ====== */}
+      {mounted &&
+        deleteUser !== null &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 100000,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              background: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(6px)",
+            }}
+            onClick={() => !deleting && setDeleteUser(null)}
+          >
             <div
               style={{
-                background: "#fef2f2",
-                border: "1px solid #fecaca",
-                borderRadius: 10,
-                padding: "10px 14px",
-                marginBottom: 20,
-                fontSize: "0.8rem",
-                color: "#991b1b",
-                textAlign: "center",
+                background: "white",
+                borderRadius: 18,
+                boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.4)",
+                padding: "28px 32px",
+                width: "100%",
+                maxWidth: 420,
+                animation: "fadeIn 0.15s ease",
+                border: "1px solid var(--border)",
               }}
             >
-              ⚠️ Toàn bộ phân quyền của tài khoản này sẽ bị thu hồi vĩnh viễn.
-            </div>
+              <div style={{ textAlign: "center", marginBottom: 18 }}>
+                <div
+                  style={{
+                    width: 54,
+                    height: 54,
+                    background: "#fee2e2",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "0 auto 14px",
+                  }}
+                >
+                  <Trash2 size={26} color="#dc2626" />
+                </div>
+                <h3 style={{ fontSize: "1.25rem", color: "#0f172a", marginBottom: 6, fontWeight: 800 }}>
+                  Xóa tài khoản người dùng?
+                </h3>
+                <p style={{ color: "#64748b", fontSize: "0.875rem", margin: 0, lineHeight: 1.5 }}>
+                  Bạn có chắc chắn muốn xóa tài khoản{" "}
+                  <strong style={{ color: "var(--primary)" }}>{deleteUser.username}</strong> ({deleteUser.hoTen})?
+                </p>
+              </div>
 
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                className="btn btn-secondary"
-                style={{ flex: 1 }}
-                onClick={() => setDeleteUser(null)}
-                disabled={deleting}
+              <div
+                style={{
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  marginBottom: 22,
+                  fontSize: "0.825rem",
+                  color: "#991b1b",
+                  textAlign: "center",
+                }}
               >
-                Hủy bỏ
-              </button>
-              <button
-                className="btn"
-                style={{ flex: 1.4, background: "#dc2626", color: "white", borderColor: "#dc2626", fontWeight: 700 }}
-                onClick={handleConfirmDelete}
-                disabled={deleting}
-              >
-                {deleting ? "Đang xóa..." : "Xác nhận xóa"}
-              </button>
+                ⚠️ Toàn bộ phân quyền của tài khoản này sẽ bị thu hồi vĩnh viễn.
+              </div>
+
+              <div style={{ display: "flex", gap: 12 }}>
+                <button
+                  className="btn btn-secondary"
+                  style={{ flex: 1, height: 40 }}
+                  onClick={() => setDeleteUser(null)}
+                  disabled={deleting}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  className="btn"
+                  style={{
+                    flex: 1.4,
+                    height: 40,
+                    background: "#dc2626",
+                    color: "white",
+                    borderColor: "#dc2626",
+                    fontWeight: 700,
+                  }}
+                  onClick={handleConfirmDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? "Đang xóa..." : "Xác nhận xóa"}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
