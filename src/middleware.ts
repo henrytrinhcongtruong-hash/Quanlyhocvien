@@ -1,32 +1,33 @@
 // src/middleware.ts
-// Bảo vệ routes /admin/* - yêu cầu đăng nhập
-import { auth } from "@/lib/auth";
+// Bảo vệ routes /admin/* - Edge Runtime Compatible 100%
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export default auth((req) => {
-  const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
+export function middleware(req: NextRequest) {
+  const { nextUrl, cookies } = req;
+
+  const hasSession =
+    cookies.has("authjs.session-token") ||
+    cookies.has("__Secure-authjs.session-token") ||
+    cookies.has("next-auth.session-token") ||
+    cookies.has("__Secure-next-auth.session-token");
 
   const isAdminRoute = nextUrl.pathname.startsWith("/admin");
   const isLoginPage = nextUrl.pathname === "/admin/login";
-  const isApiRoute = nextUrl.pathname.startsWith("/api");
 
-  // API routes: handle auth in route handlers
-  if (isApiRoute) return NextResponse.next();
-
-  // Login page: redirect if already logged in
-  if (isLoginPage && isLoggedIn) {
+  // Login page: chuyển sang /admin nếu đã đăng nhập
+  if (isLoginPage && hasSession) {
     return NextResponse.redirect(new URL("/admin", nextUrl));
   }
 
-  // Admin routes: redirect to login if not logged in
-  if (isAdminRoute && !isLoginPage && !isLoggedIn) {
+  // Admin routes: chuyển sang login nếu chưa đăng nhập
+  if (isAdminRoute && !isLoginPage && !hasSession) {
     return NextResponse.redirect(new URL("/admin/login", nextUrl));
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/:path*"],
+  matcher: ["/admin/:path*"],
 };

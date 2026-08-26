@@ -1,6 +1,5 @@
 // src/lib/prisma.ts
-// Prisma Client singleton - tránh tạo nhiều connection trong Next.js dev mode
-
+// Prisma Client singleton - tối ưu cho Next.js Node.js runtime & Vercel
 import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
