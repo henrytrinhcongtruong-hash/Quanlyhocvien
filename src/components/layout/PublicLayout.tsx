@@ -15,10 +15,12 @@ import {
   School,
   GraduationCap,
   CalendarDays,
+  LayoutGrid,
 } from "lucide-react";
 
 const NAV_BASE = [
   { href: "/", icon: Users, label: "Danh sách lớp", exact: true },
+  { href: "/so-do-lop", icon: LayoutGrid, label: "Sơ đồ lớp" },
   { href: "/thoi-khoa-bieu", icon: CalendarDays, label: "Thời khóa biểu" },
   { href: "/lich-thi", icon: GraduationCap, label: "Lịch thi & KT" },
   { href: "/quy-lop", icon: Wallet, label: "Quỹ lớp" },

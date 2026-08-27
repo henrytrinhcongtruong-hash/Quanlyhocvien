@@ -19,6 +19,7 @@ model Student {
   gioiTinh  String    @default("Nam") // "Nam" | "Nữ"
   to        Int       // 1-4
   lop       String    @default("11AT3")
+  avatar    String?   // Ảnh học sinh
   ghiChu    String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -195,6 +196,24 @@ model Timetable {
   @@index([lop])
   @@index([thu])
   @@index([hocKy])
+}
+
+// =========================================
+// SƠ ĐỒ LỚP HỌC (SEATING CHART)
+// =========================================
+model SeatingChart {
+  id          Int      @id @default(autoincrement())
+  lop         String   @default("12T2")
+  title       String   @default("CLASSROOM SEATING CHART")
+  gvcn        String?  @default("Phí Huỳnh Anh Hào")
+  slogan      String?  @default("Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển")
+  month       String   @default("Tháng 09/2025")
+  slotsData   String   // JSON string chứa mảng 56 vị trí chỗ ngồi
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([lop])
+  @@index([month])
 }
 
 // =========================================

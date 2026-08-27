@@ -40,7 +40,8 @@ interface UserItem {
 
 const MODULES = [
   { key: "hoc_sinh", label: "Quản lý Học sinh", desc: "Hồ sơ, danh sách, xuất nhập Excel" },
-  { key: "thoi_khoa_bieu", label: "Thời khóa biểu", desc: "Thời khóa biểu các thứ trong tuần, tiết học, phòng học" },
+  { key: "so_do_lop", label: "Sơ đồ lớp học", desc: "Sắp xếp chỗ ngồi, đổi chỗ kéo thả, xuất PDF bàn giáo viên" },
+  { key: "thoi_khoa_bieu", label: "Thời khóa biểu", desc: "Thời khóa biểu các thứ trong tuần, tiết học" },
   { key: "lich_thi", label: "Lịch thi & Kiểm tra", desc: "Lịch kiểm tra 15p, 1 tiết, thi giữa kỳ & cuối kỳ" },
   { key: "diem_danh", label: "Điểm danh", desc: "Điểm danh hàng ngày, theo dõi chuyên cần" },
   { key: "quy", label: "Quản lý Quỹ lớp", desc: "Thu chi, đợt thu, sao kê dòng tiền" },
@@ -57,6 +58,7 @@ const PERMISSION_TEMPLATES = {
     badgeColor: "#1d4ed8",
     perms: {
       hoc_sinh: { level: "toan_quyen", scope: "toan_lop" },
+      so_do_lop: { level: "toan_quyen", scope: "toan_lop" },
       thoi_khoa_bieu: { level: "toan_quyen", scope: "toan_lop" },
       lich_thi: { level: "toan_quyen", scope: "toan_lop" },
       diem_danh: { level: "toan_quyen", scope: "toan_lop" },
@@ -68,11 +70,12 @@ const PERMISSION_TEMPLATES = {
   },
   lop_truong: {
     label: "🌟 Lớp trưởng / Lớp phó",
-    desc: "Điểm danh, TKB, lịch thi, trực nhật, sự kiện; Quỹ và Báo cáo chỉ xem",
+    desc: "Điểm danh, Sơ đồ lớp, TKB, lịch thi, trực nhật, sự kiện",
     badge: "#fef3c7",
     badgeColor: "#b45309",
     perms: {
       hoc_sinh: { level: "chi_xem", scope: "toan_lop" },
+      so_do_lop: { level: "toan_quyen", scope: "toan_lop" },
       thoi_khoa_bieu: { level: "toan_quyen", scope: "toan_lop" },
       lich_thi: { level: "toan_quyen", scope: "toan_lop" },
       diem_danh: { level: "toan_quyen", scope: "toan_lop" },
@@ -84,11 +87,12 @@ const PERMISSION_TEMPLATES = {
   },
   to_truong: {
     label: "🛡️ Tổ trưởng",
-    desc: "Điểm danh theo tổ; xem TKB, lịch thi, danh sách, sự kiện & báo cáo",
+    desc: "Điểm danh theo tổ; xem Sơ đồ lớp, TKB, lịch thi, danh sách, sự kiện",
     badge: "#e0e7ff",
     badgeColor: "#4338ca",
     perms: {
       hoc_sinh: { level: "khong_co_quyen", scope: "toan_lop" },
+      so_do_lop: { level: "chi_xem", scope: "toan_lop" },
       thoi_khoa_bieu: { level: "chi_xem", scope: "toan_lop" },
       lich_thi: { level: "chi_xem", scope: "toan_lop" },
       diem_danh: { level: "toan_quyen", scope: "theo_to" },
@@ -100,11 +104,12 @@ const PERMISSION_TEMPLATES = {
   },
   thu_quy: {
     label: "💰 Thủ quỹ lớp",
-    desc: "Toàn quyền quản lý quỹ thu chi; xem TKB, lịch thi và danh sách học sinh",
+    desc: "Toàn quyền quản lý quỹ thu chi; xem Sơ đồ lớp, TKB, lịch thi",
     badge: "#dcfce7",
     badgeColor: "#15803d",
     perms: {
       hoc_sinh: { level: "chi_xem", scope: "toan_lop" },
+      so_do_lop: { level: "chi_xem", scope: "toan_lop" },
       thoi_khoa_bieu: { level: "chi_xem", scope: "toan_lop" },
       lich_thi: { level: "chi_xem", scope: "toan_lop" },
       diem_danh: { level: "khong_co_quyen", scope: "toan_lop" },
@@ -121,6 +126,7 @@ const PERMISSION_TEMPLATES = {
     badgeColor: "#475569",
     perms: {
       hoc_sinh: { level: "chi_xem", scope: "toan_lop" },
+      so_do_lop: { level: "chi_xem", scope: "toan_lop" },
       thoi_khoa_bieu: { level: "chi_xem", scope: "toan_lop" },
       lich_thi: { level: "chi_xem", scope: "toan_lop" },
       diem_danh: { level: "chi_xem", scope: "toan_lop" },
