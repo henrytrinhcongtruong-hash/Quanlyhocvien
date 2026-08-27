@@ -587,10 +587,9 @@ function PublicSoDoLopContent() {
                 background: "#ffffff",
                 border: "3px solid #1e293b",
                 borderRadius: 18,
-                padding: "10px 18px",
+                padding: "12px 20px",
                 textAlign: "center",
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 boxShadow: "0 4px 10px rgba(0,0,0,0.06)",
@@ -601,24 +600,10 @@ function PublicSoDoLopContent() {
                   fontSize: "1.15rem",
                   fontWeight: 900,
                   color: "#1e293b",
-                  letterSpacing: "1px",
+                  letterSpacing: "1.5px",
                 }}
               >
                 TEACHER'S DESK
-              </div>
-              <div
-                style={{
-                  width: 36,
-                  height: 10,
-                  background: "#facc15",
-                  borderRadius: "0 0 8px 8px",
-                  border: "2px solid #1e293b",
-                  borderTop: "none",
-                  marginTop: 2,
-                }}
-              />
-              <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 700, marginTop: 2 }}>
-                BÀN GIÁO VIÊN
               </div>
             </div>
           </div>
