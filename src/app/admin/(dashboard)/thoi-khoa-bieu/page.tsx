@@ -8,7 +8,6 @@ import {
   Edit2,
   Trash2,
   Clock,
-  MapPin,
   User,
   BookOpen,
   AlertCircle,
@@ -17,11 +16,9 @@ import {
   Save,
   Printer,
   Sparkles,
-  Layers,
-  School,
-  Calendar,
-  Sun,
   Moon,
+  RotateCcw,
+  Coffee,
 } from "lucide-react";
 
 interface TimetableItem {
@@ -32,7 +29,6 @@ interface TimetableItem {
   thoiGian: string | null;
   monHoc: string;
   giaoVien: string | null;
-  phongHoc: string | null;
   lop: string;
   hocKy: string;
   ghiChu: string | null;
@@ -42,63 +38,51 @@ interface PeriodForm {
   id?: number;
   thu: number;
   tiet: number;
-  buoi: string;
-  thoiGian: string;
   monHoc: string;
   giaoVien: string;
-  phongHoc: string;
   lop: string;
   hocKy: string;
   ghiChu: string;
 }
 
-const DEFAULT_TIMES: Record<number, string> = {
-  1: "07:15 - 08:00",
-  2: "08:05 - 08:50",
-  3: "09:05 - 09:50",
-  4: "09:55 - 10:40",
-  5: "10:45 - 11:30",
-  6: "13:30 - 14:15",
-  7: "14:20 - 15:05",
-  8: "15:15 - 16:00",
-  9: "16:05 - 16:50",
-  10: "16:55 - 17:40",
+// Khung giờ học Buổi Tối chuẩn Trung tâm GDNN - GDTX TP. Thủ Đức (Bắt đầu 18:00)
+const EVENING_TIMES: Record<number, { time: string; duration: string }> = {
+  1: { time: "18h00 - 18h40", duration: "40 phút" },
+  2: { time: "18h40 - 19h20", duration: "40 phút" },
+  3: { time: "19h35 - 20h15", duration: "40 phút" },
+  4: { time: "20h15 - 20h55", duration: "40 phút" },
+  5: { time: "20h55 - 21h35", duration: "40 phút" },
 };
 
-const POPULAR_SUBJECTS = [
-  "Chào Cờ",
-  "Toán Học",
-  "Ngữ Văn",
-  "Tiếng Anh",
-  "Vật Lý",
-  "Hóa Học",
-  "Sinh Học",
-  "Lịch Sử",
-  "Địa Lý",
-  "Tin Học",
-  "GDCD",
-  "Công Nghệ",
-  "Thể Dục",
-  "HĐ Trải Nghiệm",
-  "Sinh Hoạt Lớp",
+// 9 môn học chính + Chào Cờ / HĐTN
+const SUBJECT_OPTIONS = [
+  { value: "Chào Cờ", label: "🚩 Chào Cờ (Đầu tuần)" },
+  { value: "Toán", label: "📐 Toán" },
+  { value: "Ngữ văn", label: "📖 Ngữ văn" },
+  { value: "Ngoại ngữ", label: "🌐 Ngoại ngữ" },
+  { value: "Hóa học", label: "🧪 Hóa học" },
+  { value: "Sinh học", label: "🔬 Sinh học" },
+  { value: "Lịch sử", label: "🏛️ Lịch sử" },
+  { value: "Địa lý", label: "🌍 Địa lý" },
+  { value: "Tin học", label: "💻 Tin học" },
+  { value: "HĐTN2", label: "🌟 HĐTN2 (Hoạt động trải nghiệm)" },
+  { value: "HĐTN3", label: "🌟 HĐTN3 (Hoạt động trải nghiệm)" },
+  { value: "HĐTN", label: "🌟 HĐTN" },
 ];
 
 const SUBJECT_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   "Chào Cờ": { bg: "#fee2e2", text: "#dc2626", border: "#fca5a5" },
-  "Sinh Hoạt Lớp": { bg: "#fef3c7", text: "#b45309", border: "#fde68a" },
-  "Toán Học": { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" },
-  "Ngữ Văn": { bg: "#faf5ff", text: "#7e22ce", border: "#e9d5ff" },
-  "Tiếng Anh": { bg: "#f0fdfa", text: "#0f766e", border: "#99f6e4" },
-  "Vật Lý": { bg: "#fff7ed", text: "#c2410c", border: "#fed7aa" },
-  "Hóa Học": { bg: "#fdf2f8", text: "#be185d", border: "#fbcfe8" },
-  "Sinh Học": { bg: "#f0fdf4", text: "#15803d", border: "#bbf7d0" },
-  "Lịch Sử": { bg: "#fffbeb", text: "#b45309", border: "#fde68a" },
-  "Địa Lý": { bg: "#f8fafc", text: "#334155", border: "#cbd5e1" },
-  "Tin Học": { bg: "#e0f2fe", text: "#0369a1", border: "#bae6fd" },
-  "Thể Dục": { bg: "#ecfdf5", text: "#047857", border: "#a7f3d0" },
-  "GDCD": { bg: "#f5f3ff", text: "#6d28d9", border: "#ddd6fe" },
-  "Công Nghệ": { bg: "#fefce8", text: "#a16207", border: "#fef08a" },
-  "HĐ Trải Nghiệm": { bg: "#fdf4ff", text: "#a21caf", border: "#f5d0fe" },
+  "Toán": { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" },
+  "Ngữ văn": { bg: "#faf5ff", text: "#7e22ce", border: "#e9d5ff" },
+  "Ngoại ngữ": { bg: "#f0fdfa", text: "#0f766e", border: "#99f6e4" },
+  "Hóa học": { bg: "#fdf2f8", text: "#be185d", border: "#fbcfe8" },
+  "Sinh học": { bg: "#f0fdf4", text: "#15803d", border: "#bbf7d0" },
+  "Lịch sử": { bg: "#fffbeb", text: "#b45309", border: "#fde68a" },
+  "Địa lý": { bg: "#f8fafc", text: "#334155", border: "#cbd5e1" },
+  "Tin học": { bg: "#e0f2fe", text: "#0369a1", border: "#bae6fd" },
+  "HĐTN": { bg: "#fdf4ff", text: "#a21caf", border: "#f5d0fe" },
+  "HĐTN2": { bg: "#fdf4ff", text: "#a21caf", border: "#f5d0fe" },
+  "HĐTN3": { bg: "#fdf4ff", text: "#a21caf", border: "#f5d0fe" },
 };
 
 function getSubjectColor(monHoc: string) {
@@ -106,12 +90,11 @@ function getSubjectColor(monHoc: string) {
 }
 
 const DAYS = [
-  { thu: 2, label: "Thứ Hai" },
-  { thu: 3, label: "Thứ Ba" },
-  { thu: 4, label: "Thứ Tư" },
-  { thu: 5, label: "Thứ Năm" },
-  { thu: 6, label: "Thứ Sáu" },
-  { thu: 7, label: "Thứ Bảy" },
+  { thu: 2, label: "Thứ 2" },
+  { thu: 3, label: "Thứ 3" },
+  { thu: 4, label: "Thứ 4" },
+  { thu: 5, label: "Thứ 5" },
+  { thu: 6, label: "Thứ 6" },
 ];
 
 export default function AdminThoiKhoaBieuPage() {
@@ -120,35 +103,30 @@ export default function AdminThoiKhoaBieuPage() {
   const { data: session } = useSession();
 
   const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
-  const assignedLop = (session as { assignedLop?: string })?.assignedLop || "11AT3";
+  const assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
 
   const [timetable, setTimetable] = useState<TimetableItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLop, setSelectedLop] = useState(() => {
     if (!isSuperAdmin && assignedLop) return assignedLop;
-    return urlLop || "11AT3";
+    return urlLop || "12T2";
   });
   const [selectedHocKy, setSelectedHocKy] = useState("HK1");
-  const [filterBuoi, setFilterBuoi] = useState<"ALL" | "Sáng" | "Chiều">("ALL");
-  const [classList, setClassList] = useState<string[]>(["11AT3", "12T2"]);
+  const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<PeriodForm>({
     thu: 2,
     tiet: 1,
-    buoi: "Sáng",
-    thoiGian: DEFAULT_TIMES[1],
-    monHoc: "Toán Học",
-    giaoVien: "Thầy Tuấn",
-    phongHoc: "Phòng 201",
-    lop: "11AT3",
+    monHoc: "Chào Cờ",
+    giaoVien: "",
+    lop: "12T2",
     hocKy: "HK1",
     ghiChu: "",
   });
   const [saving, setSaving] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -198,47 +176,23 @@ export default function AdminThoiKhoaBieuPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLop, selectedHocKy]);
 
-  function openAddPeriod(thu: number, tiet: number) {
-    const buoi = tiet <= 5 ? "Sáng" : "Chiều";
+  function openEditCell(thu: number, tiet: number) {
+    const existing = timetable.find((t) => t.thu === thu && t.tiet === tiet);
     setForm({
+      id: existing?.id,
       thu,
       tiet,
-      buoi,
-      thoiGian: DEFAULT_TIMES[tiet] || "07:15 - 08:00",
-      monHoc: "Toán Học",
-      giaoVien: "",
-      phongHoc: "Phòng 201",
+      monHoc: existing?.monHoc || (thu === 2 && tiet === 1 ? "Chào Cờ" : "Toán"),
+      giaoVien: existing?.giaoVien || "",
       lop: selectedLop,
       hocKy: selectedHocKy,
-      ghiChu: "",
-    });
-    setModalOpen(true);
-  }
-
-  function openEditPeriod(item: TimetableItem) {
-    setForm({
-      id: item.id,
-      thu: item.thu,
-      tiet: item.tiet,
-      buoi: item.buoi,
-      thoiGian: item.thoiGian || DEFAULT_TIMES[item.tiet] || "",
-      monHoc: item.monHoc,
-      giaoVien: item.giaoVien || "",
-      phongHoc: item.phongHoc || "",
-      lop: item.lop,
-      hocKy: item.hocKy,
-      ghiChu: item.ghiChu || "",
+      ghiChu: existing?.ghiChu || "",
     });
     setModalOpen(true);
   }
 
   async function handleSavePeriod() {
-    if (!form.monHoc.trim()) {
-      showToast("Vui lòng nhập tên môn học", "error");
-      return;
-    }
     setSaving(true);
-
     try {
       const res = await fetch("/api/timetable", {
         method: "POST",
@@ -246,11 +200,8 @@ export default function AdminThoiKhoaBieuPage() {
         body: JSON.stringify({
           thu: form.thu,
           tiet: form.tiet,
-          buoi: form.buoi,
-          thoiGian: form.thoiGian,
-          monHoc: form.monHoc.trim(),
+          monHoc: form.monHoc,
           giaoVien: form.giaoVien.trim() || null,
-          phongHoc: form.phongHoc.trim() || null,
           lop: selectedLop,
           hocKy: selectedHocKy,
           ghiChu: form.ghiChu.trim() || null,
@@ -258,11 +209,11 @@ export default function AdminThoiKhoaBieuPage() {
       });
 
       if (res.ok) {
-        showToast("Đã lưu tiết học thành công");
+        showToast("Đã lưu thời khóa biểu");
         setModalOpen(false);
         loadTimetable();
       } else {
-        showToast("Lỗi khi lưu tiết học", "error");
+        showToast("Lỗi khi lưu", "error");
       }
     } catch {
       showToast("Lỗi kết nối máy chủ", "error");
@@ -271,47 +222,29 @@ export default function AdminThoiKhoaBieuPage() {
     }
   }
 
-  async function handleDeletePeriod() {
-    if (!deleteId) return;
-    setDeleting(true);
+  async function handleResetDefault() {
+    if (!confirm(`Bạn có chắc muốn đặt lại Thời khóa biểu Buổi Tối chuẩn cho Lớp ${selectedLop}?`)) return;
+    setResetting(true);
     try {
-      const res = await fetch(`/api/timetable/${deleteId}`, { method: "DELETE" });
+      const res = await fetch(`/api/timetable/reset?lop=${selectedLop}&hocKy=${selectedHocKy}`, { method: "POST" });
       if (res.ok) {
-        showToast("Đã xóa tiết học");
-        setDeleteId(null);
-        setModalOpen(false);
+        showToast("Đã khôi phục Thời khóa biểu Buổi Tối chuẩn");
         loadTimetable();
       } else {
-        showToast("Lỗi khi xóa tiết học", "error");
+        showToast("Lỗi khi khôi phục", "error");
       }
     } catch {
       showToast("Lỗi kết nối máy chủ", "error");
     } finally {
-      setDeleting(false);
+      setResetting(false);
     }
   }
 
-  // Find item by day & period
   function getPeriodItem(thu: number, tiet: number): TimetableItem | undefined {
     return timetable.find((t) => t.thu === thu && t.tiet === tiet);
   }
 
-  // Periods range
-  const morningPeriods = [1, 2, 3, 4, 5];
-  const afternoonPeriods = [6, 7, 8, 9, 10];
-
-  const displayPeriods =
-    filterBuoi === "Sáng"
-      ? morningPeriods
-      : filterBuoi === "Chiều"
-      ? afternoonPeriods
-      : [...morningPeriods, ...afternoonPeriods];
-
-  // Stats
-  const totalPeriods = timetable.length;
-  const morningCount = timetable.filter((t) => t.tiet <= 5).length;
-  const afternoonCount = timetable.filter((t) => t.tiet > 5).length;
-  const uniqueSubjects = new Set(timetable.map((t) => t.monHoc)).size;
+  const periodsList = [1, 2, 3, 4, 5];
 
   return (
     <div className="animate-fade-in">
@@ -333,7 +266,6 @@ export default function AdminThoiKhoaBieuPage() {
             fontWeight: 600,
             fontSize: "0.875rem",
             boxShadow: "var(--shadow-lg)",
-            animation: "fadeIn 0.2s ease",
           }}
         >
           {toast.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
@@ -353,83 +285,68 @@ export default function AdminThoiKhoaBieuPage() {
         }}
       >
         <div>
-          <h1 style={{ fontSize: "1.4rem", marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
-            <CalendarDays size={26} color="var(--primary)" />
-            Thời khóa biểu {selectedLop ? `— Lớp ${selectedLop}` : ""} ({selectedHocKy})
-          </h1>
-          <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
-            Quản lý kế hoạch học tập, thời gian biểu và phòng học từng tiết trong tuần
-          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+              }}
+            >
+              <Moon size={20} />
+            </div>
+            <div>
+              <h1 style={{ fontSize: "1.35rem", fontWeight: 800, margin: 0 }}>
+                Thời Khóa Biểu Buổi Tối — Lớp {selectedLop}
+              </h1>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: 0 }}>
+                Khung giờ học Buổi Tối: <strong>18h00 - 21h35</strong> (Thứ 2 đến Thứ 6)
+              </p>
+            </div>
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => window.print()}>
-            <Printer size={14} /> In Thời khóa biểu
-          </button>
           <button
-            className="btn btn-primary btn-sm"
-            onClick={() => openAddPeriod(2, 1)}
+            className="btn btn-secondary btn-sm"
+            onClick={handleResetDefault}
+            disabled={resetting}
+            title="Khôi phục thời khóa biểu mẫu theo đúng kế hoạch"
           >
-            <Plus size={14} /> Thêm tiết học
+            <RotateCcw size={14} /> {resetting ? "Đang nạp..." : "Nạp TKB Chuẩn Mẫu"}
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={() => window.print()}>
+            <Printer size={14} /> In Thời Khóa Biểu
           </button>
         </div>
       </div>
 
-      {/* KPI Metrics */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 14, marginBottom: 20 }}>
-        <div className="card" style={{ padding: "14px 18px", borderLeft: "4px solid var(--primary)" }}>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
-            Tổng số tiết / tuần
-          </div>
-          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--primary)", marginTop: 2 }}>
-            {totalPeriods}
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-            {uniqueSubjects} môn học khác nhau
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: "14px 18px", borderLeft: "4px solid #f59e0b" }}>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
-            Tiết buổi Sáng (T1 - T5)
-          </div>
-          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#d97706", marginTop: 2 }}>
-            {morningCount}
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-            Chính khóa buổi sáng
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: "14px 18px", borderLeft: "4px solid #8b5cf6" }}>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
-            Tiết buổi Chiều (T6 - T10)
-          </div>
-          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#7c3aed", marginTop: 2 }}>
-            {afternoonCount}
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-            Tự chọn & Bồi dưỡng
-          </div>
-        </div>
-      </div>
-
-      {/* Toolbar Filters */}
+      {/* Toolbar Controls */}
       <div
         style={{
           display: "flex",
           gap: 12,
-          marginBottom: 18,
-          flexWrap: "wrap",
+          marginBottom: 16,
           alignItems: "center",
-          justifyContent: "space-between",
+          flexWrap: "wrap",
+          background: "white",
+          padding: "12px 18px",
+          borderRadius: 14,
+          border: "1px solid var(--border)",
         }}
       >
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          {/* Class Select */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+            Chọn Lớp:
+          </span>
           <select
             className="select"
-            style={{ fontWeight: 700, color: "var(--primary)", minWidth: 140 }}
+            style={{ fontWeight: 800, color: "var(--primary)", minWidth: 120 }}
             value={selectedLop}
             onChange={(e) => setSelectedLop(e.target.value)}
           >
@@ -439,11 +356,15 @@ export default function AdminThoiKhoaBieuPage() {
               </option>
             ))}
           </select>
+        </div>
 
-          {/* Semester Select */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+            Học kỳ:
+          </span>
           <select
             className="select"
-            style={{ minWidth: 130 }}
+            style={{ minWidth: 120 }}
             value={selectedHocKy}
             onChange={(e) => setSelectedHocKy(e.target.value)}
           >
@@ -452,73 +373,33 @@ export default function AdminThoiKhoaBieuPage() {
           </select>
         </div>
 
-        {/* Buổi Filter Buttons */}
-        <div style={{ display: "flex", background: "var(--bg-muted)", padding: 3, borderRadius: 10, border: "1px solid var(--border)" }}>
-          <button
-            onClick={() => setFilterBuoi("ALL")}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 8,
-              border: "none",
-              background: filterBuoi === "ALL" ? "white" : "transparent",
-              color: filterBuoi === "ALL" ? "var(--primary)" : "var(--text-secondary)",
-              fontWeight: 700,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-              boxShadow: filterBuoi === "ALL" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-            }}
-          >
-            Tất cả buổi
-          </button>
-          <button
-            onClick={() => setFilterBuoi("Sáng")}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 8,
-              border: "none",
-              background: filterBuoi === "Sáng" ? "white" : "transparent",
-              color: filterBuoi === "Sáng" ? "#d97706" : "var(--text-secondary)",
-              fontWeight: 700,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              boxShadow: filterBuoi === "Sáng" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-            }}
-          >
-            <Sun size={13} /> Buổi Sáng
-          </button>
-          <button
-            onClick={() => setFilterBuoi("Chiều")}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 8,
-              border: "none",
-              background: filterBuoi === "Chiều" ? "white" : "transparent",
-              color: filterBuoi === "Chiều" ? "#7c3aed" : "var(--text-secondary)",
-              fontWeight: 700,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              boxShadow: filterBuoi === "Chiều" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-            }}
-          >
-            <Moon size={13} /> Buổi Chiều
-          </button>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <span className="badge" style={{ background: "#f5f3ff", color: "#6d28d9", border: "1px solid #ddd6fe", fontWeight: 700 }}>
+            🌙 Duy nhất Buổi Tối (5 Tiết)
+          </span>
+          <span className="badge" style={{ background: "#ecfdf5", color: "#047857", border: "1px solid #a7f3d0", fontWeight: 700 }}>
+            ✨ 9 Môn chuẩn + Chào cờ
+          </span>
         </div>
       </div>
 
-      {/* Timetable Weekly Grid */}
-      <div className="card" style={{ overflow: "hidden", borderRadius: 16, border: "1px solid var(--border)" }}>
+      {/* Main Timetable Table (Pixel Perfect match to User's Excel) */}
+      <div className="card" style={{ overflow: "hidden", borderRadius: 16, border: "2px solid #06b6d4" }}>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
             <thead>
-              <tr style={{ background: "#f8fafc", borderBottom: "2px solid var(--border)" }}>
-                <th style={{ width: 100, padding: "14px 12px", textAlign: "center", fontSize: "0.825rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
-                  Tiết
+              <tr style={{ background: "#06b6d4", color: "white" }}>
+                <th
+                  style={{
+                    width: 140,
+                    padding: "14px 12px",
+                    textAlign: "center",
+                    fontSize: "0.9rem",
+                    fontWeight: 800,
+                    borderRight: "1px solid rgba(255,255,255,0.3)",
+                  }}
+                >
+                  Tiết / Giờ học
                 </th>
                 {DAYS.map((d) => (
                   <th
@@ -526,11 +407,10 @@ export default function AdminThoiKhoaBieuPage() {
                     style={{
                       padding: "14px 12px",
                       textAlign: "center",
-                      fontSize: "0.95rem",
+                      fontSize: "1.05rem",
                       fontWeight: 800,
-                      color: "#1e293b",
-                      borderLeft: "1px solid var(--border)",
-                      width: "15%",
+                      borderRight: "1px solid rgba(255,255,255,0.3)",
+                      width: "17%",
                     }}
                   >
                     {d.label}
@@ -539,143 +419,140 @@ export default function AdminThoiKhoaBieuPage() {
               </tr>
             </thead>
             <tbody>
-              {displayPeriods.map((tietNum) => {
-                const isFirstAfternoon = tietNum === 6;
+              {periodsList.map((tietNum) => {
+                const isBreakTime = tietNum === 3;
+                const timeInfo = EVENING_TIMES[tietNum];
+
                 return (
                   <React.Fragment key={tietNum}>
-                    {isFirstAfternoon && filterBuoi === "ALL" && (
-                      <tr style={{ background: "#f1f5f9" }}>
+                    {/* Giờ giải lao sau Tiết 2 */}
+                    {isBreakTime && (
+                      <tr style={{ background: "#fef3c7", borderBottom: "1px solid #fde68a" }}>
                         <td
-                          colSpan={7}
+                          colSpan={6}
                           style={{
                             padding: "8px 16px",
                             textAlign: "center",
-                            fontSize: "0.8rem",
+                            fontSize: "0.825rem",
                             fontWeight: 800,
-                            color: "#64748b",
-                            letterSpacing: "0.05em",
-                            textTransform: "uppercase",
+                            color: "#b45309",
                           }}
                         >
-                          ☕ NGHỈ TRƯA — BẮT ĐẦU BUỔI CHIỀU
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                            <Coffee size={15} />
+                            <span>GIẢI LAO: 19h20 - 19h35 (15 phút)</span>
+                          </div>
                         </td>
                       </tr>
                     )}
+
                     <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                      {/* Tiết Header Column */}
+                      {/* Tiết & Giờ học Column */}
                       <td
                         style={{
                           padding: "12px 10px",
                           textAlign: "center",
-                          background: "#fafbfc",
-                          borderRight: "1px solid var(--border)",
+                          background: "#06b6d415",
+                          borderRight: "2px solid #06b6d4",
+                          verticalAlign: "middle",
                         }}
                       >
-                        <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--primary)" }}>
-                          Tiết {tietNum}
+                        <div style={{ fontWeight: 900, fontSize: "1.1rem", color: "#0891b2" }}>
+                          {tietNum}
                         </div>
-                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
-                          {DEFAULT_TIMES[tietNum] || ""}
+                        <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", marginTop: 2 }}>
+                          {timeInfo.time}
+                        </div>
+                        <div style={{ fontSize: "0.68rem", color: "#64748b" }}>
+                          ({timeInfo.duration})
                         </div>
                       </td>
 
-                      {/* 6 Days Columns */}
+                      {/* 5 Day Columns (Thứ 2 -> Thứ 6) */}
                       {DAYS.map((d) => {
                         const item = getPeriodItem(d.thu, tietNum);
-                        if (!item) {
+                        const isMondayFlag = d.thu === 2 && tietNum === 1;
+
+                        if (!item || !item.monHoc) {
                           return (
                             <td
                               key={d.thu}
+                              onClick={() => openEditCell(d.thu, tietNum)}
                               style={{
                                 padding: "8px",
-                                borderLeft: "1px solid var(--border)",
-                                verticalAlign: "top",
-                                background: "#ffffff",
+                                borderRight: "1px solid var(--border)",
+                                textAlign: "center",
+                                verticalAlign: "middle",
+                                cursor: "pointer",
+                                background: "#fafafa",
+                                transition: "background 0.15s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = "#f1f5f9";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "#fafafa";
                               }}
                             >
-                              <button
-                                onClick={() => openAddPeriod(d.thu, tietNum)}
-                                style={{
-                                  width: "100%",
-                                  height: 70,
-                                  border: "1px dashed var(--border)",
-                                  background: "transparent",
-                                  borderRadius: 10,
-                                  color: "var(--text-muted)",
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: "0.75rem",
-                                  fontWeight: 600,
-                                  transition: "all 0.15s ease",
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.borderColor = "var(--primary)";
-                                  e.currentTarget.style.color = "var(--primary)";
-                                  e.currentTarget.style.background = "var(--primary-light)";
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.borderColor = "var(--border)";
-                                  e.currentTarget.style.color = "var(--text-muted)";
-                                  e.currentTarget.style.background = "transparent";
-                                }}
-                              >
-                                <Plus size={13} style={{ marginRight: 4 }} /> Thêm
-                              </button>
+                              <span style={{ color: "#cbd5e1", fontSize: "0.85rem", fontWeight: 600 }}>
+                                + Chọn môn
+                              </span>
                             </td>
                           );
                         }
 
                         const color = getSubjectColor(item.monHoc);
+
                         return (
                           <td
                             key={d.thu}
+                            onClick={() => openEditCell(d.thu, tietNum)}
                             style={{
                               padding: "6px 8px",
-                              borderLeft: "1px solid var(--border)",
-                              verticalAlign: "top",
+                              borderRight: "1px solid var(--border)",
+                              verticalAlign: "middle",
+                              cursor: "pointer",
                             }}
                           >
                             <div
-                              onClick={() => openEditPeriod(item)}
                               style={{
                                 background: color.bg,
                                 border: `1px solid ${color.border}`,
                                 borderRadius: 10,
-                                padding: "8px 10px",
-                                cursor: "pointer",
-                                transition: "all 0.15s ease",
-                                position: "relative",
-                                minHeight: 70,
+                                padding: "10px 12px",
+                                minHeight: 62,
                                 display: "flex",
                                 flexDirection: "column",
-                                justifyContent: "space-between",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                textAlign: "center",
+                                transition: "all 0.15s ease",
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = "translateY(-2px)";
-                                e.currentTarget.style.boxShadow = "0 4px 10px rgba(0,0,0,0.08)";
+                                e.currentTarget.style.transform = "scale(1.02)";
+                                e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.06)";
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.transform = "none";
                                 e.currentTarget.style.boxShadow = "none";
                               }}
                             >
-                              <div>
-                                <div style={{ fontWeight: 800, fontSize: "0.875rem", color: color.text, marginBottom: 2 }}>
-                                  {item.monHoc}
-                                </div>
-                                {item.giaoVien && (
-                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", fontWeight: 600 }}>
-                                    🧑‍🏫 {item.giaoVien}
-                                  </div>
-                                )}
+                              <div
+                                style={{
+                                  fontWeight: 800,
+                                  fontSize: "0.98rem",
+                                  color: color.text,
+                                  lineHeight: 1.2,
+                                }}
+                              >
+                                {item.monHoc}
                               </div>
 
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                                <span>{item.phongHoc || "P.201"}</span>
-                                <Edit2 size={11} color={color.text} style={{ opacity: 0.7 }} />
-                              </div>
+                              {item.giaoVien && (
+                                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 3, fontWeight: 600 }}>
+                                  🧑‍🏫 {item.giaoVien}
+                                </div>
+                              )}
                             </div>
                           </td>
                         );
@@ -689,7 +566,7 @@ export default function AdminThoiKhoaBieuPage() {
         </div>
       </div>
 
-      {/* ====== ADD / EDIT PERIOD MODAL ====== */}
+      {/* ====== QUICK EDIT / SELECT SUBJECT MODAL ====== */}
       {modalOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 99999 }}>
           <div
@@ -705,17 +582,21 @@ export default function AdminThoiKhoaBieuPage() {
               background: "white",
               borderRadius: 18,
               boxShadow: "var(--shadow-xl)",
-              padding: "26px 30px",
+              padding: "26px 28px",
               width: "100%",
-              maxWidth: 500,
+              maxWidth: 440,
               animation: "fadeIn 0.15s ease",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
-                <CalendarDays size={20} color="var(--primary)" />
-                {form.id ? "Chỉnh sửa tiết học" : "Thêm tiết học mới"}
-              </h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 10 }}>
+              <div>
+                <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, color: "var(--primary)" }}>
+                  Thứ {form.thu} — Tiết {form.tiet}
+                </h3>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", margin: 0 }}>
+                  Khung giờ: {EVENING_TIMES[form.tiet]?.time} (Buổi Tối)
+                </p>
+              </div>
               <button
                 style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
                 onClick={() => setModalOpen(false)}
@@ -725,184 +606,55 @@ export default function AdminThoiKhoaBieuPage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Row 1: Thứ & Tiết */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label className="label">Thứ trong tuần *</label>
-                  <select
-                    className="select"
-                    value={form.thu}
-                    onChange={(e) => setForm((f) => ({ ...f, thu: Number(e.target.value) }))}
-                  >
-                    {DAYS.map((d) => (
-                      <option key={d.thu} value={d.thu}>
-                        {d.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="label">Tiết học (1-10) *</label>
-                  <select
-                    className="select"
-                    value={form.tiet}
-                    onChange={(e) => {
-                      const t = Number(e.target.value);
-                      setForm((f) => ({
-                        ...f,
-                        tiet: t,
-                        buoi: t <= 5 ? "Sáng" : "Chiều",
-                        thoiGian: DEFAULT_TIMES[t] || f.thoiGian,
-                      }));
-                    }}
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((t) => (
-                      <option key={t} value={t}>
-                        Tiết {t} ({t <= 5 ? "Sáng" : "Chiều"})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Row 2: Môn học */}
+              {/* Drop list môn học */}
               <div>
-                <label className="label">Môn học *</label>
-                <input
-                  className="input"
-                  list="subjects-datalist"
+                <label className="label" style={{ fontWeight: 800 }}>
+                  Chọn Môn Học *
+                </label>
+                <select
+                  className="select"
+                  style={{ fontWeight: 700, fontSize: "1rem", padding: "10px 14px" }}
                   value={form.monHoc}
                   onChange={(e) => setForm((f) => ({ ...f, monHoc: e.target.value }))}
-                  placeholder="Chọn hoặc nhập môn học..."
-                />
-                <datalist id="subjects-datalist">
-                  {POPULAR_SUBJECTS.map((s) => (
-                    <option key={s} value={s} />
+                >
+                  <option value="NONE">-- Trống (Không có tiết học) --</option>
+                  {SUBJECT_OPTIONS.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
                   ))}
-                </datalist>
+                </select>
               </div>
 
-              {/* Row 3: Giáo viên & Phòng học */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label className="label">Giáo viên phụ trách</label>
-                  <input
-                    className="input"
-                    value={form.giaoVien}
-                    onChange={(e) => setForm((f) => ({ ...f, giaoVien: e.target.value }))}
-                    placeholder="VD: Thầy Tuấn, Cô Lan..."
-                  />
-                </div>
-                <div>
-                  <label className="label">Phòng học</label>
-                  <input
-                    className="input"
-                    value={form.phongHoc}
-                    onChange={(e) => setForm((f) => ({ ...f, phongHoc: e.target.value }))}
-                    placeholder="VD: Phòng 201..."
-                  />
-                </div>
-              </div>
-
-              {/* Row 4: Khung giờ */}
+              {/* Giáo viên */}
               <div>
-                <label className="label">Khung thời gian</label>
+                <label className="label">Giáo viên phụ trách (tùy chọn)</label>
                 <input
                   className="input"
-                  value={form.thoiGian}
-                  onChange={(e) => setForm((f) => ({ ...f, thoiGian: e.target.value }))}
-                  placeholder="VD: 07:15 - 08:00"
+                  value={form.giaoVien}
+                  onChange={(e) => setForm((f) => ({ ...f, giaoVien: e.target.value }))}
+                  placeholder="VD: Thầy Tuấn, Cô Lan..."
                 />
               </div>
 
-              {/* Row 5: Ghi chú */}
+              {/* Ghi chú */}
               <div>
-                <label className="label">Ghi chú / Dặn dò học sinh</label>
+                <label className="label">Ghi chú dặn dò (tùy chọn)</label>
                 <input
                   className="input"
                   value={form.ghiChu}
                   onChange={(e) => setForm((f) => ({ ...f, ghiChu: e.target.value }))}
-                  placeholder="VD: Mang SGK tập 2, làm bài tập về nhà..."
+                  placeholder="VD: Mang đề cương, làm bài tập..."
                 />
               </div>
             </div>
 
             <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-              {form.id && (
-                <button
-                  type="button"
-                  className="btn"
-                  style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5" }}
-                  onClick={() => setDeleteId(form.id!)}
-                  disabled={deleting}
-                >
-                  <Trash2 size={14} /> Xóa
-                </button>
-              )}
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setModalOpen(false)}>
                 Hủy
               </button>
               <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSavePeriod} disabled={saving}>
                 {saving ? "Đang lưu..." : <><Save size={14} /> Lưu tiết học</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ====== DELETE CONFIRM MODAL ====== */}
-      {deleteId !== null && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100000 }}>
-          <div
-            style={{ position: "absolute", inset: 0, background: "rgba(15, 23, 42, 0.5)" }}
-            onClick={() => setDeleteId(null)}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%,-50%)",
-              background: "white",
-              borderRadius: 14,
-              boxShadow: "var(--shadow-xl)",
-              padding: "24px",
-              width: "100%",
-              maxWidth: 360,
-              animation: "fadeIn 0.15s ease",
-            }}
-          >
-            <div style={{ textAlign: "center", marginBottom: 16 }}>
-              <div
-                style={{
-                  width: 46,
-                  height: 46,
-                  background: "#fee2e2",
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 10px",
-                }}
-              >
-                <Trash2 size={22} color="#dc2626" />
-              </div>
-              <h4 style={{ margin: 0, fontSize: "1.1rem" }}>Xóa tiết học này?</h4>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 4 }}>
-                Tiết học sẽ được xóa khỏi thời khóa biểu của lớp.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setDeleteId(null)}>
-                Hủy
-              </button>
-              <button
-                className="btn"
-                style={{ flex: 1, background: "#dc2626", color: "white", borderColor: "#dc2626" }}
-                onClick={handleDeletePeriod}
-                disabled={deleting}
-              >
-                {deleting ? "Đang xóa..." : "Xóa"}
               </button>
             </div>
           </div>

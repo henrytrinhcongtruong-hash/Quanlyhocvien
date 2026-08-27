@@ -2,68 +2,70 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const DEFAULT_TIMES: Record<number, string> = {
-  1: "07:15 - 08:00",
-  2: "08:05 - 08:50",
-  3: "09:05 - 09:50",
-  4: "09:55 - 10:40",
-  5: "10:45 - 11:30",
-  6: "13:30 - 14:15",
-  7: "14:20 - 15:05",
-  8: "15:15 - 16:00",
-  9: "16:05 - 16:50",
-  10: "16:55 - 17:40",
+// Khung giờ học Buổi Tối chuẩn Trung tâm GDNN - GDTX TP. Thủ Đức (Bắt đầu 18:00)
+export const EVENING_TIMES: Record<number, string> = {
+  1: "18:00 - 18:40",
+  2: "18:40 - 19:20",
+  3: "19:35 - 20:15",
+  4: "20:15 - 20:55",
+  5: "20:55 - 21:35",
 };
 
-// Mẫu Thời khóa biểu chuẩn trường THPT
-const SAMPLE_TIMETABLE_11AT3 = [
+export const STANDARD_SUBJECTS = [
+  "Chào Cờ",
+  "Toán",
+  "Ngữ văn",
+  "Ngoại ngữ",
+  "Hóa học",
+  "Sinh học",
+  "Lịch sử",
+  "Địa lý",
+  "Tin học",
+  "HĐTN",
+  "HĐTN2",
+  "HĐTN3",
+];
+
+// Thời khóa biểu chuẩn Buổi Tối chính xác 100% theo kế hoạch của lớp
+const DEFAULT_TIMETABLE_EVENING = [
   // Thứ 2
-  { thu: 2, tiet: 1, buoi: "Sáng", monHoc: "Chào Cờ", giaoVien: "BGH / GVCN", phongHoc: "Sân trường", ghiChu: "Tập trung đúng 07:00" },
-  { thu: 2, tiet: 2, buoi: "Sáng", monHoc: "Toán Học", giaoVien: "Thầy Tuấn", phongHoc: "Phòng 201", ghiChu: "Hàm số lượng giác" },
-  { thu: 2, tiet: 3, buoi: "Sáng", monHoc: "Toán Học", giaoVien: "Thầy Tuấn", phongHoc: "Phòng 201", ghiChu: "Luyện tập bài tập" },
-  { thu: 2, tiet: 4, buoi: "Sáng", monHoc: "Vật Lý", giaoVien: "Thầy Hùng", phongHoc: "Phòng 201", ghiChu: "Dao động điều hòa" },
-  { thu: 2, tiet: 5, buoi: "Sáng", monHoc: "Tiếng Anh", giaoVien: "Cô Mai", phongHoc: "Phòng 201", ghiChu: "Unit 1: Generation Gap" },
+  { thu: 2, tiet: 1, monHoc: "Chào Cờ", thoiGian: "18:00 - 18:40", ghiChu: "Chào cờ đầu tuần & HĐTN2" },
+  { thu: 2, tiet: 2, monHoc: "Hóa học", thoiGian: "18:40 - 19:20", ghiChu: "" },
+  { thu: 2, tiet: 3, monHoc: "Hóa học", thoiGian: "19:35 - 20:15", ghiChu: "" },
+  { thu: 2, tiet: 4, monHoc: "HĐTN3", thoiGian: "20:15 - 20:55", ghiChu: "Hoạt động trải nghiệm" },
+  { thu: 2, tiet: 5, monHoc: "Lịch sử", thoiGian: "20:55 - 21:35", ghiChu: "" },
 
   // Thứ 3
-  { thu: 3, tiet: 1, buoi: "Sáng", monHoc: "Ngữ Văn", giaoVien: "Cô Lan", phongHoc: "Phòng 201", ghiChu: "Đọc hiểu văn bản" },
-  { thu: 3, tiet: 2, buoi: "Sáng", monHoc: "Ngữ Văn", giaoVien: "Cô Lan", phongHoc: "Phòng 201", ghiChu: "Viết đoạn văn nghị luận" },
-  { thu: 3, tiet: 3, buoi: "Sáng", monHoc: "Hóa Học", giaoVien: "Cô Thảo", phongHoc: "Phòng 201", ghiChu: "Cân bằng hóa học" },
-  { thu: 3, tiet: 4, buoi: "Sáng", monHoc: "Sinh Học", giaoVien: "Thầy Long", phongHoc: "Phòng 201", ghiChu: "Trao đổi chất ở tế bào" },
-  { thu: 3, tiet: 5, buoi: "Sáng", monHoc: "Lịch Sử", giaoVien: "Thầy Đức", phongHoc: "Phòng 201", ghiChu: "Bài 2: Cách mạng tư sản" },
+  { thu: 3, tiet: 1, monHoc: "Ngữ văn", thoiGian: "18:00 - 18:40", ghiChu: "" },
+  { thu: 3, tiet: 2, monHoc: "Ngữ văn", thoiGian: "18:40 - 19:20", ghiChu: "" },
+  { thu: 3, tiet: 3, monHoc: "Tin học", thoiGian: "19:35 - 20:15", ghiChu: "" },
+  { thu: 3, tiet: 4, monHoc: "Toán", thoiGian: "20:15 - 20:55", ghiChu: "" },
+  { thu: 3, tiet: 5, monHoc: "Toán", thoiGian: "20:55 - 21:35", ghiChu: "" },
 
   // Thứ 4
-  { thu: 4, tiet: 1, buoi: "Sáng", monHoc: "Toán Học", giaoVien: "Thầy Tuấn", phongHoc: "Phòng 201", ghiChu: "Hình học không gian" },
-  { thu: 4, tiet: 2, buoi: "Sáng", monHoc: "Tiếng Anh", giaoVien: "Cô Mai", phongHoc: "Phòng 201", ghiChu: "Grammar & Speaking" },
-  { thu: 4, tiet: 3, buoi: "Sáng", monHoc: "Tiếng Anh", giaoVien: "Cô Mai", phongHoc: "Phòng 201", ghiChu: "Listening Practice" },
-  { thu: 4, tiet: 4, buoi: "Sáng", monHoc: "Tin Học", giaoVien: "Thầy Huy", phongHoc: "Phòng Máy 1", ghiChu: "Lập trình Python" },
-  { thu: 4, tiet: 5, buoi: "Sáng", monHoc: "Tin Học", giaoVien: "Thầy Huy", phongHoc: "Phòng Máy 1", ghiChu: "Thực hành cấu trúc rẽ nhánh" },
+  { thu: 4, tiet: 1, monHoc: "Sinh học", thoiGian: "18:00 - 18:40", ghiChu: "" },
+  { thu: 4, tiet: 2, monHoc: "Sinh học", thoiGian: "18:40 - 19:20", ghiChu: "" },
+  { thu: 4, tiet: 3, monHoc: "Tin học", thoiGian: "19:35 - 20:15", ghiChu: "" },
+  { thu: 4, tiet: 4, monHoc: "Ngoại ngữ", thoiGian: "20:15 - 20:55", ghiChu: "" },
+  { thu: 4, tiet: 5, monHoc: "Ngoại ngữ", thoiGian: "20:55 - 21:35", ghiChu: "" },
 
   // Thứ 5
-  { thu: 5, tiet: 1, buoi: "Sáng", monHoc: "Vật Lý", giaoVien: "Thầy Hùng", phongHoc: "Phòng 201", ghiChu: "Thực hành đo chu kỳ" },
-  { thu: 5, tiet: 2, buoi: "Sáng", monHoc: "Hóa Học", giaoVien: "Cô Thảo", phongHoc: "Phòng 201", ghiChu: "Dung dịch & pH" },
-  { thu: 5, tiet: 3, buoi: "Sáng", monHoc: "Địa Lý", giaoVien: "Cô Thu", phongHoc: "Phòng 201", ghiChu: "Bản đồ & Khí hậu" },
-  { thu: 5, tiet: 4, buoi: "Sáng", monHoc: "GDCD", giaoVien: "Cô Hạnh", phongHoc: "Phòng 201", ghiChu: "Pháp luật & Đời sống" },
-  { thu: 5, tiet: 5, buoi: "Sáng", monHoc: "Công Nghệ", giaoVien: "Thầy Sơn", phongHoc: "Phòng 201", ghiChu: "Bản vẽ kỹ thuật" },
+  { thu: 5, tiet: 1, monHoc: "Ngữ văn", thoiGian: "18:00 - 18:40", ghiChu: "" },
+  { thu: 5, tiet: 2, monHoc: "Ngữ văn", thoiGian: "18:40 - 19:20", ghiChu: "" },
+  { thu: 5, tiet: 3, monHoc: "Toán", thoiGian: "19:35 - 20:15", ghiChu: "" },
+  { thu: 5, tiet: 4, monHoc: "Toán", thoiGian: "20:15 - 20:55", ghiChu: "" },
 
   // Thứ 6
-  { thu: 6, tiet: 1, buoi: "Sáng", monHoc: "Toán Học", giaoVien: "Thầy Tuấn", phongHoc: "Phòng 201", ghiChu: "Ôn tập chuyên đề" },
-  { thu: 6, tiet: 2, buoi: "Sáng", monHoc: "Ngữ Văn", giaoVien: "Cô Lan", phongHoc: "Phòng 201", ghiChu: "Thực hành tiếng Việt" },
-  { thu: 6, tiet: 3, buoi: "Sáng", monHoc: "Vật Lý", giaoVien: "Thầy Hùng", phongHoc: "Phòng 201", ghiChu: "Bài tập sóng cơ" },
-  { thu: 6, tiet: 4, buoi: "Sáng", monHoc: "Thể Dục", giaoVien: "Thầy Cường", phongHoc: "Sân Thể Dục", ghiChu: "Chạy cự ly ngắn & Bóng chuyền" },
-  { thu: 6, tiet: 5, buoi: "Sáng", monHoc: "Thể Dục", giaoVien: "Thầy Cường", phongHoc: "Sân Thể Dục", ghiChu: "Mang giày & nước uống" },
-
-  // Thứ 7
-  { thu: 7, tiet: 1, buoi: "Sáng", monHoc: "Tiếng Anh", giaoVien: "Cô Mai", phongHoc: "Phòng 201", ghiChu: "Kiểm tra 15 phút từ vựng" },
-  { thu: 7, tiet: 2, buoi: "Sáng", monHoc: "Toán Học", giaoVien: "Thầy Tuấn", phongHoc: "Phòng 201", ghiChu: "Giải tích" },
-  { thu: 7, tiet: 3, buoi: "Sáng", monHoc: "Hóa Học", giaoVien: "Cô Thảo", phongHoc: "Phòng 201", ghiChu: "Phản ứng trao đổi ion" },
-  { thu: 7, tiet: 4, buoi: "Sáng", monHoc: "HĐ Trải Nghiệm", giaoVien: "GVCN", phongHoc: "Phòng 201", ghiChu: "Kỹ năng quản lý thời gian" },
-  { thu: 7, tiet: 5, buoi: "Sáng", monHoc: "Sinh Hoạt Lớp", giaoVien: "GVCN", phongHoc: "Phòng 201", ghiChu: "Tổng kết tuần & Phổ biến kế hoạch" },
+  { thu: 6, tiet: 1, monHoc: "Địa lý", thoiGian: "18:00 - 18:40", ghiChu: "" },
+  { thu: 6, tiet: 2, monHoc: "Địa lý", thoiGian: "18:40 - 19:20", ghiChu: "" },
+  { thu: 6, tiet: 3, monHoc: "Hóa học", thoiGian: "19:35 - 20:15", ghiChu: "" },
+  { thu: 6, tiet: 4, monHoc: "Ngoại ngữ", thoiGian: "20:15 - 20:55", ghiChu: "" },
 ];
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const lop = searchParams.get("lop") || "11AT3";
+    const lop = searchParams.get("lop") || "12T2";
     const hocKy = searchParams.get("hocKy") || "HK1";
 
     let timetable = await prisma.timetable.findMany({
@@ -71,14 +73,20 @@ export async function GET(req: NextRequest) {
       orderBy: [{ thu: "asc" }, { tiet: "asc" }],
     });
 
-    // Auto-seed sample timetable if database is empty for this class
+    // Auto-seed or reset with the exact evening schedule if empty or if requested
     if (timetable.length === 0) {
       await prisma.timetable.createMany({
-        data: SAMPLE_TIMETABLE_11AT3.map((item) => ({
-          ...item,
+        data: DEFAULT_TIMETABLE_EVENING.map((item) => ({
+          thu: item.thu,
+          tiet: item.tiet,
+          buoi: "Tối",
+          thoiGian: item.thoiGian,
+          monHoc: item.monHoc,
+          giaoVien: null,
+          phongHoc: null,
           lop,
           hocKy,
-          thoiGian: DEFAULT_TIMES[item.tiet] || "07:15 - 08:00",
+          ghiChu: item.ghiChu || null,
         })),
       });
 
@@ -98,16 +106,31 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { thu, tiet, buoi, thoiGian, monHoc, giaoVien, phongHoc, lop, hocKy, ghiChu } = body;
+    const { thu, tiet, monHoc, giaoVien, lop, hocKy, ghiChu } = body;
 
-    if (!thu || !tiet || !monHoc?.trim()) {
-      return NextResponse.json({ error: "Thiếu thông tin thứ, tiết hoặc môn học" }, { status: 400 });
+    if (!thu || !tiet) {
+      return NextResponse.json({ error: "Thiếu thông tin thứ hoặc tiết" }, { status: 400 });
     }
 
-    const currentLop = lop?.trim() || "11AT3";
+    const currentLop = lop?.trim() || "12T2";
     const currentHocKy = hocKy?.trim() || "HK1";
     const currentThu = Number(thu);
     const currentTiet = Number(tiet);
+
+    // If monHoc is empty or "NONE", delete this period
+    if (!monHoc || monHoc === "NONE" || monHoc.trim() === "") {
+      await prisma.timetable.deleteMany({
+        where: {
+          lop: currentLop,
+          hocKy: currentHocKy,
+          thu: currentThu,
+          tiet: currentTiet,
+        },
+      });
+      return NextResponse.json({ success: true, message: "Đã để trống tiết học" });
+    }
+
+    const thoiGian = EVENING_TIMES[currentTiet] || "18:00 - 18:40";
 
     const period = await prisma.timetable.upsert({
       where: {
@@ -119,11 +142,11 @@ export async function POST(req: NextRequest) {
         },
       },
       update: {
-        buoi: buoi || (currentTiet <= 5 ? "Sáng" : "Chiều"),
-        thoiGian: thoiGian?.trim() || DEFAULT_TIMES[currentTiet] || null,
+        buoi: "Tối",
+        thoiGian,
         monHoc: monHoc.trim(),
         giaoVien: giaoVien?.trim() || null,
-        phongHoc: phongHoc?.trim() || null,
+        phongHoc: null,
         ghiChu: ghiChu?.trim() || null,
       },
       create: {
@@ -131,11 +154,11 @@ export async function POST(req: NextRequest) {
         hocKy: currentHocKy,
         thu: currentThu,
         tiet: currentTiet,
-        buoi: buoi || (currentTiet <= 5 ? "Sáng" : "Chiều"),
-        thoiGian: thoiGian?.trim() || DEFAULT_TIMES[currentTiet] || null,
+        buoi: "Tối",
+        thoiGian,
         monHoc: monHoc.trim(),
         giaoVien: giaoVien?.trim() || null,
-        phongHoc: phongHoc?.trim() || null,
+        phongHoc: null,
         ghiChu: ghiChu?.trim() || null,
       },
     });

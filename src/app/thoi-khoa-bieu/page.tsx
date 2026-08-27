@@ -5,15 +5,11 @@ import PublicLayout from "@/components/layout/PublicLayout";
 import {
   CalendarDays,
   Clock,
-  MapPin,
   User,
   BookOpen,
   Sparkles,
-  Sun,
   Moon,
-  Calendar,
-  Layers,
-  Flame,
+  Coffee,
   CheckCircle2,
 } from "lucide-react";
 
@@ -25,41 +21,32 @@ interface TimetableItem {
   thoiGian: string | null;
   monHoc: string;
   giaoVien: string | null;
-  phongHoc: string | null;
   lop: string;
   hocKy: string;
   ghiChu: string | null;
 }
 
-const DEFAULT_TIMES: Record<number, string> = {
-  1: "07:15 - 08:00",
-  2: "08:05 - 08:50",
-  3: "09:05 - 09:50",
-  4: "09:55 - 10:40",
-  5: "10:45 - 11:30",
-  6: "13:30 - 14:15",
-  7: "14:20 - 15:05",
-  8: "15:15 - 16:00",
-  9: "16:05 - 16:50",
-  10: "16:55 - 17:40",
+const EVENING_TIMES: Record<number, { time: string; duration: string }> = {
+  1: { time: "18h00 - 18h40", duration: "40 phút" },
+  2: { time: "18h40 - 19h20", duration: "40 phút" },
+  3: { time: "19h35 - 20h15", duration: "40 phút" },
+  4: { time: "20h15 - 20h55", duration: "40 phút" },
+  5: { time: "20h55 - 21h35", duration: "40 phút" },
 };
 
 const SUBJECT_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   "Chào Cờ": { bg: "#fee2e2", text: "#dc2626", border: "#fca5a5" },
-  "Sinh Hoạt Lớp": { bg: "#fef3c7", text: "#b45309", border: "#fde68a" },
-  "Toán Học": { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" },
-  "Ngữ Văn": { bg: "#faf5ff", text: "#7e22ce", border: "#e9d5ff" },
-  "Tiếng Anh": { bg: "#f0fdfa", text: "#0f766e", border: "#99f6e4" },
-  "Vật Lý": { bg: "#fff7ed", text: "#c2410c", border: "#fed7aa" },
-  "Hóa Học": { bg: "#fdf2f8", text: "#be185d", border: "#fbcfe8" },
-  "Sinh Học": { bg: "#f0fdf4", text: "#15803d", border: "#bbf7d0" },
-  "Lịch Sử": { bg: "#fffbeb", text: "#b45309", border: "#fde68a" },
-  "Địa Lý": { bg: "#f8fafc", text: "#334155", border: "#cbd5e1" },
-  "Tin Học": { bg: "#e0f2fe", text: "#0369a1", border: "#bae6fd" },
-  "Thể Dục": { bg: "#ecfdf5", text: "#047857", border: "#a7f3d0" },
-  "GDCD": { bg: "#f5f3ff", text: "#6d28d9", border: "#ddd6fe" },
-  "Công Nghệ": { bg: "#fefce8", text: "#a16207", border: "#fef08a" },
-  "HĐ Trải Nghiệm": { bg: "#fdf4ff", text: "#a21caf", border: "#f5d0fe" },
+  "Toán": { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" },
+  "Ngữ văn": { bg: "#faf5ff", text: "#7e22ce", border: "#e9d5ff" },
+  "Ngoại ngữ": { bg: "#f0fdfa", text: "#0f766e", border: "#99f6e4" },
+  "Hóa học": { bg: "#fdf2f8", text: "#be185d", border: "#fbcfe8" },
+  "Sinh học": { bg: "#f0fdf4", text: "#15803d", border: "#bbf7d0" },
+  "Lịch sử": { bg: "#fffbeb", text: "#b45309", border: "#fde68a" },
+  "Địa lý": { bg: "#f8fafc", text: "#334155", border: "#cbd5e1" },
+  "Tin học": { bg: "#e0f2fe", text: "#0369a1", border: "#bae6fd" },
+  "HĐTN": { bg: "#fdf4ff", text: "#a21caf", border: "#f5d0fe" },
+  "HĐTN2": { bg: "#fdf4ff", text: "#a21caf", border: "#f5d0fe" },
+  "HĐTN3": { bg: "#fdf4ff", text: "#a21caf", border: "#f5d0fe" },
 };
 
 function getSubjectColor(monHoc: string) {
@@ -67,12 +54,11 @@ function getSubjectColor(monHoc: string) {
 }
 
 const DAYS = [
-  { thu: 2, label: "Thứ Hai" },
-  { thu: 3, label: "Thứ Ba" },
-  { thu: 4, label: "Thứ Tư" },
-  { thu: 5, label: "Thứ Năm" },
-  { thu: 6, label: "Thứ Sáu" },
-  { thu: 7, label: "Thứ Bảy" },
+  { thu: 2, label: "Thứ 2" },
+  { thu: 3, label: "Thứ 3" },
+  { thu: 4, label: "Thứ 4" },
+  { thu: 5, label: "Thứ 5" },
+  { thu: 6, label: "Thứ 6" },
 ];
 
 function PublicThoiKhoaBieuContent() {
@@ -81,21 +67,20 @@ function PublicThoiKhoaBieuContent() {
 
   const [activeLop, setActiveLop] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return urlLop || localStorage.getItem("admin_selected_class") || "11AT3";
+      return urlLop || localStorage.getItem("admin_selected_class") || "12T2";
     }
-    return urlLop || "11AT3";
+    return urlLop || "12T2";
   });
 
   const [timetable, setTimetable] = useState<TimetableItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedHocKy, setSelectedHocKy] = useState("HK1");
   const [viewTab, setViewTab] = useState<"week" | "today">("week");
-  const [filterBuoi, setFilterBuoi] = useState<"ALL" | "Sáng" | "Chiều">("ALL");
 
-  // Determine current day of week in Vietnam (0 = Sunday, 1 = Monday (Thứ 2), 2 = Tuesday (Thứ 3)...)
+  // Determine current day in Vietnam
   const todayDate = new Date();
-  const jsDay = todayDate.getDay(); // 0 is Sunday, 1 is Mon, 2 is Tue...
-  const currentThu = jsDay === 0 ? 8 : jsDay + 1; // 2=Thứ 2, 3=Thứ 3... 7=Thứ 7
+  const jsDay = todayDate.getDay();
+  const currentThu = jsDay === 0 ? 8 : jsDay + 1; // 2=Thứ 2, ..., 6=Thứ 6
 
   // Sync class from URL
   useEffect(() => {
@@ -119,31 +104,22 @@ function PublicThoiKhoaBieuContent() {
     return timetable.find((t) => t.thu === thu && t.tiet === tiet);
   }
 
-  // Today's periods
   const todayPeriods = timetable.filter((t) => t.thu === currentThu).sort((a, b) => a.tiet - b.tiet);
-
-  const morningPeriods = [1, 2, 3, 4, 5];
-  const afternoonPeriods = [6, 7, 8, 9, 10];
-  const displayPeriods =
-    filterBuoi === "Sáng"
-      ? morningPeriods
-      : filterBuoi === "Chiều"
-      ? afternoonPeriods
-      : [...morningPeriods, ...afternoonPeriods];
+  const periodsList = [1, 2, 3, 4, 5];
 
   return (
     <div>
       {/* Banner */}
       <div
         style={{
-          background: "linear-gradient(135deg, hsl(213,94%,44%) 0%, hsl(213,80%,55%) 50%, hsl(160,70%,45%) 100%)",
+          background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #06b6d4 100%)",
           borderRadius: "var(--radius-xl)",
-          padding: "32px 28px",
-          marginBottom: 24,
+          padding: "30px 26px",
+          marginBottom: 22,
           color: "white",
           position: "relative",
           overflow: "hidden",
-          boxShadow: "0 8px 24px rgba(16,90,188,0.2)",
+          boxShadow: "0 8px 24px rgba(30,27,75,0.25)",
         }}
       >
         <div style={{ position: "relative", zIndex: 1 }}>
@@ -152,7 +128,7 @@ function PublicThoiKhoaBieuContent() {
               style={{
                 width: 46,
                 height: 46,
-                background: "rgba(255,255,255,0.2)",
+                background: "rgba(255,255,255,0.15)",
                 borderRadius: 14,
                 display: "flex",
                 alignItems: "center",
@@ -160,27 +136,27 @@ function PublicThoiKhoaBieuContent() {
                 backdropFilter: "blur(6px)",
               }}
             >
-              <CalendarDays size={26} color="white" />
+              <Moon size={26} color="#38bdf8" />
             </div>
             <div>
-              <h1 style={{ color: "white", fontSize: "1.5rem", margin: 0 }}>
-                Thời Khóa Biểu Học Tập
+              <h1 style={{ color: "white", fontSize: "1.45rem", margin: 0 }}>
+                Thời Khóa Biểu Buổi Tối — Lớp {activeLop}
               </h1>
-              <p style={{ color: "rgba(255,255,255,0.9)", fontSize: "0.875rem", margin: 0 }}>
-                Lớp {activeLop} • Kế hoạch tiết học, phòng học & giáo viên bộ môn
+              <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.85rem", margin: 0 }}>
+                Khung giờ học Buổi Tối: <strong>18h00 - 21h35</strong> (Bắt đầu từ ngày 07/09/2025)
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Today Alert Card */}
-      {currentThu >= 2 && currentThu <= 7 && todayPeriods.length > 0 && (
+      {/* Today's Schedule Highlight */}
+      {currentThu >= 2 && currentThu <= 6 && todayPeriods.length > 0 && (
         <div
           className="card"
           style={{
             padding: "18px 22px",
-            marginBottom: 22,
+            marginBottom: 20,
             background: "linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%)",
             border: "1px solid #86efac",
             borderRadius: 16,
@@ -192,15 +168,15 @@ function PublicThoiKhoaBieuContent() {
                 🌟 HÔM NAY: {DAYS.find((d) => d.thu === currentThu)?.label}
               </span>
               <span style={{ fontSize: "0.85rem", color: "#166534", fontWeight: 700 }}>
-                {todayPeriods.length} tiết học
+                {todayPeriods.length} tiết học buổi tối
               </span>
             </div>
           </div>
 
-          {/* Today's period chips */}
           <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
             {todayPeriods.map((p) => {
               const color = getSubjectColor(p.monHoc);
+              const timeInfo = EVENING_TIMES[p.tiet];
               return (
                 <div
                   key={p.id}
@@ -209,19 +185,21 @@ function PublicThoiKhoaBieuContent() {
                     border: `1px solid ${color.border}`,
                     borderRadius: 12,
                     padding: "10px 14px",
-                    minWidth: 140,
+                    minWidth: 135,
                     boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
                   }}
                 >
                   <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-                    Tiết {p.tiet} • {p.thoiGian || DEFAULT_TIMES[p.tiet]}
+                    Tiết {p.tiet} • {timeInfo?.time || p.thoiGian}
                   </div>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: color.text, marginTop: 2 }}>
+                  <div style={{ fontSize: "1rem", fontWeight: 800, color: color.text, marginTop: 2 }}>
                     {p.monHoc}
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 2 }}>
-                    {p.phongHoc || "P.201"} {p.giaoVien ? `• ${p.giaoVien}` : ""}
-                  </div>
+                  {p.giaoVien && (
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 2 }}>
+                      🧑‍🏫 {p.giaoVien}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -235,7 +213,7 @@ function PublicThoiKhoaBieuContent() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 18,
+          marginBottom: 16,
           flexWrap: "wrap",
           gap: 12,
         }}
@@ -252,10 +230,9 @@ function PublicThoiKhoaBieuContent() {
               fontWeight: 700,
               fontSize: "0.85rem",
               cursor: "pointer",
-              transition: "all 0.15s ease",
             }}
           >
-            🗓️ Toàn bộ tuần
+            🗓️ Toàn bộ tuần (Thứ 2 - Thứ 6)
           </button>
           <button
             onClick={() => setViewTab("today")}
@@ -268,86 +245,41 @@ function PublicThoiKhoaBieuContent() {
               fontWeight: 700,
               fontSize: "0.85rem",
               cursor: "pointer",
-              transition: "all 0.15s ease",
             }}
           >
-            ⚡ Hôm nay ({DAYS.find((d) => d.thu === currentThu)?.label || "Chủ Nhật"})
+            ⚡ Hôm nay ({DAYS.find((d) => d.thu === currentThu)?.label || "Nghỉ"})
           </button>
         </div>
 
-        {/* Buổi Filter */}
-        <div style={{ display: "flex", background: "var(--bg-muted)", padding: 3, borderRadius: 10, border: "1px solid var(--border)" }}>
-          <button
-            onClick={() => setFilterBuoi("ALL")}
-            style={{
-              padding: "5px 10px",
-              borderRadius: 6,
-              border: "none",
-              background: filterBuoi === "ALL" ? "white" : "transparent",
-              color: filterBuoi === "ALL" ? "var(--primary)" : "var(--text-secondary)",
-              fontWeight: 700,
-              fontSize: "0.78rem",
-              cursor: "pointer",
-            }}
-          >
-            Tất cả
-          </button>
-          <button
-            onClick={() => setFilterBuoi("Sáng")}
-            style={{
-              padding: "5px 10px",
-              borderRadius: 6,
-              border: "none",
-              background: filterBuoi === "Sáng" ? "white" : "transparent",
-              color: filterBuoi === "Sáng" ? "#d97706" : "var(--text-secondary)",
-              fontWeight: 700,
-              fontSize: "0.78rem",
-              cursor: "pointer",
-            }}
-          >
-            Sáng
-          </button>
-          <button
-            onClick={() => setFilterBuoi("Chiều")}
-            style={{
-              padding: "5px 10px",
-              borderRadius: 6,
-              border: "none",
-              background: filterBuoi === "Chiều" ? "white" : "transparent",
-              color: filterBuoi === "Chiều" ? "#7c3aed" : "var(--text-secondary)",
-              fontWeight: 700,
-              fontSize: "0.78rem",
-              cursor: "pointer",
-            }}
-          >
-            Chiều
-          </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", color: "var(--text-muted)" }}>
+          <Clock size={14} /> Khung giờ 18h00 - 21h35
         </div>
       </div>
 
       {/* Main Content */}
       {loading ? (
-        <div className="skeleton" style={{ height: 400, borderRadius: 16 }} />
+        <div className="skeleton" style={{ height: 350, borderRadius: 16 }} />
       ) : viewTab === "today" ? (
         /* TODAY VIEW */
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {todayPeriods.length === 0 ? (
             <div className="card" style={{ padding: "48px 20px", textAlign: "center" }}>
               <Sparkles size={40} color="var(--text-muted)" style={{ margin: "0 auto 10px" }} />
-              <h3>Hôm nay không có tiết học nào</h3>
+              <h3>Hôm nay không có tiết học buổi tối</h3>
               <p style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>
-                Chúc các bạn có một ngày nghỉ ngơi vui vẻ!
+                Chúc các bạn học viên có một ngày nghỉ ngơi vui vẻ!
               </p>
             </div>
           ) : (
             todayPeriods.map((p) => {
               const color = getSubjectColor(p.monHoc);
+              const timeInfo = EVENING_TIMES[p.tiet];
               return (
                 <div
                   key={p.id}
-                  className="card card-hover"
+                  className="card"
                   style={{
-                    padding: "18px 20px",
+                    padding: "16px 20px",
                     borderRadius: 14,
                     borderLeft: `5px solid ${color.text}`,
                     display: "flex",
@@ -360,8 +292,8 @@ function PublicThoiKhoaBieuContent() {
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                     <div
                       style={{
-                        width: 48,
-                        height: 48,
+                        width: 46,
+                        height: 46,
                         borderRadius: 12,
                         background: color.bg,
                         border: `1px solid ${color.border}`,
@@ -381,7 +313,7 @@ function PublicThoiKhoaBieuContent() {
                         {p.monHoc}
                       </h3>
                       <div style={{ fontSize: "0.825rem", color: "var(--text-muted)", marginTop: 2 }}>
-                        ⏰ <strong>{p.thoiGian || DEFAULT_TIMES[p.tiet]}</strong> • Phòng <strong>{p.phongHoc || "201"}</strong>
+                        ⏰ <strong>{timeInfo?.time || p.thoiGian}</strong> ({timeInfo?.duration})
                       </div>
                     </div>
                   </div>
@@ -404,14 +336,23 @@ function PublicThoiKhoaBieuContent() {
           )}
         </div>
       ) : (
-        /* WEEKLY GRID VIEW */
-        <div className="card" style={{ overflow: "hidden", borderRadius: 16, border: "1px solid var(--border)" }}>
+        /* WEEKLY GRID (MATCHES USER'S EXACT EXCEL DESIGN) */
+        <div className="card" style={{ overflow: "hidden", borderRadius: 16, border: "2px solid #06b6d4" }}>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
               <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "2px solid var(--border)" }}>
-                  <th style={{ width: 90, padding: "12px 10px", textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 700 }}>
-                    Tiết
+                <tr style={{ background: "#06b6d4", color: "white" }}>
+                  <th
+                    style={{
+                      width: 140,
+                      padding: "14px 12px",
+                      textAlign: "center",
+                      fontSize: "0.9rem",
+                      fontWeight: 800,
+                      borderRight: "1px solid rgba(255,255,255,0.3)",
+                    }}
+                  >
+                    Tiết / Giờ học
                   </th>
                   {DAYS.map((d) => {
                     const isTodayCol = d.thu === currentThu;
@@ -421,12 +362,11 @@ function PublicThoiKhoaBieuContent() {
                         style={{
                           padding: "14px 12px",
                           textAlign: "center",
-                          fontSize: "0.92rem",
+                          fontSize: "1.05rem",
                           fontWeight: 800,
-                          color: isTodayCol ? "#166534" : "#1e293b",
-                          background: isTodayCol ? "#f0fdf4" : "transparent",
-                          borderLeft: "1px solid var(--border)",
-                          width: "15%",
+                          borderRight: "1px solid rgba(255,255,255,0.3)",
+                          background: isTodayCol ? "#0891b2" : "transparent",
+                          width: "17%",
                         }}
                       >
                         {d.label} {isTodayCol ? "🌟" : ""}
@@ -436,60 +376,71 @@ function PublicThoiKhoaBieuContent() {
                 </tr>
               </thead>
               <tbody>
-                {displayPeriods.map((tietNum) => {
-                  const isFirstAfternoon = tietNum === 6;
+                {periodsList.map((tietNum) => {
+                  const isBreakTime = tietNum === 3;
+                  const timeInfo = EVENING_TIMES[tietNum];
+
                   return (
                     <React.Fragment key={tietNum}>
-                      {isFirstAfternoon && filterBuoi === "ALL" && (
-                        <tr style={{ background: "#f1f5f9" }}>
+                      {/* Giải lao sau Tiết 2 */}
+                      {isBreakTime && (
+                        <tr style={{ background: "#fef3c7", borderBottom: "1px solid #fde68a" }}>
                           <td
-                            colSpan={7}
+                            colSpan={6}
                             style={{
                               padding: "8px 16px",
                               textAlign: "center",
-                              fontSize: "0.75rem",
+                              fontSize: "0.825rem",
                               fontWeight: 800,
-                              color: "#64748b",
-                              letterSpacing: "0.05em",
+                              color: "#b45309",
                             }}
                           >
-                            ☕ NGHỈ TRƯA — BUỔI CHIỀU
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                              <Coffee size={15} />
+                              <span>GIẢI LAO: 19h20 - 19h35 (15 phút)</span>
+                            </div>
                           </td>
                         </tr>
                       )}
+
                       <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                        {/* Tiết header */}
+                        {/* Tiết / Giờ */}
                         <td
                           style={{
-                            padding: "12px 8px",
+                            padding: "12px 10px",
                             textAlign: "center",
-                            background: "#fafbfc",
-                            borderRight: "1px solid var(--border)",
+                            background: "#06b6d415",
+                            borderRight: "2px solid #06b6d4",
+                            verticalAlign: "middle",
                           }}
                         >
-                          <div style={{ fontWeight: 800, fontSize: "0.9rem", color: "var(--primary)" }}>
-                            Tiết {tietNum}
+                          <div style={{ fontWeight: 900, fontSize: "1.1rem", color: "#0891b2" }}>
+                            {tietNum}
                           </div>
-                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                            {DEFAULT_TIMES[tietNum] || ""}
+                          <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", marginTop: 2 }}>
+                            {timeInfo.time}
+                          </div>
+                          <div style={{ fontSize: "0.68rem", color: "#64748b" }}>
+                            ({timeInfo.duration})
                           </div>
                         </td>
 
-                        {/* 6 Day columns */}
+                        {/* 5 Days Columns */}
                         {DAYS.map((d) => {
                           const item = getPeriodItem(d.thu, tietNum);
                           const isTodayCol = d.thu === currentThu;
-                          if (!item) {
+
+                          if (!item || !item.monHoc) {
                             return (
                               <td
                                 key={d.thu}
                                 style={{
                                   padding: "6px",
-                                  borderLeft: "1px solid var(--border)",
+                                  borderRight: "1px solid var(--border)",
                                   background: isTodayCol ? "#f0fdf420" : "white",
                                   textAlign: "center",
                                   color: "var(--text-muted)",
-                                  fontSize: "0.75rem",
+                                  fontSize: "0.85rem",
                                 }}
                               >
                                 —
@@ -502,10 +453,10 @@ function PublicThoiKhoaBieuContent() {
                             <td
                               key={d.thu}
                               style={{
-                                padding: "6px",
-                                borderLeft: "1px solid var(--border)",
-                                background: isTodayCol ? "#f0fdf425" : "white",
-                                verticalAlign: "top",
+                                padding: "6px 8px",
+                                borderRight: "1px solid var(--border)",
+                                background: isTodayCol ? "#f0fdf430" : "white",
+                                verticalAlign: "middle",
                               }}
                             >
                               <div
@@ -513,26 +464,30 @@ function PublicThoiKhoaBieuContent() {
                                   background: color.bg,
                                   border: `1px solid ${color.border}`,
                                   borderRadius: 10,
-                                  padding: "7px 9px",
-                                  minHeight: 64,
+                                  padding: "10px 12px",
+                                  minHeight: 62,
                                   display: "flex",
                                   flexDirection: "column",
-                                  justifyContent: "space-between",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  textAlign: "center",
                                 }}
                               >
-                                <div>
-                                  <div style={{ fontWeight: 800, fontSize: "0.85rem", color: color.text }}>
-                                    {item.monHoc}
+                                <div
+                                  style={{
+                                    fontWeight: 800,
+                                    fontSize: "0.98rem",
+                                    color: color.text,
+                                    lineHeight: 1.2,
+                                  }}
+                                >
+                                  {item.monHoc}
+                                </div>
+                                {item.giaoVien && (
+                                  <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 3, fontWeight: 600 }}>
+                                    🧑‍🏫 {item.giaoVien}
                                   </div>
-                                  {item.giaoVien && (
-                                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontWeight: 600 }}>
-                                      {item.giaoVien}
-                                    </div>
-                                  )}
-                                </div>
-                                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 4 }}>
-                                  {item.phongHoc || "P.201"}
-                                </div>
+                                )}
                               </div>
                             </td>
                           );
@@ -553,7 +508,7 @@ function PublicThoiKhoaBieuContent() {
 export default function PublicThoiKhoaBieuPage() {
   return (
     <PublicLayout>
-      <Suspense fallback={<div className="skeleton" style={{ height: 400, borderRadius: 16 }} />}>
+      <Suspense fallback={<div className="skeleton" style={{ height: 350, borderRadius: 16 }} />}>
         <PublicThoiKhoaBieuContent />
       </Suspense>
     </PublicLayout>
