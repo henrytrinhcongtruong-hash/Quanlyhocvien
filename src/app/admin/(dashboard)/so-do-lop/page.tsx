@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -14,7 +14,6 @@ import {
   Printer,
   RotateCw,
   ArrowLeftRight,
-  Shuffle,
   Calendar,
   Sparkles,
   Edit3,
@@ -22,11 +21,10 @@ import {
   CheckCircle,
   AlertCircle,
   Settings,
-  Search,
   School,
-  Maximize2,
+  RotateCcw,
 } from "lucide-react";
-import { SeatSlotData } from "@/app/api/seating/route";
+import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
 
 interface StudentOption {
   id: number;
@@ -63,6 +61,7 @@ export default function AdminSoDoLopPage() {
   const [students, setStudents] = useState<StudentOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   // Drag and Drop & Touch Swap state
   const [draggedSlotId, setDraggedSlotId] = useState<string | null>(null);
@@ -137,7 +136,17 @@ export default function AdminSoDoLopPage() {
         setTitle(data.chart.title || "CLASSROOM SEATING CHART");
         setGvcn(data.chart.gvcn || "Phí Huỳnh Anh Hào");
         setSlogan(data.chart.slogan || "Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển");
-        setSlots(data.chart.slots || []);
+
+        // Ensure 56 slots
+        let loadedSlots: SeatSlotData[] = data.chart.slots || [];
+        if (loadedSlots.length < 56) {
+          const empty = generateEmptySlots();
+          loadedSlots = empty.map((e) => {
+            const found = loadedSlots.find((l) => l.row === e.row && l.col === e.col);
+            return found || e;
+          });
+        }
+        setSlots(loadedSlots);
         setStudents(data.students || []);
       }
     } catch {
@@ -182,6 +191,22 @@ export default function AdminSoDoLopPage() {
     }
   }
 
+  // Clear all seats to blank
+  async function handleClearAllSlots() {
+    if (!confirm(`Bạn có chắc muốn LÀM TRỐNG TOÀN BỘ 56 vị trí chỗ ngồi của Lớp ${selectedLop} (${selectedMonth}) không?`)) return;
+    setClearing(true);
+    try {
+      const empty = generateEmptySlots();
+      setSlots(empty);
+      await handleSaveChart(empty);
+      showToast("Đã làm trống toàn bộ sơ đồ 56 chỗ ngồi");
+    } catch {
+      showToast("Lỗi làm trống sơ đồ", "error");
+    } finally {
+      setClearing(false);
+    }
+  }
+
   // Swap / Move 2 Slots
   function swapSlots(sourceId: string, targetId: string) {
     if (sourceId === targetId) return;
@@ -193,7 +218,6 @@ export default function AdminSoDoLopPage() {
 
       if (srcIdx === -1 || tgtIdx === -1) return prev;
 
-      // Swap student details
       const tempName = newSlots[srcIdx].studentName;
       const tempPhoto = newSlots[srcIdx].studentPhoto;
       const tempId = newSlots[srcIdx].studentId;
@@ -215,12 +239,11 @@ export default function AdminSoDoLopPage() {
         gender: tempGender,
       };
 
-      // Auto save after swap
       handleSaveChart(newSlots);
       return newSlots;
     });
 
-    showToast("Đã đổi chỗ 2 học sinh");
+    showToast("Đã đổi chỗ 2 vị trí");
     setSelectedSlotForSwap(null);
     setDraggedSlotId(null);
     setDragOverSlotId(null);
@@ -289,7 +312,7 @@ export default function AdminSoDoLopPage() {
     }
   }
 
-  // Handle Photo Upload (Base64)
+  // Photo Upload
   function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -342,32 +365,17 @@ export default function AdminSoDoLopPage() {
   }
 
   // ====== ROTATION TOOLS ======
-  // 1. Dời hàng (Hàng 1 -> Hàng 2 -> ... Hàng 7 -> Hàng 1)
+  // 1. Dời hàng (Hàng 1 -> Hàng 2 -> ... Hàng 7 -> Hàng 1) cho cả 2 Dãy
   function handleRotateRows() {
-    if (!confirm("Bạn có muốn xoay vòng các hàng ghế (Dời tiến 1 hàng) không?")) return;
+    if (!confirm("Bạn có muốn xoay vòng các hàng ghế (Dời tiến 1 hàng cho cả 2 dãy) không?")) return;
 
     setSlots((prev) => {
       const newSlots = [...prev];
-      // For left block
-      for (let c = 1; c <= 4; c++) {
+      // For all 8 columns (Cols 1-4 Left, Cols 5-8 Right)
+      for (let c = 1; c <= 8; c++) {
         const colSeats = [1, 2, 3, 4, 5, 6, 7].map((r) => newSlots.find((s) => s.row === r && s.col === c)!);
         const lastSeat = { ...colSeats[6] };
         for (let r = 6; r >= 1; r--) {
-          const prevSeat = colSeats[r - 1];
-          colSeats[r].studentName = prevSeat.studentName;
-          colSeats[r].studentPhoto = prevSeat.studentPhoto;
-          colSeats[r].studentId = prevSeat.studentId;
-        }
-        colSeats[0].studentName = lastSeat.studentName;
-        colSeats[0].studentPhoto = lastSeat.studentPhoto;
-        colSeats[0].studentId = lastSeat.studentId;
-      }
-
-      // For right block (rows 1-6 only, row 7 is teacher desk)
-      for (let c = 5; c <= 8; c++) {
-        const colSeats = [1, 2, 3, 4, 5, 6].map((r) => newSlots.find((s) => s.row === r && s.col === c)!);
-        const lastSeat = { ...colSeats[5] };
-        for (let r = 5; r >= 1; r--) {
           const prevSeat = colSeats[r - 1];
           colSeats[r].studentName = prevSeat.studentName;
           colSeats[r].studentPhoto = prevSeat.studentPhoto;
@@ -382,16 +390,16 @@ export default function AdminSoDoLopPage() {
       return newSlots;
     });
 
-    showToast("Đã xoay vòng các hàng ghế thành công!");
+    showToast("Đã xoay vòng 7 hàng ghế thành công!");
   }
 
-  // 2. Hoán đổi 2 dãy (Left Block <-> Right Block)
+  // 2. Hoán đổi 2 dãy (Dãy Trái 28 chỗ <-> Dãy Phải 28 chỗ)
   function handleSwapBlocks() {
     if (!confirm("Bạn có muốn đổi chỗ giữa Dãy Trái và Dãy Phải không?")) return;
 
     setSlots((prev) => {
       const newSlots = [...prev];
-      for (let r = 1; r <= 6; r++) {
+      for (let r = 1; r <= 7; r++) {
         for (let i = 0; i < 4; i++) {
           const leftSeat = newSlots.find((s) => s.row === r && s.col === 1 + i);
           const rightSeat = newSlots.find((s) => s.row === r && s.col === 5 + i);
@@ -451,7 +459,7 @@ export default function AdminSoDoLopPage() {
     }
   }
 
-  // Open Settings Modal
+  // Settings
   function openSettings() {
     setSettingsForm({ title, gvcn, slogan });
     setSettingsModalOpen(true);
@@ -463,69 +471,13 @@ export default function AdminSoDoLopPage() {
     setSlogan(settingsForm.slogan.trim() || "Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển");
     setSettingsModalOpen(false);
     showToast("Đã cập nhật thông tin sơ đồ");
-    // trigger save
     setTimeout(() => handleSaveChart(), 100);
   }
 
-  // Render Seat Card Component
+  // Render Seat Card
   function renderSeatCard(slot: SeatSlotData) {
-    const isTeacherDesk = slot.row === 7 && slot.col >= 5;
     const isSelected = selectedSlotForSwap === slot.id;
     const isDragOver = dragOverSlotId === slot.id;
-
-    if (isTeacherDesk) {
-      // Row 7, Col 5-8 is merged for Teacher's Desk
-      if (slot.col === 5) {
-        return (
-          <div
-            key="teacher-desk"
-            style={{
-              gridColumn: "span 4",
-              background: "#ffffff",
-              border: "3px solid #1e293b",
-              borderRadius: 20,
-              padding: "16px 20px",
-              textAlign: "center",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-              minHeight: 110,
-              position: "relative",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "1.25rem",
-                fontWeight: 900,
-                color: "#1e293b",
-                letterSpacing: "1px",
-                fontFamily: "var(--font-sans)",
-              }}
-            >
-              TEACHER'S DESK
-            </div>
-            <div
-              style={{
-                width: 38,
-                height: 12,
-                background: "#facc15",
-                borderRadius: "0 0 8px 8px",
-                border: "2px solid #1e293b",
-                borderTop: "none",
-                marginTop: 4,
-              }}
-            />
-            <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 700, marginTop: 4 }}>
-              BÀN GIÁO VIÊN
-            </div>
-          </div>
-        );
-      }
-      return null;
-    }
-
     const hasStudent = !!slot.studentName;
 
     return (
@@ -551,24 +503,25 @@ export default function AdminSoDoLopPage() {
         {/* Photo Container */}
         <div
           style={{
-            width: 72,
-            height: 72,
+            width: 68,
+            height: 68,
             borderRadius: "50%",
-            background: hasStudent ? "#f1f5f9" : "transparent",
+            background: hasStudent ? "#f1f5f9" : "#ffffff",
             border: isSelected
               ? "3px solid #0284c7"
               : isDragOver
               ? "3px dashed #0284c7"
               : hasStudent
-              ? "2px solid #e2e8f0"
-              : "2px dashed #cbd5e1",
+              ? "2px solid #cbd5e1"
+              : "2px dashed #94a3b8",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
-            boxShadow: hasStudent ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
+            boxShadow: hasStudent ? "0 4px 8px rgba(0,0,0,0.06)" : "none",
             marginBottom: 6,
             position: "relative",
+            transition: "all 0.15s ease",
           }}
         >
           {hasStudent ? (
@@ -593,14 +546,16 @@ export default function AdminSoDoLopPage() {
                   color: "#0369a1",
                 }}
               >
-                {slot.studentName?.substring(0, 2) || <User size={26} color="#0284c7" />}
+                {slot.studentName?.substring(0, 2) || <User size={24} color="#0284c7" />}
               </div>
             )
           ) : (
-            <Plus size={20} color="#94a3b8" />
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Plus size={20} color="#94a3b8" />
+            </div>
           )}
 
-          {/* Drag handle badge indicator */}
+          {/* Drag handle icon */}
           {hasStudent && (
             <div
               title="Kéo chuột để đổi chỗ"
@@ -610,7 +565,7 @@ export default function AdminSoDoLopPage() {
                 right: 2,
                 width: 18,
                 height: 18,
-                background: "rgba(15,23,42,0.7)",
+                background: "rgba(15,23,42,0.75)",
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
@@ -623,12 +578,12 @@ export default function AdminSoDoLopPage() {
           )}
         </div>
 
-        {/* Name Capsule Box (Pixel Perfect match to User's sample) */}
+        {/* Name Capsule Box */}
         <div
           style={{
             width: "100%",
-            maxWidth: 100,
-            minHeight: 38,
+            maxWidth: 96,
+            minHeight: 36,
             borderRadius: 14,
             border: isSelected
               ? "2px solid #0284c7"
@@ -654,7 +609,7 @@ export default function AdminSoDoLopPage() {
               wordBreak: "break-word",
             }}
           >
-            {slot.studentName || "Trống"}
+            {slot.studentName || "TRỐNG"}
           </span>
         </div>
       </div>
@@ -717,10 +672,10 @@ export default function AdminSoDoLopPage() {
             </div>
             <div>
               <h1 style={{ fontSize: "1.35rem", fontWeight: 800, margin: 0 }}>
-                Sơ Đồ Lớp Học & Chỗ Ngồi — Lớp {selectedLop}
+                Sơ Đồ Lớp Học (2 Dãy Đều 7 Hàng Ngang • 56 Chỗ) — Lớp {selectedLop}
               </h1>
               <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: 0 }}>
-                Sắp xếp chỗ ngồi 7 hàng ngang, 2 dãy (56 chỗ) • Kéo thả đổi chỗ bằng chuột • Xuất PDF in bàn giáo viên
+                2 Dãy bàn chuẩn đều 7 hàng ngang • Kéo thả đổi chỗ bằng chuột • Xuất PDF in bàn giáo viên
               </p>
             </div>
           </div>
@@ -728,6 +683,14 @@ export default function AdminSoDoLopPage() {
 
         {/* Action Buttons */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleClearAllSlots}
+            disabled={clearing}
+            title="Làm trống toàn bộ 56 vị trí để xếp mới từ đầu"
+          >
+            <RotateCcw size={14} /> {clearing ? "Đang làm trống..." : "Làm trống sơ đồ"}
+          </button>
           <button className="btn btn-secondary btn-sm" onClick={openSettings}>
             <Settings size={14} /> Chỉnh sửa thông tin
           </button>
@@ -756,7 +719,6 @@ export default function AdminSoDoLopPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-          {/* Class Selector */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
               Lớp:
@@ -775,10 +737,9 @@ export default function AdminSoDoLopPage() {
             </select>
           </div>
 
-          {/* Month Selector */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
-              Tháng:
+              Tháng áp dụng:
             </span>
             <select
               className="select"
@@ -800,14 +761,14 @@ export default function AdminSoDoLopPage() {
           <button
             className="btn btn-secondary btn-sm"
             onClick={handleRotateRows}
-            title="Dời tiến mỗi hàng 1 bậc"
+            title="Dời tiến 7 hàng ghế 1 bậc"
           >
-            <RotateCw size={13} /> Xoay vòng hàng ghế
+            <RotateCw size={13} /> Xoay vòng 7 hàng ghế
           </button>
           <button
             className="btn btn-secondary btn-sm"
             onClick={handleSwapBlocks}
-            title="Hoán đổi toàn bộ Dãy Trái và Dãy Phải"
+            title="Hoán đổi toàn bộ 2 Dãy Trái và Dãy Phải"
           >
             <ArrowLeftRight size={13} /> Đổi chéo 2 dãy
           </button>
@@ -839,7 +800,7 @@ export default function AdminSoDoLopPage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Move size={14} />
-          <span>💡 <strong>Mẹo đổi chỗ:</strong> Dùng chuột <strong>kéo thả</strong> ảnh học sinh sang vị trí khác để đổi chỗ, hoặc bấm vào 1 vị trí để sửa/thêm ảnh!</span>
+          <span>💡 <strong>Hướng dẫn:</strong> Bấm vào bất kỳ ô <strong>TRỐNG</strong> nào để chọn học sinh / thêm ảnh thẻ. Kéo thả chuột giữa 2 ô để hoán đổi chỗ ngồi!</span>
         </div>
         {selectedSlotForSwap && (
           <span style={{ color: "#0284c7", fontWeight: 800 }}>
@@ -849,7 +810,7 @@ export default function AdminSoDoLopPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* SEATING CHART POSTER / PRINT CONTAINER (MATCHES USER'S EXACT SAMPLE IMAGE) */}
+      {/* SEATING CHART POSTER / PRINT CONTAINER (2 FULL 7-ROW BLOCKS = 56 SEATS)  */}
       {/* ========================================================================= */}
       <div
         id="seating-chart-print-area"
@@ -867,7 +828,7 @@ export default function AdminSoDoLopPage() {
           margin: "0 auto",
         }}
       >
-        {/* Main 7 Rows Grid Layout */}
+        {/* Main 7 Rows Grid Layout (Both Left and Right Blocks have full 7 rows) */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
             const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
@@ -907,7 +868,7 @@ export default function AdminSoDoLopPage() {
                   H{rowNum}
                 </div>
 
-                {/* Dãy Phải (4 cột bàn) */}
+                {/* Dãy Phải (4 cột bàn đều 7 hàng) */}
                 <div
                   style={{
                     display: "grid",
@@ -923,11 +884,64 @@ export default function AdminSoDoLopPage() {
         </div>
 
         {/* ========================================================= */}
-        {/* FOOTER SECTION: TITLE, CLASS, TEACHER, SLOGAN (EXACT MATCH) */}
+        {/* TEACHER'S DESK (BÀN GIÁO VIÊN NẰM PHÍA DƯỚI BẢNG GHẾ)     */}
         {/* ========================================================= */}
         <div
           style={{
-            marginTop: 36,
+            marginTop: 26,
+            display: "flex",
+            justifyContent: "flex-end",
+            paddingRight: 20,
+          }}
+        >
+          <div
+            style={{
+              width: 320,
+              background: "#ffffff",
+              border: "3px solid #1e293b",
+              borderRadius: 20,
+              padding: "12px 20px",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "1.15rem",
+                fontWeight: 900,
+                color: "#1e293b",
+                letterSpacing: "1px",
+              }}
+            >
+              TEACHER'S DESK
+            </div>
+            <div
+              style={{
+                width: 36,
+                height: 10,
+                background: "#facc15",
+                borderRadius: "0 0 8px 8px",
+                border: "2px solid #1e293b",
+                borderTop: "none",
+                marginTop: 2,
+              }}
+            />
+            <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, marginTop: 2 }}>
+              BÀN GIÁO VIÊN
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* FOOTER SECTION: TITLE, CLASS, TEACHER, SLOGAN             */}
+        {/* ========================================================= */}
+        <div
+          style={{
+            marginTop: 28,
             paddingTop: 20,
             borderTop: "2px solid #000000",
             display: "flex",
@@ -946,7 +960,6 @@ export default function AdminSoDoLopPage() {
                 color: "#000000",
                 letterSpacing: "-0.5px",
                 lineHeight: 1.1,
-                fontFamily: "var(--font-sans)",
               }}
             >
               {title}
@@ -1030,10 +1043,10 @@ export default function AdminSoDoLopPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 10 }}>
               <div>
                 <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "#0284c7" }}>
-                  Chỉnh sửa vị trí: Hàng {editSlotModal.row} — {editSlotModal.block === "left" ? "Dãy Trái" : "Dãy Phải"} (Cột {editSlotModal.col})
+                  Xếp chỗ: Hàng {editSlotModal.row} — {editSlotModal.block === "left" ? "Dãy Trái" : "Dãy Phải"} (Cột {editSlotModal.col})
                 </h3>
                 <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", margin: 0, marginTop: 2 }}>
-                  Gán học sinh, tải ảnh đại diện hoặc xóa vị trí
+                  Chọn học sinh, tải ảnh đại diện hoặc xóa vị trí
                 </p>
               </div>
               <button

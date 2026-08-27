@@ -11,7 +11,7 @@ import {
   Sparkles,
   School,
 } from "lucide-react";
-import { SeatSlotData } from "@/app/api/seating/route";
+import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
 
 function PublicSoDoLopContent() {
   const searchParams = useSearchParams();
@@ -65,7 +65,15 @@ function PublicSoDoLopContent() {
           setTitle(d.chart.title || "CLASSROOM SEATING CHART");
           setGvcn(d.chart.gvcn || "Phí Huỳnh Anh Hào");
           setSlogan(d.chart.slogan || "Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển");
-          setSlots(d.chart.slots || []);
+          let loadedSlots: SeatSlotData[] = d.chart.slots || [];
+          if (loadedSlots.length < 56) {
+            const empty = generateEmptySlots();
+            loadedSlots = empty.map((e) => {
+              const found = loadedSlots.find((l) => l.row === e.row && l.col === e.col);
+              return found || e;
+            });
+          }
+          setSlots(loadedSlots);
         }
       })
       .catch(() => {})
@@ -74,61 +82,10 @@ function PublicSoDoLopContent() {
 
   // Render Seat Card Component
   function renderSeatCard(slot: SeatSlotData) {
-    const isTeacherDesk = slot.row === 7 && slot.col >= 5;
     const isSearched =
       searchQuery.trim().length > 1 &&
       slot.studentName &&
       slot.studentName.toLowerCase().includes(searchQuery.trim().toLowerCase());
-
-    if (isTeacherDesk) {
-      if (slot.col === 5) {
-        return (
-          <div
-            key="teacher-desk"
-            style={{
-              gridColumn: "span 4",
-              background: "#ffffff",
-              border: "3px solid #1e293b",
-              borderRadius: 20,
-              padding: "16px 20px",
-              textAlign: "center",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-              minHeight: 105,
-            }}
-          >
-            <div
-              style={{
-                fontSize: "1.25rem",
-                fontWeight: 900,
-                color: "#1e293b",
-                letterSpacing: "1px",
-              }}
-            >
-              TEACHER'S DESK
-            </div>
-            <div
-              style={{
-                width: 38,
-                height: 12,
-                background: "#facc15",
-                borderRadius: "0 0 8px 8px",
-                border: "2px solid #1e293b",
-                borderTop: "none",
-                marginTop: 4,
-              }}
-            />
-            <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 700, marginTop: 4 }}>
-              BÀN GIÁO VIÊN
-            </div>
-          </div>
-        );
-      }
-      return null;
-    }
 
     const hasStudent = !!slot.studentName;
 
@@ -148,15 +105,15 @@ function PublicSoDoLopContent() {
         {/* Photo Container */}
         <div
           style={{
-            width: 70,
-            height: 70,
+            width: 68,
+            height: 68,
             borderRadius: "50%",
-            background: hasStudent ? "#f1f5f9" : "transparent",
+            background: hasStudent ? "#f1f5f9" : "#ffffff",
             border: isSearched
               ? "3px solid #ef4444"
               : hasStudent
-              ? "2px solid #e2e8f0"
-              : "2px dashed #cbd5e1",
+              ? "2px solid #cbd5e1"
+              : "2px dashed #94a3b8",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -164,7 +121,7 @@ function PublicSoDoLopContent() {
             boxShadow: isSearched
               ? "0 0 16px rgba(239,68,68,0.5)"
               : hasStudent
-              ? "0 4px 10px rgba(0,0,0,0.06)"
+              ? "0 4px 8px rgba(0,0,0,0.06)"
               : "none",
             marginBottom: 6,
           }}
@@ -195,7 +152,7 @@ function PublicSoDoLopContent() {
               </div>
             )
           ) : (
-            <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Trống</span>
+            <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>—</span>
           )}
         </div>
 
@@ -226,7 +183,7 @@ function PublicSoDoLopContent() {
               wordBreak: "break-word",
             }}
           >
-            {slot.studentName || "—"}
+            {slot.studentName || "TRỐNG"}
           </span>
         </div>
       </div>
@@ -270,7 +227,7 @@ function PublicSoDoLopContent() {
                   Sơ Đồ Chỗ Ngồi Lớp Học — Lớp {activeLop}
                 </h1>
                 <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.85rem", margin: 0 }}>
-                  Sơ đồ vị trí 56 chỗ ngồi • Áp dụng: <strong>{selectedMonth}</strong> • GVCN: {gvcn}
+                  2 Dãy bàn đều 7 hàng ngang (56 chỗ) • Áp dụng: <strong>{selectedMonth}</strong> • GVCN: {gvcn}
                 </p>
               </div>
             </div>
@@ -351,7 +308,7 @@ function PublicSoDoLopContent() {
             margin: "0 auto",
           }}
         >
-          {/* 7 Rows Grid */}
+          {/* 7 Rows Grid (Both Left and Right Blocks have full 7 rows) */}
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
               const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
@@ -367,7 +324,7 @@ function PublicSoDoLopContent() {
                     gap: 12,
                   }}
                 >
-                  {/* Dãy Trái */}
+                  {/* Dãy Trái (4 cột) */}
                   <div
                     style={{
                       display: "grid",
@@ -390,7 +347,7 @@ function PublicSoDoLopContent() {
                     H{rowNum}
                   </div>
 
-                  {/* Dãy Phải */}
+                  {/* Dãy Phải (4 cột) */}
                   <div
                     style={{
                       display: "grid",
@@ -405,10 +362,61 @@ function PublicSoDoLopContent() {
             })}
           </div>
 
+          {/* Teacher's Desk below seating rows */}
+          <div
+            style={{
+              marginTop: 26,
+              display: "flex",
+              justifyContent: "flex-end",
+              paddingRight: 20,
+            }}
+          >
+            <div
+              style={{
+                width: 320,
+                background: "#ffffff",
+                border: "3px solid #1e293b",
+                borderRadius: 20,
+                padding: "12px 20px",
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "1.15rem",
+                  fontWeight: 900,
+                  color: "#1e293b",
+                  letterSpacing: "1px",
+                }}
+              >
+                TEACHER'S DESK
+              </div>
+              <div
+                style={{
+                  width: 36,
+                  height: 10,
+                  background: "#facc15",
+                  borderRadius: "0 0 8px 8px",
+                  border: "2px solid #1e293b",
+                  borderTop: "none",
+                  marginTop: 2,
+                }}
+              />
+              <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, marginTop: 2 }}>
+                BÀN GIÁO VIÊN
+              </div>
+            </div>
+          </div>
+
           {/* Footer Section */}
           <div
             style={{
-              marginTop: 36,
+              marginTop: 28,
               paddingTop: 20,
               borderTop: "2px solid #000000",
               display: "flex",

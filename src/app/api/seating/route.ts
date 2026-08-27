@@ -1,73 +1,6 @@
-// src/app/api/seating/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-export interface SeatSlotData {
-  id: string; // "slot-r1-c1"
-  row: number; // 1-7
-  col: number; // 1-8 (1-4: Dãy Trái, 5-8: Dãy Phải)
-  block: "left" | "right"; // Dãy Trái hay Dãy Phải
-  studentId?: number | null;
-  studentName?: string | null;
-  studentPhoto?: string | null;
-  gender?: string | null;
-}
-
-// 56 slots mẫu chính xác theo ảnh sơ đồ lớp học mẫu
-function generateInitialSlots(): SeatSlotData[] {
-  // Dữ liệu mẫu học sinh từ ảnh
-  const leftGrid: (string | null)[][] = [
-    ["PHAN GIA KHANG", null, "HOÀNG BẢO NAM", "NGUYỄN MINH ĐỨC"],
-    ["PHẠM MINH HIỂN", "LÊ NGUYỄN TRƯỜNG AN", null, "N VĨNH THIÊN PHÚC"],
-    ["PHẠM THIÊN HƯƠNG", null, null, "HOÀNG VIỆT DANH"],
-    ["TRẦN HOÀNG QUÂN", "TRỊNH CÔNG TRƯỜNG", "P PHƯƠNG UYÊN", "N NGỌC YẾN NHI"],
-    ["LÊ NGUYỄN HOÀNG ANH", "P.N QUỲNH ANH", "HÀ THỊ DIỄM MY", "LÊ ĐỨC TRỌNG"],
-    ["TRẦN NGỌC NHIÊN", "N HOÀNG TẤN HÀO", "N.P XUYÊN PHƯƠNG", "MÃ QUỐC DUY"],
-    ["NGUYỄN THANH TÚ", null, null, "NGUYỄN TUẤN ANH"],
-  ];
-
-  const rightGrid: (string | null)[][] = [
-    ["NGUYỄN TẤN SANG", "LƯU NGỌC QUỲNH HOA", "PHAN GIA BẢO", "N NGỌC ANH PHƯƠNG"],
-    ["LÊ THỊ HOÀI THẢO", null, "PHAN ANH THƯ", "N NGỌC ANH THƯ"],
-    ["VŨ ĐỨC HUY", null, "VŨ NGỌC MINH TUYẾT", "LÊ DƯƠNG ÂN"],
-    ["NGUYỄN XUÂN HỢP", "LÂM VĂN TUẤN", "TRẦN PHONG", "TÔ VỸ"],
-    ["L.C CHÁNH THÔNG", "ĐẶNG THỊ MỸ HÒA", "N THỊ KHÁNH NGỌC", "H THANH QUANG"],
-    ["NGUYỄN THỊ HỒNG ANH", "TRẦN BẢO THANH", "NGUYỄN THỊ CÁT TUYỀN", "PHÙNG BẢO TRÂN"],
-    [null, null, null, null], // Hàng 7 Dãy Phải dành cho Bàn Giáo Viên
-  ];
-
-  const slots: SeatSlotData[] = [];
-
-  for (let r = 1; r <= 7; r++) {
-    // Dãy Trái (Cột 1 -> 4)
-    for (let c = 1; c <= 4; c++) {
-      const name = leftGrid[r - 1]?.[c - 1] || null;
-      slots.push({
-        id: `slot-r${r}-c${c}`,
-        row: r,
-        col: c,
-        block: "left",
-        studentName: name,
-        studentPhoto: null,
-      });
-    }
-
-    // Dãy Phải (Cột 5 -> 8)
-    for (let c = 5; c <= 8; c++) {
-      const name = rightGrid[r - 1]?.[c - 5] || null;
-      slots.push({
-        id: `slot-r${r}-c${c}`,
-        row: r,
-        col: c,
-        block: "right",
-        studentName: name,
-        studentPhoto: null,
-      });
-    }
-  }
-
-  return slots;
-}
+import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
 
 export async function GET(req: NextRequest) {
   try {
@@ -81,8 +14,8 @@ export async function GET(req: NextRequest) {
     });
 
     if (!chart) {
-      // Create initial chart
-      const initialSlots = generateInitialSlots();
+      // Create initial chart with 56 empty slots
+      const initialSlots = generateEmptySlots();
       chart = await prisma.seatingChart.create({
         data: {
           lop,
