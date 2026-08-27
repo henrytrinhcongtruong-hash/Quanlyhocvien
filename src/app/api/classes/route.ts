@@ -47,7 +47,7 @@ export async function DELETE(req: NextRequest) {
     });
     const studentIds = students.map((s) => s.id);
 
-    // 2. Xóa cascade toàn bộ dữ liệu liên quan (Thu quỹ, Điểm danh, Lịch trực, Sự kiện, Lịch thi, Học sinh)
+    // 2. Xóa cascade toàn bộ dữ liệu liên quan (Thu quỹ, Điểm danh, Lịch trực, Sự kiện, Lịch thi, Thời khóa biểu, Học sinh)
     if (studentIds.length > 0) {
       await prisma.$transaction([
         prisma.feeCollection.deleteMany({ where: { studentId: { in: studentIds } } }),
@@ -55,11 +55,13 @@ export async function DELETE(req: NextRequest) {
         prisma.dutyRoster.deleteMany({ where: { studentId: { in: studentIds } } }),
         prisma.eventMember.deleteMany({ where: { studentId: { in: studentIds } } }),
         prisma.examSchedule.deleteMany({ where: { lop } }),
+        prisma.timetable.deleteMany({ where: { lop } }),
         prisma.student.deleteMany({ where: { id: { in: studentIds } } }),
       ]);
     } else {
       await prisma.$transaction([
         prisma.examSchedule.deleteMany({ where: { lop } }),
+        prisma.timetable.deleteMany({ where: { lop } }),
         prisma.student.deleteMany({ where: { lop } }),
       ]);
     }

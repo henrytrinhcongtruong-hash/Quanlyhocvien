@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 // =========================================
 export type Module =
   | "hoc_sinh"
+  | "thoi_khoa_bieu"
   | "diem_danh"
   | "su_kien"
   | "bao_cao"

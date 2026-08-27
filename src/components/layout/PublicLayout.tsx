@@ -14,10 +14,12 @@ import {
   X,
   School,
   GraduationCap,
+  CalendarDays,
 } from "lucide-react";
 
 const NAV_BASE = [
   { href: "/", icon: Users, label: "Danh sách lớp", exact: true },
+  { href: "/thoi-khoa-bieu", icon: CalendarDays, label: "Thời khóa biểu" },
   { href: "/lich-thi", icon: GraduationCap, label: "Lịch thi & KT" },
   { href: "/quy-lop", icon: Wallet, label: "Quỹ lớp" },
   { href: "/lich-truc", icon: Calendar, label: "Lịch trực nhật" },
