@@ -107,7 +107,7 @@ function PublicSoDoLopContent() {
       .finally(() => setLoading(false));
   }, [activeLop, selectedMonth]);
 
-  // 1-Click Direct A4 PDF Download
+  // 1-Click Direct Full-Height A4 PDF Download
   async function handleDownloadPdf() {
     const element = document.getElementById("seating-chart-print-area");
     if (!element) {
@@ -138,11 +138,12 @@ function PublicSoDoLopContent() {
 
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 5;
-      const renderWidth = pageWidth - margin * 2;
-      const renderHeight = (canvas.height * renderWidth) / canvas.width;
+      const marginX = 4;
+      const marginY = 4;
+      const renderWidth = pageWidth - marginX * 2; // 202mm
+      const renderHeight = pageHeight - marginY * 2; // 289mm
 
-      pdf.addImage(imgData, "PNG", margin, margin, renderWidth, Math.min(renderHeight, pageHeight - margin * 2));
+      pdf.addImage(imgData, "PNG", marginX, marginY, renderWidth, renderHeight);
       pdf.save(`So_do_lop_${activeLop}_A4_${selectedMonth.replace(/[\s/]+/g, "_")}.pdf`);
     } catch (error) {
       console.error("PDF export error:", error);
@@ -174,15 +175,16 @@ function PublicSoDoLopContent() {
           userSelect: "none",
           transition: "all 0.15s ease",
           opacity: isDimmed ? 0.3 : 1,
-          transform: isSearched ? "scale(1.08)" : isMatchingTo && filterTo !== 0 ? "scale(1.02)" : "none",
+          transform: isSearched ? "scale(1.06)" : isMatchingTo && filterTo !== 0 ? "scale(1.02)" : "none",
           zIndex: isSearched ? 10 : 1,
+          width: "100%",
         }}
       >
-        {/* LARGER PHOTO CONTAINER (82px x 82px) */}
+        {/* EXTRA-LARGE PHOTO CONTAINER (92px x 92px) */}
         <div
           style={{
-            width: 82,
-            height: 82,
+            width: 92,
+            height: 92,
             borderRadius: "50%",
             background: hasStudent ? (toConfig ? toConfig.bg : "#f1f5f9") : "#ffffff",
             border: isSearched
@@ -190,7 +192,7 @@ function PublicSoDoLopContent() {
               : filterTo !== 0 && isMatchingTo
               ? `3px solid ${toConfig?.border || "#0284c7"}`
               : hasStudent
-              ? `2px solid ${toConfig ? toConfig.border : "#cbd5e1"}`
+              ? `2.5px solid ${toConfig ? toConfig.border : "#cbd5e1"}`
               : "2px dashed #94a3b8",
             display: "flex",
             alignItems: "center",
@@ -203,7 +205,7 @@ function PublicSoDoLopContent() {
               : hasStudent
               ? "0 3px 6px rgba(0,0,0,0.06)"
               : "none",
-            marginBottom: 4,
+            marginBottom: 5,
             position: "relative",
             transition: "all 0.15s ease",
           }}
@@ -226,15 +228,15 @@ function PublicSoDoLopContent() {
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 900,
-                  fontSize: "1.25rem",
+                  fontSize: "1.45rem",
                   color: toConfig ? toConfig.text : "#0369a1",
                 }}
               >
-                {slot.studentName?.substring(0, 2) || <User size={28} color="#0284c7" />}
+                {slot.studentName?.substring(0, 2) || <User size={32} color="#0284c7" />}
               </div>
             )
           ) : (
-            <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>—</span>
+            <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>—</span>
           )}
 
           {/* Tổ Badge */}
@@ -247,9 +249,9 @@ function PublicSoDoLopContent() {
                 left: 0,
                 background: toConfig?.border || "#0284c7",
                 color: "white",
-                fontSize: "0.6rem",
+                fontSize: "0.65rem",
                 fontWeight: 900,
-                padding: "2px 5px",
+                padding: "2px 6px",
                 borderRadius: "0 0 8px 0",
               }}
             >
@@ -258,13 +260,13 @@ function PublicSoDoLopContent() {
           )}
         </div>
 
-        {/* Name Capsule Box */}
+        {/* Name Capsule Box (Non-clipped 3 lines allowed) */}
         <div
           style={{
             width: "100%",
-            maxWidth: 102,
-            minHeight: 34,
-            borderRadius: 12,
+            maxWidth: 112,
+            minHeight: 46,
+            borderRadius: 14,
             border: isSearched
               ? "2px solid #ef4444"
               : filterTo !== 0 && isMatchingTo
@@ -282,14 +284,14 @@ function PublicSoDoLopContent() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "3px 4px",
+            padding: "4px 6px",
             textAlign: "center",
             boxShadow: hasStudent ? "0 2px 4px rgba(0,0,0,0.04)" : "none",
           }}
         >
           <span
             style={{
-              fontSize: "0.68rem",
+              fontSize: "0.72rem",
               fontWeight: 900,
               color: isSearched
                 ? "#dc2626"
@@ -298,9 +300,10 @@ function PublicSoDoLopContent() {
                 : hasStudent
                 ? "#000000"
                 : "#94a3b8",
-              lineHeight: 1.15,
+              lineHeight: 1.22,
               textTransform: "uppercase",
               wordBreak: "break-word",
+              display: "block",
             }}
           >
             {slot.studentName || "TRỐNG"}
@@ -312,17 +315,19 @@ function PublicSoDoLopContent() {
 
   return (
     <div>
-      {/* Exact 1-Page A4 Print CSS Styles */}
+      {/* Full-Height A4 Print CSS Styles */}
       <style jsx global>{`
         @media print {
           @page {
             size: A4 portrait;
             margin: 4mm 5mm;
           }
-          body {
-            background: #ffffff !important;
+          html, body {
+            width: 100% !important;
+            height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
+            background: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -338,13 +343,21 @@ function PublicSoDoLopContent() {
             top: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
+            height: 288mm !important;
+            min-height: 288mm !important;
+            max-height: 288mm !important;
             margin: 0 !important;
-            padding: 14px 16px 10px !important;
+            padding: 16px 20px 14px !important;
+            box-sizing: border-box !important;
             box-shadow: none !important;
-            border: 2px solid #000000 !important;
-            border-radius: 16px !important;
+            border: 2.5px solid #000000 !important;
+            border-radius: 18px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justifyContent: space-between !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            page-break-after: avoid !important;
             overflow: hidden !important;
           }
           .no-print, header, nav, aside, footer {
@@ -389,7 +402,7 @@ function PublicSoDoLopContent() {
                   Sơ Đồ Chỗ Ngồi Lớp Học — Lớp {activeLop}
                 </h1>
                 <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.85rem", margin: 0 }}>
-                  Khung ảnh lớn sắc nét • Vừa vặn 1 trang A4 • Áp dụng: <strong>{selectedMonth}</strong> • GVCN: {gvcn}
+                  Khung ảnh 92px • Tràn đầy khổ giấy A4 • Áp dụng: <strong>{selectedMonth}</strong> • GVCN: {gvcn}
                 </p>
               </div>
             </div>
@@ -510,16 +523,16 @@ function PublicSoDoLopContent() {
             background: "#ffffff",
             backgroundImage: "radial-gradient(#e2e8f0 1.2px, transparent 1.2px)",
             backgroundSize: "22px 22px",
-            borderRadius: 20,
-            border: "2px solid #e2e8f0",
-            padding: "24px 26px 18px",
+            borderRadius: 22,
+            border: "2.5px solid #000000",
+            padding: "26px 28px 22px",
             boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-            maxWidth: 960,
+            maxWidth: 980,
             margin: "0 auto",
           }}
         >
           {/* 7 Rows Grid */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
               const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
               const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
@@ -531,7 +544,7 @@ function PublicSoDoLopContent() {
                     display: "grid",
                     gridTemplateColumns: "1fr 34px 1fr",
                     alignItems: "center",
-                    gap: 10,
+                    gap: 12,
                   }}
                 >
                   {/* Dãy Trái (4 cột) */}
@@ -539,7 +552,7 @@ function PublicSoDoLopContent() {
                     style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(4, 1fr)",
-                      gap: 8,
+                      gap: 10,
                     }}
                   >
                     {leftSlots.map((s) => renderSeatCard(s))}
@@ -549,9 +562,10 @@ function PublicSoDoLopContent() {
                   <div
                     style={{
                       textAlign: "center",
-                      fontSize: "0.68rem",
-                      fontWeight: 800,
+                      fontSize: "0.72rem",
+                      fontWeight: 900,
                       color: "#94a3b8",
+                      letterSpacing: "1px",
                     }}
                   >
                     H{rowNum}
@@ -562,7 +576,7 @@ function PublicSoDoLopContent() {
                     style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(4, 1fr)",
-                      gap: 8,
+                      gap: 10,
                     }}
                   >
                     {rightSlots.map((s) => renderSeatCard(s))}
@@ -572,10 +586,10 @@ function PublicSoDoLopContent() {
             })}
           </div>
 
-          {/* Teacher's Desk below seating rows */}
+          {/* Teacher's Desk */}
           <div
             style={{
-              marginTop: 14,
+              marginTop: 18,
               display: "flex",
               justifyContent: "flex-end",
               paddingRight: 16,
@@ -583,7 +597,7 @@ function PublicSoDoLopContent() {
           >
             <div
               style={{
-                width: 310,
+                width: 320,
                 background: "#ffffff",
                 border: "3px solid #1e293b",
                 borderRadius: 18,
@@ -597,10 +611,10 @@ function PublicSoDoLopContent() {
             >
               <div
                 style={{
-                  fontSize: "1.15rem",
+                  fontSize: "1.2rem",
                   fontWeight: 900,
                   color: "#1e293b",
-                  letterSpacing: "1.5px",
+                  letterSpacing: "2px",
                 }}
               >
                 TEACHER'S DESK
@@ -611,20 +625,20 @@ function PublicSoDoLopContent() {
           {/* Footer Section */}
           <div
             style={{
-              marginTop: 16,
-              paddingTop: 14,
-              borderTop: "2px solid #000000",
+              marginTop: 20,
+              paddingTop: 16,
+              borderTop: "2.5px solid #000000",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "flex-end",
               flexWrap: "wrap",
-              gap: 12,
+              gap: 14,
             }}
           >
             <div style={{ flex: 1, minWidth: 280 }}>
               <div
                 style={{
-                  fontSize: "1.5rem",
+                  fontSize: "1.6rem",
                   fontWeight: 900,
                   color: "#000000",
                   letterSpacing: "-0.5px",
@@ -634,23 +648,23 @@ function PublicSoDoLopContent() {
                 {title}
               </div>
               {slogan && (
-                <div style={{ fontSize: "0.78rem", color: "#475569", fontStyle: "italic", marginTop: 3 }}>
+                <div style={{ fontSize: "0.825rem", color: "#475569", fontStyle: "italic", marginTop: 4 }}>
                   "{slogan}"
                 </div>
               )}
-              <div style={{ fontSize: "0.7rem", color: "#94a3b8", marginTop: 2, fontWeight: 600 }}>
+              <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 3, fontWeight: 600 }}>
                 Áp dụng: {selectedMonth} • Hệ thống Quanlyhocvien
               </div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 210 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 220 }}>
               <div
                 style={{
-                  border: "2px solid #000000",
+                  border: "2.5px solid #000000",
                   borderRadius: 16,
-                  padding: "5px 14px",
-                  fontSize: "0.85rem",
-                  fontWeight: 800,
+                  padding: "6px 16px",
+                  fontSize: "0.9rem",
+                  fontWeight: 900,
                   color: "#000000",
                   background: "#ffffff",
                   display: "flex",
@@ -663,11 +677,11 @@ function PublicSoDoLopContent() {
 
               <div
                 style={{
-                  border: "2px solid #000000",
+                  border: "2.5px solid #000000",
                   borderRadius: 16,
-                  padding: "5px 14px",
-                  fontSize: "0.85rem",
-                  fontWeight: 800,
+                  padding: "6px 16px",
+                  fontSize: "0.9rem",
+                  fontWeight: 900,
                   color: "#000000",
                   background: "#ffffff",
                   display: "flex",

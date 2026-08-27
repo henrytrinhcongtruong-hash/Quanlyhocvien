@@ -83,7 +83,7 @@ export default function AdminSoDoLopPage() {
 
   // Edit Slot Modal
   const [editSlotModal, setEditSlotModal] = useState<SeatSlotData | null>(null);
-  const [modalFilterTo, setModalFilterTo] = useState<number>(0); // 0 = All, 1, 2, 3, 4
+  const [modalFilterTo, setModalFilterTo] = useState<number>(0);
   const [slotForm, setSlotForm] = useState<{
     studentId: number | null;
     studentName: string;
@@ -238,7 +238,7 @@ export default function AdminSoDoLopPage() {
     }
   }
 
-  // 1-Click Direct A4 PDF Download
+  // 1-Click Direct Full-Height A4 PDF Download
   async function handleDownloadPdf() {
     const element = document.getElementById("seating-chart-print-area");
     if (!element) {
@@ -269,13 +269,14 @@ export default function AdminSoDoLopPage() {
 
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 5;
-      const renderWidth = pageWidth - margin * 2;
-      const renderHeight = (canvas.height * renderWidth) / canvas.width;
+      const marginX = 4;
+      const marginY = 4;
+      const renderWidth = pageWidth - marginX * 2; // 202mm
+      const renderHeight = pageHeight - marginY * 2; // 289mm
 
-      pdf.addImage(imgData, "PNG", margin, margin, renderWidth, Math.min(renderHeight, pageHeight - margin * 2));
+      pdf.addImage(imgData, "PNG", marginX, marginY, renderWidth, renderHeight);
       pdf.save(`So_do_lop_${selectedLop}_A4_${selectedMonth.replace(/[\s/]+/g, "_")}.pdf`);
-      showToast("Đã xuất file PDF A4 chuẩn 1 trang thành công!");
+      showToast("Đã xuất file PDF A4 chuẩn tràn trang thành công!");
     } catch (error) {
       console.error("PDF export error:", error);
       showToast("Đang mở hộp thoại in...", "success");
@@ -564,7 +565,7 @@ export default function AdminSoDoLopPage() {
   // Filtered Students for Modal
   const modalFilteredStudents = modalFilterTo === 0 ? students : students.filter((s) => s.to === modalFilterTo);
 
-  // Render Seat Card with LARGER PHOTO AVATAR FRAME
+  // Render Seat Card with EXPANDED AVATAR (92px) and NON-CLIPPED FULL NAME CAPSULE BOX
   function renderSeatCard(slot: SeatSlotData) {
     const isSelected = selectedSlotForSwap === slot.id;
     const isDragOver = dragOverSlotId === slot.id;
@@ -594,13 +595,14 @@ export default function AdminSoDoLopPage() {
           opacity: isDimmed ? 0.3 : 1,
           transform: isDragOver ? "scale(1.05)" : isSelected ? "scale(1.03)" : isMatchingTo && filterTo !== 0 ? "scale(1.02)" : "none",
           zIndex: isDragOver || isSelected ? 10 : 1,
+          width: "100%",
         }}
       >
-        {/* LARGER PHOTO CONTAINER (82px x 82px) */}
+        {/* EXTRA-LARGE PHOTO CONTAINER (92px x 92px) */}
         <div
           style={{
-            width: 82,
-            height: 82,
+            width: 92,
+            height: 92,
             borderRadius: "50%",
             background: hasStudent ? (toConfig ? toConfig.bg : "#f1f5f9") : "#ffffff",
             border: isSelected
@@ -610,7 +612,7 @@ export default function AdminSoDoLopPage() {
               : filterTo !== 0 && isMatchingTo
               ? `3px solid ${toConfig?.border || "#0284c7"}`
               : hasStudent
-              ? `2px solid ${toConfig ? toConfig.border : "#cbd5e1"}`
+              ? `2.5px solid ${toConfig ? toConfig.border : "#cbd5e1"}`
               : "2px dashed #94a3b8",
             display: "flex",
             alignItems: "center",
@@ -621,7 +623,7 @@ export default function AdminSoDoLopPage() {
               : hasStudent
               ? "0 3px 6px rgba(0,0,0,0.06)"
               : "none",
-            marginBottom: 4,
+            marginBottom: 5,
             position: "relative",
             transition: "all 0.15s ease",
           }}
@@ -644,16 +646,16 @@ export default function AdminSoDoLopPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 900,
-                  fontSize: "1.25rem",
+                  fontSize: "1.45rem",
                   color: toConfig ? toConfig.text : "#0369a1",
                 }}
               >
-                {slot.studentName?.substring(0, 2) || <User size={28} color="#0284c7" />}
+                {slot.studentName?.substring(0, 2) || <User size={32} color="#0284c7" />}
               </div>
             )
           ) : (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <Plus size={24} color="#94a3b8" />
+              <Plus size={26} color="#94a3b8" />
             </div>
           )}
 
@@ -667,9 +669,9 @@ export default function AdminSoDoLopPage() {
                 left: 0,
                 background: toConfig?.border || "#0284c7",
                 color: "white",
-                fontSize: "0.6rem",
+                fontSize: "0.65rem",
                 fontWeight: 900,
-                padding: "2px 5px",
+                padding: "2px 6px",
                 borderRadius: "0 0 8px 0",
               }}
             >
@@ -686,8 +688,8 @@ export default function AdminSoDoLopPage() {
                 position: "absolute",
                 bottom: 2,
                 right: 2,
-                width: 18,
-                height: 18,
+                width: 20,
+                height: 20,
                 background: "rgba(15,23,42,0.75)",
                 borderRadius: "50%",
                 display: "flex",
@@ -696,18 +698,18 @@ export default function AdminSoDoLopPage() {
                 color: "white",
               }}
             >
-              <Move size={10} />
+              <Move size={11} />
             </div>
           )}
         </div>
 
-        {/* Name Capsule Box */}
+        {/* Name Capsule Box (Enhanced height & clear 3-line overflow) */}
         <div
           style={{
             width: "100%",
-            maxWidth: 102,
-            minHeight: 34,
-            borderRadius: 12,
+            maxWidth: 112,
+            minHeight: 46,
+            borderRadius: 14,
             border: isSelected
               ? "2px solid #0284c7"
               : filterTo !== 0 && isMatchingTo
@@ -719,19 +721,20 @@ export default function AdminSoDoLopPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "3px 4px",
+            padding: "4px 6px",
             textAlign: "center",
             boxShadow: hasStudent ? "0 2px 4px rgba(0,0,0,0.04)" : "none",
           }}
         >
           <span
             style={{
-              fontSize: "0.68rem",
+              fontSize: "0.72rem",
               fontWeight: 900,
               color: filterTo !== 0 && isMatchingTo && toConfig ? toConfig.text : hasStudent ? "#000000" : "#94a3b8",
-              lineHeight: 1.15,
+              lineHeight: 1.22,
               textTransform: "uppercase",
               wordBreak: "break-word",
+              display: "block",
             }}
           >
             {slot.studentName || "TRỐNG"}
@@ -743,17 +746,19 @@ export default function AdminSoDoLopPage() {
 
   return (
     <div className="animate-fade-in">
-      {/* Exact 1-Page A4 Print CSS Styles */}
+      {/* Full-Height A4 Print CSS Styles (No whitespace, 100% 1-Page Fit) */}
       <style jsx global>{`
         @media print {
           @page {
             size: A4 portrait;
             margin: 4mm 5mm;
           }
-          body {
-            background: #ffffff !important;
+          html, body {
+            width: 100% !important;
+            height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
+            background: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -769,13 +774,21 @@ export default function AdminSoDoLopPage() {
             top: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
+            height: 288mm !important;
+            min-height: 288mm !important;
+            max-height: 288mm !important;
             margin: 0 !important;
-            padding: 14px 16px 10px !important;
+            padding: 16px 20px 14px !important;
+            box-sizing: border-box !important;
             box-shadow: none !important;
-            border: 2px solid #000000 !important;
-            border-radius: 16px !important;
+            border: 2.5px solid #000000 !important;
+            border-radius: 18px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justifyContent: space-between !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            page-break-after: avoid !important;
             overflow: hidden !important;
           }
           .no-print, header, nav, aside, footer {
@@ -839,10 +852,10 @@ export default function AdminSoDoLopPage() {
             </div>
             <div>
               <h1 style={{ fontSize: "1.35rem", fontWeight: 800, margin: 0 }}>
-                Sơ Đồ Lớp Học (Khung A4 Chuẩn In) — Lớp {selectedLop}
+                Sơ Đồ Lớp Học (Tràn Đầy Khổ A4 • Không Bị Che Tên) — Lớp {selectedLop}
               </h1>
               <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: 0 }}>
-                Khung ảnh lớn sắc nét • Vừa vặn đúng 1 trang A4 • Xuất file PDF & In đặt bàn giáo viên
+                Khung ảnh lớn 92px • Tên học sinh hiển thị trọn vẹn 100% • Khít kín khổ giấy A4
               </p>
             </div>
           </div>
@@ -868,7 +881,7 @@ export default function AdminSoDoLopPage() {
             className="btn btn-secondary btn-sm"
             onClick={handleDownloadPdf}
             disabled={exportingPdf}
-            title="Tải trực tiếp file PDF khổ A4"
+            title="Tải trực tiếp file PDF khổ A4 tràn đầy trang"
           >
             <Download size={14} /> {exportingPdf ? "Đang tạo PDF..." : "Tải file PDF A4"}
           </button>
@@ -1013,7 +1026,7 @@ export default function AdminSoDoLopPage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Move size={14} />
-          <span>💡 <strong>Hướng dẫn:</strong> Bấm vào bất kỳ ô nào để tải ảnh thẻ hoặc gán học sinh. Khung ảnh đã được phóng to tối đa và vừa vặn chuẩn 1 trang giấy A4 khi in!</span>
+          <span>💡 <strong>Hướng dẫn:</strong> Bấm vào ô để sửa ảnh/tên. Khung ảnh đã được phóng to 92px, tên học sinh không bị che khuất và sơ đồ sẽ vừa vặn tràn đầy 1 trang A4!</span>
         </div>
         {selectedSlotForSwap && (
           <span style={{ color: "#0284c7", fontWeight: 800 }}>
@@ -1023,7 +1036,7 @@ export default function AdminSoDoLopPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* SEATING CHART POSTER / PRINT CONTAINER (FIT EXACT 1 PAGE A4 WITH LARGE AVATARS) */}
+      {/* SEATING CHART POSTER / PRINT CONTAINER (EXPANDED TO FILL FULL A4 PAGE)   */}
       {/* ========================================================================= */}
       <div
         id="seating-chart-print-area"
@@ -1032,17 +1045,17 @@ export default function AdminSoDoLopPage() {
           background: "#ffffff",
           backgroundImage: "radial-gradient(#e2e8f0 1.2px, transparent 1.2px)",
           backgroundSize: "22px 22px",
-          borderRadius: 20,
-          border: "2px solid #e2e8f0",
-          padding: "24px 26px 18px",
+          borderRadius: 22,
+          border: "2.5px solid #000000",
+          padding: "26px 28px 22px",
           boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
           position: "relative",
-          maxWidth: 960,
+          maxWidth: 980,
           margin: "0 auto",
         }}
       >
         {/* Main 7 Rows Grid Layout */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
             const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
             const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
@@ -1054,7 +1067,7 @@ export default function AdminSoDoLopPage() {
                   display: "grid",
                   gridTemplateColumns: "1fr 34px 1fr",
                   alignItems: "center",
-                  gap: 10,
+                  gap: 12,
                 }}
               >
                 {/* Dãy Trái (4 cột bàn) */}
@@ -1062,7 +1075,7 @@ export default function AdminSoDoLopPage() {
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: 8,
+                    gap: 10,
                   }}
                 >
                   {leftSlots.map((s) => renderSeatCard(s))}
@@ -1072,8 +1085,8 @@ export default function AdminSoDoLopPage() {
                 <div
                   style={{
                     textAlign: "center",
-                    fontSize: "0.68rem",
-                    fontWeight: 800,
+                    fontSize: "0.72rem",
+                    fontWeight: 900,
                     color: "#94a3b8",
                     letterSpacing: "1px",
                   }}
@@ -1086,7 +1099,7 @@ export default function AdminSoDoLopPage() {
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: 8,
+                    gap: 10,
                   }}
                 >
                   {rightSlots.map((s) => renderSeatCard(s))}
@@ -1097,11 +1110,11 @@ export default function AdminSoDoLopPage() {
         </div>
 
         {/* ========================================================= */}
-        {/* TEACHER'S DESK (BÀN GIÁO VIÊN NẰM PHÍA DƯỚI BẢNG GHẾ)     */}
+        {/* TEACHER'S DESK (ONLY "TEACHER'S DESK" TEXT)               */}
         {/* ========================================================= */}
         <div
           style={{
-            marginTop: 14,
+            marginTop: 18,
             display: "flex",
             justifyContent: "flex-end",
             paddingRight: 16,
@@ -1109,7 +1122,7 @@ export default function AdminSoDoLopPage() {
         >
           <div
             style={{
-              width: 310,
+              width: 320,
               background: "#ffffff",
               border: "3px solid #1e293b",
               borderRadius: 18,
@@ -1123,10 +1136,10 @@ export default function AdminSoDoLopPage() {
           >
             <div
               style={{
-                fontSize: "1.15rem",
+                fontSize: "1.2rem",
                 fontWeight: 900,
                 color: "#1e293b",
-                letterSpacing: "1.5px",
+                letterSpacing: "2px",
               }}
             >
               TEACHER'S DESK
@@ -1139,21 +1152,21 @@ export default function AdminSoDoLopPage() {
         {/* ========================================================= */}
         <div
           style={{
-            marginTop: 16,
-            paddingTop: 14,
-            borderTop: "2px solid #000000",
+            marginTop: 20,
+            paddingTop: 16,
+            borderTop: "2.5px solid #000000",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-end",
             flexWrap: "wrap",
-            gap: 12,
+            gap: 14,
           }}
         >
           {/* Bottom Left Title */}
           <div style={{ flex: 1, minWidth: 280 }}>
             <div
               style={{
-                fontSize: "1.5rem",
+                fontSize: "1.6rem",
                 fontWeight: 900,
                 color: "#000000",
                 letterSpacing: "-0.5px",
@@ -1163,25 +1176,25 @@ export default function AdminSoDoLopPage() {
               {title}
             </div>
             {slogan && (
-              <div style={{ fontSize: "0.78rem", color: "#475569", fontStyle: "italic", marginTop: 3 }}>
+              <div style={{ fontSize: "0.825rem", color: "#475569", fontStyle: "italic", marginTop: 4 }}>
                 "{slogan}"
               </div>
             )}
-            <div style={{ fontSize: "0.7rem", color: "#94a3b8", marginTop: 2, fontWeight: 600 }}>
+            <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 3, fontWeight: 600 }}>
               Áp dụng: {selectedMonth} • Hệ thống Quanlyhocvien
             </div>
           </div>
 
           {/* Bottom Right Badges (Class & Teacher) */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 210 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 220 }}>
             {/* Class Box */}
             <div
               style={{
-                border: "2px solid #000000",
+                border: "2.5px solid #000000",
                 borderRadius: 16,
-                padding: "5px 14px",
-                fontSize: "0.85rem",
-                fontWeight: 800,
+                padding: "6px 16px",
+                fontSize: "0.9rem",
+                fontWeight: 900,
                 color: "#000000",
                 background: "#ffffff",
                 display: "flex",
@@ -1195,11 +1208,11 @@ export default function AdminSoDoLopPage() {
             {/* Teacher Box */}
             <div
               style={{
-                border: "2px solid #000000",
+                border: "2.5px solid #000000",
                 borderRadius: 16,
-                padding: "5px 14px",
-                fontSize: "0.85rem",
-                fontWeight: 800,
+                padding: "6px 16px",
+                fontSize: "0.9rem",
+                fontWeight: 900,
                 color: "#000000",
                 background: "#ffffff",
                 display: "flex",
@@ -1215,7 +1228,7 @@ export default function AdminSoDoLopPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* EDIT SLOT MODAL WITH TO FILTER (BỘ LỌC THEO TỔ)          */}
+      {/* EDIT SLOT MODAL WITH TO FILTER                            */}
       {/* ========================================================= */}
       {editSlotModal && typeof document !== "undefined" && createPortal(
         <div style={{ position: "fixed", inset: 0, zIndex: 999999 }}>
@@ -1411,7 +1424,7 @@ export default function AdminSoDoLopPage() {
       )}
 
       {/* ========================================================= */}
-      {/* SETTINGS MODAL (EDIT TITLE, GVCN, SLOGAN) */}
+      {/* SETTINGS MODAL (EDIT TITLE, GVCN, SLOGAN)                 */}
       {/* ========================================================= */}
       {settingsModalOpen && typeof document !== "undefined" && createPortal(
         <div style={{ position: "fixed", inset: 0, zIndex: 999999 }}>
@@ -1492,7 +1505,7 @@ export default function AdminSoDoLopPage() {
       )}
 
       {/* ========================================================= */}
-      {/* NEW MONTH MODAL */}
+      {/* NEW MONTH MODAL                                           */}
       {/* ========================================================= */}
       {newMonthModalOpen && typeof document !== "undefined" && createPortal(
         <div style={{ position: "fixed", inset: 0, zIndex: 999999 }}>
