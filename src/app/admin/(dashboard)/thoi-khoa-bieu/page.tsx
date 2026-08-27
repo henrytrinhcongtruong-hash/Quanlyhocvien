@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -567,53 +568,107 @@ export default function AdminThoiKhoaBieuPage() {
       </div>
 
       {/* ====== QUICK EDIT / SELECT SUBJECT MODAL ====== */}
-      {modalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 99999 }}>
+      {modalOpen && typeof document !== "undefined" && createPortal(
+        <div style={{ position: "fixed", inset: 0, zIndex: 999999 }}>
           <div
-            style={{ position: "absolute", inset: 0, background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(4px)" }}
+            style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.65)", backdropFilter: "blur(4px)" }}
             onClick={() => setModalOpen(false)}
           />
           <div
             style={{
-              position: "absolute",
+              position: "fixed",
               top: "50%",
               left: "50%",
               transform: "translate(-50%,-50%)",
               background: "white",
-              borderRadius: 18,
-              boxShadow: "var(--shadow-xl)",
+              borderRadius: 20,
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
               padding: "26px 28px",
-              width: "100%",
-              maxWidth: 440,
+              width: "92%",
+              maxWidth: 520,
+              maxHeight: "90vh",
+              overflowY: "auto",
               animation: "fadeIn 0.15s ease",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
               <div>
-                <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, color: "var(--primary)" }}>
-                  Thứ {form.thu} — Tiết {form.tiet}
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "#0891b2" }}>
+                  Xếp Môn: Thứ {form.thu} — Tiết {form.tiet}
                 </h3>
-                <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", margin: 0 }}>
-                  Khung giờ: {EVENING_TIMES[form.tiet]?.time} (Buổi Tối)
+                <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: 0, marginTop: 2 }}>
+                  Khung giờ: <strong>{EVENING_TIMES[form.tiet]?.time}</strong> (Buổi Tối • Lớp {selectedLop})
                 </p>
               </div>
               <button
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+                style={{ background: "#f1f5f9", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-muted)" }}
                 onClick={() => setModalOpen(false)}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Drop list môn học */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* 1-Click Visual Subject Picker Grid */}
               <div>
-                <label className="label" style={{ fontWeight: 800 }}>
-                  Chọn Môn Học *
+                <label className="label" style={{ fontWeight: 800, fontSize: "0.875rem", marginBottom: 8, display: "block" }}>
+                  ⚡ Chọn nhanh môn học (Bấm 1 chạm):
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 8 }}>
+                  {SUBJECT_OPTIONS.map((s) => {
+                    const isSelected = form.monHoc === s.value;
+                    const color = getSubjectColor(s.value);
+                    return (
+                      <button
+                        key={s.value}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, monHoc: s.value }))}
+                        style={{
+                          padding: "10px 8px",
+                          borderRadius: 10,
+                          border: isSelected ? `2px solid ${color.text}` : `1px solid ${color.border}`,
+                          background: isSelected ? color.bg : "#ffffff",
+                          color: isSelected ? color.text : "#334155",
+                          fontWeight: isSelected ? 800 : 600,
+                          fontSize: "0.85rem",
+                          cursor: "pointer",
+                          textAlign: "center",
+                          boxShadow: isSelected ? `0 0 0 2px ${color.border}` : "none",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, monHoc: "NONE" }))}
+                    style={{
+                      padding: "10px 8px",
+                      borderRadius: 10,
+                      border: form.monHoc === "NONE" ? "2px solid #ef4444" : "1px dashed #cbd5e1",
+                      background: form.monHoc === "NONE" ? "#fee2e2" : "#f8fafc",
+                      color: form.monHoc === "NONE" ? "#dc2626" : "#64748b",
+                      fontWeight: form.monHoc === "NONE" ? 800 : 600,
+                      fontSize: "0.825rem",
+                      cursor: "pointer",
+                      textAlign: "center",
+                    }}
+                  >
+                    ⚪ Trống (Không học)
+                  </button>
+                </div>
+              </div>
+
+              {/* Dropdown Selector */}
+              <div>
+                <label className="label" style={{ fontWeight: 700, fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                  Hoặc chọn từ danh sách thả xuống:
                 </label>
                 <select
                   className="select"
-                  style={{ fontWeight: 700, fontSize: "1rem", padding: "10px 14px" }}
+                  style={{ fontWeight: 800, fontSize: "0.95rem", padding: "10px 14px", width: "100%" }}
                   value={form.monHoc}
                   onChange={(e) => setForm((f) => ({ ...f, monHoc: e.target.value }))}
                 >
@@ -644,12 +699,12 @@ export default function AdminThoiKhoaBieuPage() {
                   className="input"
                   value={form.ghiChu}
                   onChange={(e) => setForm((f) => ({ ...f, ghiChu: e.target.value }))}
-                  placeholder="VD: Mang đề cương, làm bài tập..."
+                  placeholder="VD: Mang đề cương ôn tập, làm bài..."
                 />
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 22, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setModalOpen(false)}>
                 Hủy
               </button>
@@ -658,7 +713,8 @@ export default function AdminThoiKhoaBieuPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
