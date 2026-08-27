@@ -1,11 +1,11 @@
 // src/lib/imageUtils.ts
-// Nén ảnh avatar client-side tự động để dung lượng chỉ còn 20KB - 50KB, tránh vượt giới hạn Vercel 4.5MB
+// Nén ảnh avatar client-side thông minh để kích thước chỉ còn 15KB - 25KB, cực nhanh và sắc nét
 
 export function compressImage(
   file: File,
-  maxWidth = 360,
-  maxHeight = 360,
-  quality = 0.85
+  maxWidth = 280,
+  maxHeight = 320,
+  quality = 0.8
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

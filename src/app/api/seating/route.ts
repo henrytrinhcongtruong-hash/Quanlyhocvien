@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       parsedSlots = generateEmptySlots();
     }
 
-    // Link avatar from Student table
+    // Merge student info into slots
     parsedSlots = parsedSlots.map((s) => {
       if (s.studentId) {
         const found = students.find((st) => st.id === s.studentId);
@@ -78,22 +78,8 @@ export async function POST(req: NextRequest) {
 
     const currentLop = lop?.trim() || "12T2";
     const currentMonth = month?.trim() || "Tháng 09/2025";
-    const rawSlots: SeatSlotData[] = Array.isArray(slots) ? slots : JSON.parse(slots || "[]");
-
-    // Clean slots to lightweight format: Do not store large base64 strings in JSON column if student has studentId
-    const cleanSlots = rawSlots.map((s) => ({
-      id: s.id,
-      row: s.row,
-      col: s.col,
-      block: s.block,
-      studentId: s.studentId || null,
-      studentName: s.studentName ? s.studentName.toUpperCase() : null,
-      studentPhoto: s.studentId ? null : (s.studentPhoto ? s.studentPhoto.substring(0, 100000) : null),
-      gender: s.gender || null,
-      to: s.to || null,
-    }));
-
-    const slotsString = JSON.stringify(cleanSlots);
+    const parsedSlots: SeatSlotData[] = Array.isArray(slots) ? slots : JSON.parse(slots || "[]");
+    const slotsString = JSON.stringify(parsedSlots);
 
     let updated;
     if (id) {
@@ -101,8 +87,8 @@ export async function POST(req: NextRequest) {
         where: { id: Number(id) },
         data: {
           title: title?.trim() || `SƠ ĐỒ LỚP ${currentLop}`,
-          gvcn: gvcn?.trim() || "",
-          slogan: slogan?.trim() || "",
+          gvcn: gvcn !== undefined ? gvcn?.trim() : undefined,
+          slogan: slogan !== undefined ? slogan?.trim() : undefined,
           month: currentMonth,
           slotsData: slotsString,
         },
@@ -136,9 +122,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Save avatar updates directly to Student table using Promise.allSettled
+    if (Array.isArray(parsedSlots)) {
+      const photoSlots = parsedSlots.filter((s) => s.studentId && s.studentPhoto);
+      if (photoSlots.length > 0) {
+        await Promise.allSettled(
+          photoSlots.map((s) =>
+            prisma.student.update({
+              where: { id: Number(s.studentId) },
+              data: { avatar: s.studentPhoto },
+            })
+          )
+        );
+      }
+    }
+
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("POST seating chart error:", error);
-    return NextResponse.json({ error: "Lỗi khi lưu sơ đồ lớp học" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Lỗi khi lưu sơ đồ: " + (error instanceof Error ? error.message : String(error)) },
+      { status: 500 }
+    );
   }
 }

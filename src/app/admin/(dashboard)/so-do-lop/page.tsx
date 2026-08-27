@@ -197,6 +197,7 @@ export default function AdminSoDoLopPage() {
   async function handleSaveChart(customSlots?: SeatSlotData[]) {
     setSaving(true);
     try {
+      const payloadSlots = customSlots || slots;
       const res = await fetch("/api/seating", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -207,17 +208,19 @@ export default function AdminSoDoLopPage() {
           title,
           gvcn,
           slogan,
-          slots: customSlots || slots,
+          slots: payloadSlots,
         }),
       });
 
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.success) {
         showToast("Đã lưu sơ đồ lớp học thành công");
+        if (data.data?.id) setChartId(data.data.id);
       } else {
-        showToast("Lỗi khi lưu sơ đồ", "error");
+        showToast(data.error || "Lỗi khi lưu sơ đồ", "error");
       }
-    } catch {
-      showToast("Lỗi kết nối máy chủ", "error");
+    } catch (e) {
+      showToast("Lỗi kết nối máy chủ: " + (e instanceof Error ? e.message : ""), "error");
     } finally {
       setSaving(false);
     }
