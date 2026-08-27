@@ -604,12 +604,12 @@ export default function AdminSoDoLopPage() {
           width: "100%",
         }}
       >
-        {/* EXTRA-LARGE PHOTO CONTAINER (92px x 92px) */}
+        {/* RECTANGULAR PHOTO CONTAINER (98px x 104px, Bo tròn nhẹ 4 góc) */}
         <div
           style={{
-            width: 92,
-            height: 92,
-            borderRadius: "50%",
+            width: 98,
+            height: 104,
+            borderRadius: 14,
             background: hasStudent ? (toConfig ? toConfig.bg : "#f1f5f9") : "#ffffff",
             border: isSelected
               ? "3px solid #0284c7"
@@ -678,7 +678,7 @@ export default function AdminSoDoLopPage() {
                 fontSize: "0.65rem",
                 fontWeight: 900,
                 padding: "2px 6px",
-                borderRadius: "0 0 8px 0",
+                borderRadius: "11px 0 8px 0",
               }}
             >
               T{slot.to}
@@ -1360,9 +1360,9 @@ export default function AdminSoDoLopPage() {
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <div
                     style={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: "50%",
+                      width: 68,
+                      height: 78,
+                      borderRadius: 12,
                       background: slotForm.to ? TO_COLORS[slotForm.to]?.bg : "#f1f5f9",
                       border: slotForm.to ? `2px solid ${TO_COLORS[slotForm.to]?.border}` : "2px solid #cbd5e1",
                       display: "flex",

@@ -180,12 +180,12 @@ function PublicSoDoLopContent() {
           width: "100%",
         }}
       >
-        {/* EXTRA-LARGE PHOTO CONTAINER (92px x 92px) */}
+        {/* RECTANGULAR PHOTO CONTAINER (98px x 104px, Bo tròn nhẹ 4 góc) */}
         <div
           style={{
-            width: 92,
-            height: 92,
-            borderRadius: "50%",
+            width: 98,
+            height: 104,
+            borderRadius: 14,
             background: hasStudent ? (toConfig ? toConfig.bg : "#f1f5f9") : "#ffffff",
             border: isSearched
               ? "3px solid #ef4444"
@@ -252,7 +252,7 @@ function PublicSoDoLopContent() {
                 fontSize: "0.65rem",
                 fontWeight: 900,
                 padding: "2px 6px",
-                borderRadius: "0 0 8px 0",
+                borderRadius: "11px 0 8px 0",
               }}
             >
               T{slot.to}
