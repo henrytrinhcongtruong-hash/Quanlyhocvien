@@ -24,6 +24,7 @@ import {
   School,
   RotateCcw,
   Filter,
+  Download,
 } from "lucide-react";
 import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
 
@@ -65,14 +66,15 @@ export default function AdminSoDoLopPage() {
 
   // Chart data
   const [chartId, setChartId] = useState<number | null>(null);
-  const [title, setTitle] = useState("CLASSROOM SEATING CHART");
-  const [gvcn, setGvcn] = useState("Phí Huỳnh Anh Hào");
-  const [slogan, setSlogan] = useState("Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển");
+  const [title, setTitle] = useState("SƠ ĐỒ LỚP 12T2 (SS: 55)");
+  const [gvcn, setGvcn] = useState("KIM LIÊN");
+  const [slogan, setSlogan] = useState("12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG! 100% ĐẬU TỐT NGHIỆP – WE ARE WINNERS! 🏆");
   const [slots, setSlots] = useState<SeatSlotData[]>([]);
   const [students, setStudents] = useState<StudentOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   // Drag and Drop & Touch Swap state
   const [draggedSlotId, setDraggedSlotId] = useState<string | null>(null);
@@ -147,14 +149,13 @@ export default function AdminSoDoLopPage() {
       const data = await res.json();
       if (data.success && data.chart) {
         setChartId(data.chart.id);
-        setTitle(data.chart.title || "CLASSROOM SEATING CHART");
-        setGvcn(data.chart.gvcn || "Phí Huỳnh Anh Hào");
-        setSlogan(data.chart.slogan || "Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển");
+        setTitle(data.chart.title || `SƠ ĐỒ LỚP ${selectedLop} (SS: 55)`);
+        setGvcn(data.chart.gvcn || "KIM LIÊN");
+        setSlogan(data.chart.slogan || "12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!");
 
         const loadedStudents: StudentOption[] = data.students || [];
         setStudents(loadedStudents);
 
-        // Ensure 56 slots and populate 'to' if missing
         let loadedSlots: SeatSlotData[] = data.chart.slots || [];
         if (loadedSlots.length < 56) {
           const empty = generateEmptySlots();
@@ -171,7 +172,7 @@ export default function AdminSoDoLopPage() {
             if (st) return { ...s, to: st.to };
           }
           if (s.studentName) {
-            const st = loadedStudents.find((st) => st.hoTen.toLowerCase() === s.studentName?.toLowerCase());
+            const st = loadedStudents.find((st) => st.hoTen.toLowerCase().includes(s.studentName?.toLowerCase() || ""));
             if (st) return { ...s, to: st.to };
           }
           return s;
@@ -234,6 +235,53 @@ export default function AdminSoDoLopPage() {
       showToast("Lỗi làm trống sơ đồ", "error");
     } finally {
       setClearing(false);
+    }
+  }
+
+  // 1-Click Direct A4 PDF Download
+  async function handleDownloadPdf() {
+    const element = document.getElementById("seating-chart-print-area");
+    if (!element) {
+      window.print();
+      return;
+    }
+
+    setExportingPdf(true);
+    try {
+      const html2canvasModule = await import("html2canvas");
+      const html2canvas = html2canvasModule.default;
+      const jsPdfModule = await import("jspdf");
+      const jsPDF = jsPdfModule.default;
+
+      const canvas = await html2canvas(element, {
+        scale: 2.5,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 5;
+      const renderWidth = pageWidth - margin * 2;
+      const renderHeight = (canvas.height * renderWidth) / canvas.width;
+
+      pdf.addImage(imgData, "PNG", margin, margin, renderWidth, Math.min(renderHeight, pageHeight - margin * 2));
+      pdf.save(`So_do_lop_${selectedLop}_A4_${selectedMonth.replace(/[\s/]+/g, "_")}.pdf`);
+      showToast("Đã xuất file PDF A4 chuẩn 1 trang thành công!");
+    } catch (error) {
+      console.error("PDF export error:", error);
+      showToast("Đang mở hộp thoại in...", "success");
+      window.print();
+    } finally {
+      setExportingPdf(false);
     }
   }
 
@@ -505,9 +553,9 @@ export default function AdminSoDoLopPage() {
   }
 
   function handleSaveSettings() {
-    setTitle(settingsForm.title.trim() || "CLASSROOM SEATING CHART");
-    setGvcn(settingsForm.gvcn.trim() || "Phí Huỳnh Anh Hào");
-    setSlogan(settingsForm.slogan.trim() || "Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển");
+    setTitle(settingsForm.title.trim() || `SƠ ĐỒ LỚP ${selectedLop} (SS: 55)`);
+    setGvcn(settingsForm.gvcn.trim() || "KIM LIÊN");
+    setSlogan(settingsForm.slogan.trim() || "12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!");
     setSettingsModalOpen(false);
     showToast("Đã cập nhật thông tin sơ đồ");
     setTimeout(() => handleSaveChart(), 100);
@@ -516,7 +564,7 @@ export default function AdminSoDoLopPage() {
   // Filtered Students for Modal
   const modalFilteredStudents = modalFilterTo === 0 ? students : students.filter((s) => s.to === modalFilterTo);
 
-  // Render Seat Card
+  // Render Seat Card with LARGER PHOTO AVATAR FRAME
   function renderSeatCard(slot: SeatSlotData) {
     const isSelected = selectedSlotForSwap === slot.id;
     const isDragOver = dragOverSlotId === slot.id;
@@ -541,18 +589,18 @@ export default function AdminSoDoLopPage() {
           alignItems: "center",
           cursor: "pointer",
           userSelect: "none",
-          transition: "all 0.2s ease",
+          transition: "all 0.15s ease",
           position: "relative",
-          opacity: isDimmed ? 0.35 : 1,
-          transform: isDragOver ? "scale(1.06)" : isSelected ? "scale(1.04)" : isMatchingTo && filterTo !== 0 ? "scale(1.03)" : "none",
+          opacity: isDimmed ? 0.3 : 1,
+          transform: isDragOver ? "scale(1.05)" : isSelected ? "scale(1.03)" : isMatchingTo && filterTo !== 0 ? "scale(1.02)" : "none",
           zIndex: isDragOver || isSelected ? 10 : 1,
         }}
       >
-        {/* Photo Container */}
+        {/* LARGER PHOTO CONTAINER (82px x 82px) */}
         <div
           style={{
-            width: 68,
-            height: 68,
+            width: 82,
+            height: 82,
             borderRadius: "50%",
             background: hasStudent ? (toConfig ? toConfig.bg : "#f1f5f9") : "#ffffff",
             border: isSelected
@@ -569,11 +617,11 @@ export default function AdminSoDoLopPage() {
             justifyContent: "center",
             overflow: "hidden",
             boxShadow: filterTo !== 0 && isMatchingTo
-              ? `0 0 14px ${toConfig?.glow || "rgba(2,132,199,0.3)"}`
+              ? `0 0 12px ${toConfig?.glow || "rgba(2,132,199,0.3)"}`
               : hasStudent
-              ? "0 4px 8px rgba(0,0,0,0.06)"
+              ? "0 3px 6px rgba(0,0,0,0.06)"
               : "none",
-            marginBottom: 6,
+            marginBottom: 4,
             position: "relative",
             transition: "all 0.15s ease",
           }}
@@ -596,16 +644,16 @@ export default function AdminSoDoLopPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 900,
-                  fontSize: "1.1rem",
+                  fontSize: "1.25rem",
                   color: toConfig ? toConfig.text : "#0369a1",
                 }}
               >
-                {slot.studentName?.substring(0, 2) || <User size={24} color="#0284c7" />}
+                {slot.studentName?.substring(0, 2) || <User size={28} color="#0284c7" />}
               </div>
             )
           ) : (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <Plus size={20} color="#94a3b8" />
+              <Plus size={24} color="#94a3b8" />
             </div>
           )}
 
@@ -619,7 +667,7 @@ export default function AdminSoDoLopPage() {
                 left: 0,
                 background: toConfig?.border || "#0284c7",
                 color: "white",
-                fontSize: "0.58rem",
+                fontSize: "0.6rem",
                 fontWeight: 900,
                 padding: "2px 5px",
                 borderRadius: "0 0 8px 0",
@@ -632,6 +680,7 @@ export default function AdminSoDoLopPage() {
           {/* Drag handle icon */}
           {hasStudent && (
             <div
+              className="no-print"
               title="Kéo chuột để đổi chỗ"
               style={{
                 position: "absolute",
@@ -656,9 +705,9 @@ export default function AdminSoDoLopPage() {
         <div
           style={{
             width: "100%",
-            maxWidth: 96,
-            minHeight: 36,
-            borderRadius: 14,
+            maxWidth: 102,
+            minHeight: 34,
+            borderRadius: 12,
             border: isSelected
               ? "2px solid #0284c7"
               : filterTo !== 0 && isMatchingTo
@@ -670,7 +719,7 @@ export default function AdminSoDoLopPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "4px 6px",
+            padding: "3px 4px",
             textAlign: "center",
             boxShadow: hasStudent ? "0 2px 4px rgba(0,0,0,0.04)" : "none",
           }}
@@ -694,6 +743,47 @@ export default function AdminSoDoLopPage() {
 
   return (
     <div className="animate-fade-in">
+      {/* Exact 1-Page A4 Print CSS Styles */}
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 4mm 5mm;
+          }
+          body {
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #seating-chart-print-area, #seating-chart-print-area * {
+            visibility: visible;
+          }
+          #seating-chart-print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 14px 16px 10px !important;
+            box-shadow: none !important;
+            border: 2px solid #000000 !important;
+            border-radius: 16px !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            overflow: hidden !important;
+          }
+          .no-print, header, nav, aside, footer {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       {/* Toast */}
       {toast && (
         <div
@@ -721,6 +811,7 @@ export default function AdminSoDoLopPage() {
 
       {/* Top Header */}
       <div
+        className="no-print"
         style={{
           display: "flex",
           alignItems: "flex-start",
@@ -748,10 +839,10 @@ export default function AdminSoDoLopPage() {
             </div>
             <div>
               <h1 style={{ fontSize: "1.35rem", fontWeight: 800, margin: 0 }}>
-                Sơ Đồ Lớp Học (56 Chỗ • Lọc Theo Tổ) — Lớp {selectedLop}
+                Sơ Đồ Lớp Học (Khung A4 Chuẩn In) — Lớp {selectedLop}
               </h1>
               <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: 0 }}>
-                2 Dãy bàn đều 7 hàng ngang • Bộ lọc theo từng Tổ • Kéo thả đổi chỗ bằng chuột
+                Khung ảnh lớn sắc nét • Vừa vặn đúng 1 trang A4 • Xuất file PDF & In đặt bàn giáo viên
               </p>
             </div>
           </div>
@@ -773,14 +864,23 @@ export default function AdminSoDoLopPage() {
           <button className="btn btn-secondary btn-sm" onClick={() => setNewMonthModalOpen(true)}>
             <Calendar size={14} /> Đổi tháng / Tạo mới
           </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleDownloadPdf}
+            disabled={exportingPdf}
+            title="Tải trực tiếp file PDF khổ A4"
+          >
+            <Download size={14} /> {exportingPdf ? "Đang tạo PDF..." : "Tải file PDF A4"}
+          </button>
           <button className="btn btn-primary btn-sm" onClick={() => window.print()}>
-            <Printer size={14} /> Xuất PDF / In Sơ Đồ
+            <Printer size={14} /> In Sơ Đồ A4
           </button>
         </div>
       </div>
 
       {/* Toolbar Controls */}
       <div
+        className="no-print"
         style={{
           display: "flex",
           gap: 12,
@@ -896,6 +996,7 @@ export default function AdminSoDoLopPage() {
 
       {/* Drag & Drop Hint Banner */}
       <div
+        className="no-print"
         style={{
           background: "#f0f9ff",
           border: "1px solid #bae6fd",
@@ -912,7 +1013,7 @@ export default function AdminSoDoLopPage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Move size={14} />
-          <span>💡 <strong>Hướng dẫn:</strong> Bấm vào bất kỳ ô <strong>TRỐNG</strong> nào để chọn học sinh theo từng Tổ. Kéo thả chuột giữa 2 ô để hoán đổi chỗ ngồi!</span>
+          <span>💡 <strong>Hướng dẫn:</strong> Bấm vào bất kỳ ô nào để tải ảnh thẻ hoặc gán học sinh. Khung ảnh đã được phóng to tối đa và vừa vặn chuẩn 1 trang giấy A4 khi in!</span>
         </div>
         {selectedSlotForSwap && (
           <span style={{ color: "#0284c7", fontWeight: 800 }}>
@@ -922,7 +1023,7 @@ export default function AdminSoDoLopPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* SEATING CHART POSTER / PRINT CONTAINER (2 FULL 7-ROW BLOCKS = 56 SEATS)  */}
+      {/* SEATING CHART POSTER / PRINT CONTAINER (FIT EXACT 1 PAGE A4 WITH LARGE AVATARS) */}
       {/* ========================================================================= */}
       <div
         id="seating-chart-print-area"
@@ -930,10 +1031,10 @@ export default function AdminSoDoLopPage() {
         style={{
           background: "#ffffff",
           backgroundImage: "radial-gradient(#e2e8f0 1.2px, transparent 1.2px)",
-          backgroundSize: "24px 24px",
-          borderRadius: 24,
+          backgroundSize: "22px 22px",
+          borderRadius: 20,
           border: "2px solid #e2e8f0",
-          padding: "36px 32px 28px",
+          padding: "24px 26px 18px",
           boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
           position: "relative",
           maxWidth: 960,
@@ -941,7 +1042,7 @@ export default function AdminSoDoLopPage() {
         }}
       >
         {/* Main 7 Rows Grid Layout */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
             const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
             const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
@@ -951,9 +1052,9 @@ export default function AdminSoDoLopPage() {
                 key={`row-${rowNum}`}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 40px 1fr",
+                  gridTemplateColumns: "1fr 34px 1fr",
                   alignItems: "center",
-                  gap: 12,
+                  gap: 10,
                 }}
               >
                 {/* Dãy Trái (4 cột bàn) */}
@@ -961,7 +1062,7 @@ export default function AdminSoDoLopPage() {
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: 10,
+                    gap: 8,
                   }}
                 >
                   {leftSlots.map((s) => renderSeatCard(s))}
@@ -973,7 +1074,7 @@ export default function AdminSoDoLopPage() {
                     textAlign: "center",
                     fontSize: "0.68rem",
                     fontWeight: 800,
-                    color: "#cbd5e1",
+                    color: "#94a3b8",
                     letterSpacing: "1px",
                   }}
                 >
@@ -985,7 +1086,7 @@ export default function AdminSoDoLopPage() {
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: 10,
+                    gap: 8,
                   }}
                 >
                   {rightSlots.map((s) => renderSeatCard(s))}
@@ -1000,25 +1101,25 @@ export default function AdminSoDoLopPage() {
         {/* ========================================================= */}
         <div
           style={{
-            marginTop: 26,
+            marginTop: 14,
             display: "flex",
             justifyContent: "flex-end",
-            paddingRight: 20,
+            paddingRight: 16,
           }}
         >
           <div
             style={{
-              width: 320,
+              width: 310,
               background: "#ffffff",
               border: "3px solid #1e293b",
-              borderRadius: 20,
-              padding: "12px 20px",
+              borderRadius: 18,
+              padding: "10px 18px",
               textAlign: "center",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.06)",
             }}
           >
             <div
@@ -1042,7 +1143,7 @@ export default function AdminSoDoLopPage() {
                 marginTop: 2,
               }}
             />
-            <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, marginTop: 2 }}>
+            <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 700, marginTop: 2 }}>
               BÀN GIÁO VIÊN
             </div>
           </div>
@@ -1053,21 +1154,21 @@ export default function AdminSoDoLopPage() {
         {/* ========================================================= */}
         <div
           style={{
-            marginTop: 28,
-            paddingTop: 20,
+            marginTop: 16,
+            paddingTop: 14,
             borderTop: "2px solid #000000",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-end",
             flexWrap: "wrap",
-            gap: 16,
+            gap: 12,
           }}
         >
           {/* Bottom Left Title */}
-          <div>
+          <div style={{ flex: 1, minWidth: 280 }}>
             <div
               style={{
-                fontSize: "1.7rem",
+                fontSize: "1.5rem",
                 fontWeight: 900,
                 color: "#000000",
                 letterSpacing: "-0.5px",
@@ -1077,23 +1178,23 @@ export default function AdminSoDoLopPage() {
               {title}
             </div>
             {slogan && (
-              <div style={{ fontSize: "0.8rem", color: "#64748b", fontStyle: "italic", marginTop: 4 }}>
+              <div style={{ fontSize: "0.78rem", color: "#475569", fontStyle: "italic", marginTop: 3 }}>
                 "{slogan}"
               </div>
             )}
-            <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 2, fontWeight: 600 }}>
+            <div style={{ fontSize: "0.7rem", color: "#94a3b8", marginTop: 2, fontWeight: 600 }}>
               Áp dụng: {selectedMonth} • Hệ thống Quanlyhocvien
             </div>
           </div>
 
           {/* Bottom Right Badges (Class & Teacher) */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 220 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 210 }}>
             {/* Class Box */}
             <div
               style={{
                 border: "2px solid #000000",
-                borderRadius: 20,
-                padding: "6px 16px",
+                borderRadius: 16,
+                padding: "5px 14px",
                 fontSize: "0.85rem",
                 fontWeight: 800,
                 color: "#000000",
@@ -1110,8 +1211,8 @@ export default function AdminSoDoLopPage() {
             <div
               style={{
                 border: "2px solid #000000",
-                borderRadius: 20,
-                padding: "6px 16px",
+                borderRadius: 16,
+                padding: "5px 14px",
                 fontSize: "0.85rem",
                 fontWeight: 800,
                 color: "#000000",
@@ -1367,7 +1468,7 @@ export default function AdminSoDoLopPage() {
                   className="input"
                   value={settingsForm.title}
                   onChange={(e) => setSettingsForm((f) => ({ ...f, title: e.target.value }))}
-                  placeholder="VD: CLASSROOM SEATING CHART"
+                  placeholder="VD: SƠ ĐỒ LỚP 12T2 (SS: 55)"
                 />
               </div>
 
@@ -1377,7 +1478,7 @@ export default function AdminSoDoLopPage() {
                   className="input"
                   value={settingsForm.gvcn}
                   onChange={(e) => setSettingsForm((f) => ({ ...f, gvcn: e.target.value }))}
-                  placeholder="VD: Phí Huỳnh Anh Hào"
+                  placeholder="VD: KIM LIÊN"
                 />
               </div>
 
@@ -1387,7 +1488,7 @@ export default function AdminSoDoLopPage() {
                   className="input"
                   value={settingsForm.slogan}
                   onChange={(e) => setSettingsForm((f) => ({ ...f, slogan: e.target.value }))}
-                  placeholder="VD: Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển"
+                  placeholder="VD: 12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!"
                 />
               </div>
             </div>
