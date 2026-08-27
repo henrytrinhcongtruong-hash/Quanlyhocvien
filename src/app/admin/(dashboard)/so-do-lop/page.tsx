@@ -66,7 +66,7 @@ export default function AdminSoDoLopPage() {
 
   // Chart data
   const [chartId, setChartId] = useState<number | null>(null);
-  const [title, setTitle] = useState("SƠ ĐỒ LỚP 12T2 (SS: 55)");
+  const [title, setTitle] = useState("SƠ ĐỒ LỚP 12T2");
   const [gvcn, setGvcn] = useState("KIM LIÊN");
   const [slogan, setSlogan] = useState("12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG! 100% ĐẬU TỐT NGHIỆP – WE ARE WINNERS! 🏆");
   const [slots, setSlots] = useState<SeatSlotData[]>([]);
@@ -149,7 +149,7 @@ export default function AdminSoDoLopPage() {
       const data = await res.json();
       if (data.success && data.chart) {
         setChartId(data.chart.id);
-        setTitle(data.chart.title || `SƠ ĐỒ LỚP ${selectedLop} (SS: 55)`);
+        setTitle(data.chart.title || `SƠ ĐỒ LỚP ${selectedLop}`);
         setGvcn(data.chart.gvcn || "KIM LIÊN");
         setSlogan(data.chart.slogan || "12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!");
 
@@ -554,7 +554,7 @@ export default function AdminSoDoLopPage() {
   }
 
   function handleSaveSettings() {
-    setTitle(settingsForm.title.trim() || `SƠ ĐỒ LỚP ${selectedLop} (SS: 55)`);
+    setTitle(settingsForm.title.trim() || `SƠ ĐỒ LỚP ${selectedLop}`);
     setGvcn(settingsForm.gvcn.trim() || "KIM LIÊN");
     setSlogan(settingsForm.slogan.trim() || "12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!");
     setSettingsModalOpen(false);
@@ -1466,7 +1466,7 @@ export default function AdminSoDoLopPage() {
                   className="input"
                   value={settingsForm.title}
                   onChange={(e) => setSettingsForm((f) => ({ ...f, title: e.target.value }))}
-                  placeholder="VD: SƠ ĐỒ LỚP 12T2 (SS: 55)"
+                  placeholder="VD: SƠ ĐỒ LỚP 12T2"
                 />
               </div>
 

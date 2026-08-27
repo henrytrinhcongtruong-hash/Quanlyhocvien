@@ -37,7 +37,7 @@ function PublicSoDoLopContent() {
   const [monthList, setMonthList] = useState<string[]>(["Tháng 09/2025"]);
   const [filterTo, setFilterTo] = useState<number>(0); // 0 = All, 1, 2, 3, 4
   const [slots, setSlots] = useState<SeatSlotData[]>([]);
-  const [title, setTitle] = useState("SƠ ĐỒ LỚP 12T2 (SS: 55)");
+  const [title, setTitle] = useState("SƠ ĐỒ LỚP 12T2");
   const [gvcn, setGvcn] = useState("KIM LIÊN");
   const [slogan, setSlogan] = useState("12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!");
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,7 +73,7 @@ function PublicSoDoLopContent() {
       .then((r) => r.json())
       .then((d) => {
         if (d.success && d.chart) {
-          setTitle(d.chart.title || `SƠ ĐỒ LỚP ${activeLop} (SS: 55)`);
+          setTitle(d.chart.title || `SƠ ĐỒ LỚP ${activeLop}`);
           setGvcn(d.chart.gvcn || "KIM LIÊN");
           setSlogan(d.chart.slogan || "12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!");
 
