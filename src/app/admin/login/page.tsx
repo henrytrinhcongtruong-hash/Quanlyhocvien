@@ -105,9 +105,11 @@ export default function LoginPage() {
           >
             <BookOpen size={26} color="white" />
           </div>
-          <h1 style={{ fontSize: "1.5rem", marginBottom: 4 }}>Trang Quản Trị</h1>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 900, marginBottom: 4, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
+            Quanlyhocvien
+          </h1>
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
-            Hệ thống Quản lý Giáo dục — Năm học 2025–2026
+            Hệ thống Quản lý Học viên & Giáo dục
           </p>
         </div>
 

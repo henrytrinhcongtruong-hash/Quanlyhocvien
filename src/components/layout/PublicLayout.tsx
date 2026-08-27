@@ -123,25 +123,23 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                 style={{
                   width: 40,
                   height: 40,
-                  background: "linear-gradient(135deg, hsl(213,94%,44%) 0%, hsl(213,80%,58%) 100%)",
+                  background: "linear-gradient(135deg, #0891b2 0%, #4f46e5 100%)",
                   borderRadius: 10,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
-                  boxShadow: "0 3px 8px rgba(16,90,188,0.3)",
+                  boxShadow: "0 3px 8px rgba(8,145,178,0.3)",
                 }}
               >
-                <span style={{ color: "white", fontWeight: 800, fontSize: 12, letterSpacing: -0.5 }}>
-                  {activeClass.substring(0, 3)}
-                </span>
+                <GraduationCap size={22} color="white" />
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: "1rem", lineHeight: 1.2, color: "var(--text-primary)" }}>
-                  Lớp {activeClass}
+                <div style={{ fontWeight: 800, fontSize: "1.05rem", lineHeight: 1.2, color: "var(--text-primary)", letterSpacing: "-0.3px" }}>
+                  Quanlyhocvien
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 500 }}>
-                  Năm học 2025–2026
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                  Lớp {activeClass} • Năm học 2025–2026
                 </div>
               </div>
             </div>

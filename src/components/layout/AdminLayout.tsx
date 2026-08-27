@@ -169,11 +169,11 @@ export default function AdminLayout({
           )}
         </div>
         <div>
-          <div style={{ fontWeight: 800, fontSize: "0.9rem", lineHeight: 1.2 }}>
-            {realIsSuperAdmin ? "Hệ thống Quản trị" : `Lớp ${assignedLop}`}
+          <div style={{ fontWeight: 800, fontSize: "0.95rem", lineHeight: 1.2, color: "var(--text-primary)" }}>
+            {realIsSuperAdmin ? "Quanlyhocvien" : `Lớp ${assignedLop}`}
           </div>
-          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 500 }}>
-            {realIsSuperAdmin ? "Quản trị toàn trường" : roleLabel}
+          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>
+            {realIsSuperAdmin ? "Quản trị hệ thống" : roleLabel}
           </div>
         </div>
       </div>
