@@ -30,24 +30,29 @@ export async function PUT(
     if (!session?.user?.id) return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
 
     const userId = Number(session.user.id);
+    const userRole = (session.user as { role?: string })?.role;
     const { allowed } = await checkPermission(userId, "hoc_sinh", "toan_quyen");
-    if (!allowed) return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
+    if (!allowed && userRole !== "admin") return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
 
     const body = await req.json();
+    const updateData: Record<string, unknown> = {};
+
+    if (body.hoTen !== undefined) updateData.hoTen = body.hoTen?.trim();
+    if (body.tenGoi !== undefined) updateData.tenGoi = body.tenGoi?.trim() || null;
+    if (body.ngaySinh !== undefined) updateData.ngaySinh = body.ngaySinh ? new Date(body.ngaySinh) : null;
+    if (body.gioiTinh !== undefined) updateData.gioiTinh = body.gioiTinh;
+    if (body.to !== undefined) updateData.to = Number(body.to);
+    if (body.lop !== undefined) updateData.lop = body.lop;
+    if (body.ghiChu !== undefined) updateData.ghiChu = body.ghiChu?.trim() || null;
+    if (body.avatar !== undefined) updateData.avatar = body.avatar;
+
     const student = await prisma.student.update({
       where: { id: Number(id) },
-      data: {
-        hoTen: body.hoTen?.trim(),
-        tenGoi: body.tenGoi?.trim() || null,
-        ngaySinh: body.ngaySinh ? new Date(body.ngaySinh) : null,
-        gioiTinh: body.gioiTinh || "Nam",
-        to: Number(body.to),
-        lop: body.lop || "11AT3",
-        ghiChu: body.ghiChu?.trim() || null,
-      },
+      data: updateData,
     });
     return NextResponse.json(student);
-  } catch {
+  } catch (e) {
+    console.error("PUT student error:", e);
     return NextResponse.json({ error: "Lỗi server" }, { status: 500 });
   }
 }
@@ -62,10 +67,13 @@ export async function DELETE(
     if (!session?.user?.id) return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
 
     const userId = Number(session.user.id);
+    const userRole = (session.user as { role?: string })?.role;
     const { allowed } = await checkPermission(userId, "hoc_sinh", "toan_quyen");
-    if (!allowed) return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
+    if (!allowed && userRole !== "admin") return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
 
-    await prisma.student.delete({ where: { id: Number(id) } });
+    await prisma.student.delete({
+      where: { id: Number(id) },
+    });
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Lỗi server" }, { status: 500 });

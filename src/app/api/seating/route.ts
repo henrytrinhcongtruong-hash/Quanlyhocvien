@@ -14,7 +14,6 @@ export async function GET(req: NextRequest) {
     });
 
     if (!chart) {
-      // Create initial chart with 56 empty slots
       const initialSlots = generateEmptySlots();
       chart = await prisma.seatingChart.create({
         data: {
@@ -28,7 +27,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Get list of all students of this class to easily pick from
+    // Get list of all students of this class with avatars
     const students = await prisma.student.findMany({
       where: { lop },
       select: { id: true, hoTen: true, tenGoi: true, gioiTinh: true, avatar: true, to: true },
@@ -42,7 +41,7 @@ export async function GET(req: NextRequest) {
       parsedSlots = generateEmptySlots();
     }
 
-    // Auto-sync avatar and 'to' from Student record if slot avatar is missing
+    // Link avatar from Student table
     parsedSlots = parsedSlots.map((s) => {
       if (s.studentId) {
         const found = students.find((st) => st.id === s.studentId);
@@ -51,6 +50,7 @@ export async function GET(req: NextRequest) {
             ...s,
             studentPhoto: s.studentPhoto || found.avatar || null,
             to: s.to || found.to,
+            studentName: s.studentName || found.hoTen.toUpperCase(),
           };
         }
       }
@@ -78,8 +78,22 @@ export async function POST(req: NextRequest) {
 
     const currentLop = lop?.trim() || "12T2";
     const currentMonth = month?.trim() || "Tháng 09/2025";
-    const parsedSlots: SeatSlotData[] = Array.isArray(slots) ? slots : JSON.parse(slots || "[]");
-    const slotsString = JSON.stringify(parsedSlots);
+    const rawSlots: SeatSlotData[] = Array.isArray(slots) ? slots : JSON.parse(slots || "[]");
+
+    // Clean slots to lightweight format: Do not store large base64 strings in JSON column if student has studentId
+    const cleanSlots = rawSlots.map((s) => ({
+      id: s.id,
+      row: s.row,
+      col: s.col,
+      block: s.block,
+      studentId: s.studentId || null,
+      studentName: s.studentName ? s.studentName.toUpperCase() : null,
+      studentPhoto: s.studentId ? null : (s.studentPhoto ? s.studentPhoto.substring(0, 100000) : null),
+      gender: s.gender || null,
+      to: s.to || null,
+    }));
+
+    const slotsString = JSON.stringify(cleanSlots);
 
     let updated;
     if (id) {
@@ -119,22 +133,6 @@ export async function POST(req: NextRequest) {
             slotsData: slotsString,
           },
         });
-      }
-    }
-
-    // Also persist avatar into Student table for any assigned students
-    if (Array.isArray(parsedSlots)) {
-      for (const slot of parsedSlots) {
-        if (slot.studentId && slot.studentPhoto) {
-          try {
-            await prisma.student.update({
-              where: { id: slot.studentId },
-              data: { avatar: slot.studentPhoto },
-            });
-          } catch {
-            // ignore non-critical individual student avatar update
-          }
-        }
       }
     }
 

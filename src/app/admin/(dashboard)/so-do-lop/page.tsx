@@ -416,8 +416,22 @@ export default function AdminSoDoLopPage() {
     }
   }
 
-  function handleSaveSlot() {
+  async function handleSaveSlot() {
     if (!editSlotModal) return;
+
+    // If student has studentId, persist photo to Student.avatar
+    if (slotForm.studentId) {
+      fetch(`/api/students/${slotForm.studentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar: slotForm.studentPhoto }),
+      }).catch((err) => console.error("Student avatar save error:", err));
+
+      // Update local student list
+      setStudents((prev) =>
+        prev.map((st) => (st.id === slotForm.studentId ? { ...st, avatar: slotForm.studentPhoto } : st))
+      );
+    }
 
     setSlots((prev) => {
       const updated = prev.map((s) => {
@@ -437,7 +451,7 @@ export default function AdminSoDoLopPage() {
     });
 
     setEditSlotModal(null);
-    showToast("Đã cập nhật vị trí học sinh");
+    showToast("Đã lưu vị trí và ảnh học sinh");
   }
 
   function handleClearSlot() {
