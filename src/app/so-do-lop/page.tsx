@@ -10,8 +10,16 @@ import {
   Calendar,
   Sparkles,
   School,
+  Filter,
 } from "lucide-react";
 import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
+
+const TO_COLORS: Record<number, { bg: string; text: string; border: string; glow: string }> = {
+  1: { bg: "#e0f2fe", text: "#0369a1", border: "#38bdf8", glow: "rgba(2, 132, 199, 0.4)" },
+  2: { bg: "#dcfce7", text: "#15803d", border: "#4ade80", glow: "rgba(22, 163, 74, 0.4)" },
+  3: { bg: "#fef3c7", text: "#b45309", border: "#fcd34d", glow: "rgba(217, 119, 6, 0.4)" },
+  4: { bg: "#f3e8ff", text: "#7e22ce", border: "#c084fc", glow: "rgba(147, 51, 234, 0.4)" },
+};
 
 function PublicSoDoLopContent() {
   const searchParams = useSearchParams();
@@ -26,6 +34,7 @@ function PublicSoDoLopContent() {
 
   const [selectedMonth, setSelectedMonth] = useState("Tháng 09/2025");
   const [monthList, setMonthList] = useState<string[]>(["Tháng 09/2025"]);
+  const [filterTo, setFilterTo] = useState<number>(0); // 0 = All, 1, 2, 3, 4
   const [slots, setSlots] = useState<SeatSlotData[]>([]);
   const [title, setTitle] = useState("CLASSROOM SEATING CHART");
   const [gvcn, setGvcn] = useState("Phí Huỳnh Anh Hào");
@@ -65,6 +74,8 @@ function PublicSoDoLopContent() {
           setTitle(d.chart.title || "CLASSROOM SEATING CHART");
           setGvcn(d.chart.gvcn || "Phí Huỳnh Anh Hào");
           setSlogan(d.chart.slogan || "Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển");
+
+          const studentsList = d.students || [];
           let loadedSlots: SeatSlotData[] = d.chart.slots || [];
           if (loadedSlots.length < 56) {
             const empty = generateEmptySlots();
@@ -73,6 +84,20 @@ function PublicSoDoLopContent() {
               return found || e;
             });
           }
+
+          // Backfill 'to' from students list if available
+          loadedSlots = loadedSlots.map((s) => {
+            if (s.studentId) {
+              const st = studentsList.find((st: { id: number; to: number }) => st.id === s.studentId);
+              if (st) return { ...s, to: st.to };
+            }
+            if (s.studentName) {
+              const st = studentsList.find((st: { hoTen: string; to: number }) => st.hoTen.toLowerCase() === s.studentName?.toLowerCase());
+              if (st) return { ...s, to: st.to };
+            }
+            return s;
+          });
+
           setSlots(loadedSlots);
         }
       })
@@ -88,6 +113,9 @@ function PublicSoDoLopContent() {
       slot.studentName.toLowerCase().includes(searchQuery.trim().toLowerCase());
 
     const hasStudent = !!slot.studentName;
+    const isMatchingTo = filterTo === 0 || (slot.to !== null && slot.to !== undefined && slot.to === filterTo);
+    const isDimmed = filterTo !== 0 && (!slot.to || slot.to !== filterTo);
+    const toConfig = slot.to ? TO_COLORS[slot.to] : null;
 
     return (
       <div
@@ -98,7 +126,8 @@ function PublicSoDoLopContent() {
           alignItems: "center",
           userSelect: "none",
           transition: "all 0.2s ease",
-          transform: isSearched ? "scale(1.12)" : "none",
+          opacity: isDimmed ? 0.35 : 1,
+          transform: isSearched ? "scale(1.12)" : isMatchingTo && filterTo !== 0 ? "scale(1.03)" : "none",
           zIndex: isSearched ? 10 : 1,
         }}
       >
@@ -108,11 +137,13 @@ function PublicSoDoLopContent() {
             width: 68,
             height: 68,
             borderRadius: "50%",
-            background: hasStudent ? "#f1f5f9" : "#ffffff",
+            background: hasStudent ? (toConfig ? toConfig.bg : "#f1f5f9") : "#ffffff",
             border: isSearched
               ? "3px solid #ef4444"
+              : filterTo !== 0 && isMatchingTo
+              ? `3px solid ${toConfig?.border || "#0284c7"}`
               : hasStudent
-              ? "2px solid #cbd5e1"
+              ? `2px solid ${toConfig ? toConfig.border : "#cbd5e1"}`
               : "2px dashed #94a3b8",
             display: "flex",
             alignItems: "center",
@@ -120,10 +151,14 @@ function PublicSoDoLopContent() {
             overflow: "hidden",
             boxShadow: isSearched
               ? "0 0 16px rgba(239,68,68,0.5)"
+              : filterTo !== 0 && isMatchingTo
+              ? `0 0 14px ${toConfig?.glow || "rgba(2,132,199,0.3)"}`
               : hasStudent
               ? "0 4px 8px rgba(0,0,0,0.06)"
               : "none",
             marginBottom: 6,
+            position: "relative",
+            transition: "all 0.15s ease",
           }}
         >
           {hasStudent ? (
@@ -139,13 +174,13 @@ function PublicSoDoLopContent() {
                 style={{
                   width: "100%",
                   height: "100%",
-                  background: "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)",
+                  background: toConfig ? toConfig.bg : "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 900,
                   fontSize: "1.1rem",
-                  color: "#0369a1",
+                  color: toConfig ? toConfig.text : "#0369a1",
                 }}
               >
                 {slot.studentName?.substring(0, 2) || <User size={24} color="#0284c7" />}
@@ -153,6 +188,26 @@ function PublicSoDoLopContent() {
             )
           ) : (
             <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>—</span>
+          )}
+
+          {/* Tổ Badge */}
+          {hasStudent && slot.to && (
+            <div
+              title={`Tổ ${slot.to}`}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                background: toConfig?.border || "#0284c7",
+                color: "white",
+                fontSize: "0.58rem",
+                fontWeight: 900,
+                padding: "2px 5px",
+                borderRadius: "0 0 8px 0",
+              }}
+            >
+              T{slot.to}
+            </div>
           )}
         </div>
 
@@ -163,8 +218,20 @@ function PublicSoDoLopContent() {
             maxWidth: 96,
             minHeight: 36,
             borderRadius: 14,
-            border: isSearched ? "2px solid #ef4444" : hasStudent ? "2px solid #000000" : "1px dashed #cbd5e1",
-            background: isSearched ? "#fee2e2" : hasStudent ? "#ffffff" : "#f8fafc",
+            border: isSearched
+              ? "2px solid #ef4444"
+              : filterTo !== 0 && isMatchingTo
+              ? `2px solid ${toConfig?.border || "#000000"}`
+              : hasStudent
+              ? "2px solid #000000"
+              : "1px dashed #cbd5e1",
+            background: isSearched
+              ? "#fee2e2"
+              : filterTo !== 0 && isMatchingTo && toConfig
+              ? toConfig.bg
+              : hasStudent
+              ? "#ffffff"
+              : "#f8fafc",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -177,7 +244,13 @@ function PublicSoDoLopContent() {
             style={{
               fontSize: "0.68rem",
               fontWeight: 900,
-              color: isSearched ? "#dc2626" : hasStudent ? "#000000" : "#94a3b8",
+              color: isSearched
+                ? "#dc2626"
+                : filterTo !== 0 && isMatchingTo && toConfig
+                ? toConfig.text
+                : hasStudent
+                ? "#000000"
+                : "#94a3b8",
               lineHeight: 1.15,
               textTransform: "uppercase",
               wordBreak: "break-word",
@@ -259,15 +332,51 @@ function PublicSoDoLopContent() {
         }}
       >
         {/* Search Bar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 240, maxWidth: 380 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 220, maxWidth: 340 }}>
           <Search size={16} color="var(--text-muted)" />
           <input
             className="input"
             style={{ width: "100%", padding: "6px 12px", fontSize: "0.875rem" }}
-            placeholder="🔍 Nhập tên học sinh để tìm vị trí ngồi..."
+            placeholder="🔍 Tìm tên học sinh..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+        </div>
+
+        {/* Filter By Tổ (Tổ 1 - Tổ 4) */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", padding: "4px 8px", borderRadius: 10, border: "1px solid var(--border)" }}>
+          <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>
+            <Filter size={12} /> Tổ:
+          </span>
+          {[
+            { id: 0, label: "Tất cả", color: "#64748b", bg: "#f1f5f9" },
+            { id: 1, label: "Tổ 1", color: "#0284c7", bg: "#e0f2fe" },
+            { id: 2, label: "Tổ 2", color: "#16a34a", bg: "#dcfce7" },
+            { id: 3, label: "Tổ 3", color: "#d97706", bg: "#fef3c7" },
+            { id: 4, label: "Tổ 4", color: "#9333ea", bg: "#f3e8ff" },
+          ].map((t) => {
+            const isActive = filterTo === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setFilterTo(t.id)}
+                style={{
+                  border: isActive ? `2px solid ${t.color}` : "1px solid transparent",
+                  background: isActive ? t.bg : "transparent",
+                  color: isActive ? t.color : "#64748b",
+                  fontWeight: isActive ? 800 : 600,
+                  fontSize: "0.78rem",
+                  padding: "3px 9px",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Month Selector */}

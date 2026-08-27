@@ -23,6 +23,7 @@ import {
   Settings,
   School,
   RotateCcw,
+  Filter,
 } from "lucide-react";
 import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
 
@@ -34,6 +35,13 @@ interface StudentOption {
   avatar: string | null;
   to: number;
 }
+
+const TO_COLORS: Record<number, { bg: string; text: string; border: string; glow: string }> = {
+  1: { bg: "#e0f2fe", text: "#0369a1", border: "#38bdf8", glow: "rgba(2, 132, 199, 0.4)" },
+  2: { bg: "#dcfce7", text: "#15803d", border: "#4ade80", glow: "rgba(22, 163, 74, 0.4)" },
+  3: { bg: "#fef3c7", text: "#b45309", border: "#fcd34d", glow: "rgba(217, 119, 6, 0.4)" },
+  4: { bg: "#f3e8ff", text: "#7e22ce", border: "#c084fc", glow: "rgba(147, 51, 234, 0.4)" },
+};
 
 export default function AdminSoDoLopPage() {
   const searchParams = useSearchParams();
@@ -51,6 +59,9 @@ export default function AdminSoDoLopPage() {
   const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
   const [selectedMonth, setSelectedMonth] = useState("Tháng 09/2025");
   const [monthList, setMonthList] = useState<string[]>(["Tháng 09/2025", "Tháng 10/2025"]);
+
+  // Filter on Main Page by Tổ (0 = All, 1, 2, 3, 4)
+  const [filterTo, setFilterTo] = useState<number>(0);
 
   // Chart data
   const [chartId, setChartId] = useState<number | null>(null);
@@ -70,14 +81,17 @@ export default function AdminSoDoLopPage() {
 
   // Edit Slot Modal
   const [editSlotModal, setEditSlotModal] = useState<SeatSlotData | null>(null);
+  const [modalFilterTo, setModalFilterTo] = useState<number>(0); // 0 = All, 1, 2, 3, 4
   const [slotForm, setSlotForm] = useState<{
     studentId: number | null;
     studentName: string;
     studentPhoto: string | null;
+    to: number | null;
   }>({
     studentId: null,
     studentName: "",
     studentPhoto: null,
+    to: null,
   });
 
   // Settings Modal (Title, GVCN, Slogan)
@@ -137,7 +151,10 @@ export default function AdminSoDoLopPage() {
         setGvcn(data.chart.gvcn || "Phí Huỳnh Anh Hào");
         setSlogan(data.chart.slogan || "Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển");
 
-        // Ensure 56 slots
+        const loadedStudents: StudentOption[] = data.students || [];
+        setStudents(loadedStudents);
+
+        // Ensure 56 slots and populate 'to' if missing
         let loadedSlots: SeatSlotData[] = data.chart.slots || [];
         if (loadedSlots.length < 56) {
           const empty = generateEmptySlots();
@@ -146,8 +163,21 @@ export default function AdminSoDoLopPage() {
             return found || e;
           });
         }
+
+        // Backfill 'to' from student list if available
+        loadedSlots = loadedSlots.map((s) => {
+          if (s.studentId) {
+            const st = loadedStudents.find((st) => st.id === s.studentId);
+            if (st) return { ...s, to: st.to };
+          }
+          if (s.studentName) {
+            const st = loadedStudents.find((st) => st.hoTen.toLowerCase() === s.studentName?.toLowerCase());
+            if (st) return { ...s, to: st.to };
+          }
+          return s;
+        });
+
         setSlots(loadedSlots);
-        setStudents(data.students || []);
       }
     } catch {
       showToast("Lỗi tải sơ đồ lớp học", "error");
@@ -222,6 +252,7 @@ export default function AdminSoDoLopPage() {
       const tempPhoto = newSlots[srcIdx].studentPhoto;
       const tempId = newSlots[srcIdx].studentId;
       const tempGender = newSlots[srcIdx].gender;
+      const tempTo = newSlots[srcIdx].to;
 
       newSlots[srcIdx] = {
         ...newSlots[srcIdx],
@@ -229,6 +260,7 @@ export default function AdminSoDoLopPage() {
         studentPhoto: newSlots[tgtIdx].studentPhoto,
         studentId: newSlots[tgtIdx].studentId,
         gender: newSlots[tgtIdx].gender,
+        to: newSlots[tgtIdx].to,
       };
 
       newSlots[tgtIdx] = {
@@ -237,6 +269,7 @@ export default function AdminSoDoLopPage() {
         studentPhoto: tempPhoto,
         studentId: tempId,
         gender: tempGender,
+        to: tempTo,
       };
 
       handleSaveChart(newSlots);
@@ -274,7 +307,7 @@ export default function AdminSoDoLopPage() {
     setDragOverSlotId(null);
   }
 
-  // Click-to-swap for mobile or easy one-tap
+  // Click-to-swap
   function handleSlotClick(slot: SeatSlotData) {
     if (selectedSlotForSwap) {
       if (selectedSlotForSwap === slot.id) {
@@ -290,16 +323,18 @@ export default function AdminSoDoLopPage() {
   // Edit Slot Modal
   function openEditSlotModal(slot: SeatSlotData) {
     setEditSlotModal(slot);
+    setModalFilterTo(slot.to || 0);
     setSlotForm({
       studentId: slot.studentId || null,
       studentName: slot.studentName || "",
       studentPhoto: slot.studentPhoto || null,
+      to: slot.to || null,
     });
   }
 
   function handleStudentSelect(stId: number) {
     if (stId === 0) {
-      setSlotForm({ studentId: null, studentName: "", studentPhoto: null });
+      setSlotForm({ studentId: null, studentName: "", studentPhoto: null, to: null });
       return;
     }
     const st = students.find((s) => s.id === stId);
@@ -308,6 +343,7 @@ export default function AdminSoDoLopPage() {
         studentId: st.id,
         studentName: st.hoTen.toUpperCase(),
         studentPhoto: st.avatar || null,
+        to: st.to,
       });
     }
   }
@@ -336,6 +372,7 @@ export default function AdminSoDoLopPage() {
             studentName: slotForm.studentName.trim() ? slotForm.studentName.trim().toUpperCase() : null,
             studentPhoto: slotForm.studentPhoto,
             studentId: slotForm.studentId,
+            to: slotForm.to,
           };
         }
         return s;
@@ -353,7 +390,7 @@ export default function AdminSoDoLopPage() {
     setSlots((prev) => {
       const updated = prev.map((s) => {
         if (s.id === editSlotModal.id) {
-          return { ...s, studentName: null, studentPhoto: null, studentId: null };
+          return { ...s, studentName: null, studentPhoto: null, studentId: null, to: null };
         }
         return s;
       });
@@ -365,13 +402,11 @@ export default function AdminSoDoLopPage() {
   }
 
   // ====== ROTATION TOOLS ======
-  // 1. Dời hàng (Hàng 1 -> Hàng 2 -> ... Hàng 7 -> Hàng 1) cho cả 2 Dãy
   function handleRotateRows() {
     if (!confirm("Bạn có muốn xoay vòng các hàng ghế (Dời tiến 1 hàng cho cả 2 dãy) không?")) return;
 
     setSlots((prev) => {
       const newSlots = [...prev];
-      // For all 8 columns (Cols 1-4 Left, Cols 5-8 Right)
       for (let c = 1; c <= 8; c++) {
         const colSeats = [1, 2, 3, 4, 5, 6, 7].map((r) => newSlots.find((s) => s.row === r && s.col === c)!);
         const lastSeat = { ...colSeats[6] };
@@ -380,10 +415,12 @@ export default function AdminSoDoLopPage() {
           colSeats[r].studentName = prevSeat.studentName;
           colSeats[r].studentPhoto = prevSeat.studentPhoto;
           colSeats[r].studentId = prevSeat.studentId;
+          colSeats[r].to = prevSeat.to;
         }
         colSeats[0].studentName = lastSeat.studentName;
         colSeats[0].studentPhoto = lastSeat.studentPhoto;
         colSeats[0].studentId = lastSeat.studentId;
+        colSeats[0].to = lastSeat.to;
       }
 
       handleSaveChart(newSlots);
@@ -393,7 +430,6 @@ export default function AdminSoDoLopPage() {
     showToast("Đã xoay vòng 7 hàng ghế thành công!");
   }
 
-  // 2. Hoán đổi 2 dãy (Dãy Trái 28 chỗ <-> Dãy Phải 28 chỗ)
   function handleSwapBlocks() {
     if (!confirm("Bạn có muốn đổi chỗ giữa Dãy Trái và Dãy Phải không?")) return;
 
@@ -408,14 +444,17 @@ export default function AdminSoDoLopPage() {
             const tempName = leftSeat.studentName;
             const tempPhoto = leftSeat.studentPhoto;
             const tempId = leftSeat.studentId;
+            const tempTo = leftSeat.to;
 
             leftSeat.studentName = rightSeat.studentName;
             leftSeat.studentPhoto = rightSeat.studentPhoto;
             leftSeat.studentId = rightSeat.studentId;
+            leftSeat.to = rightSeat.to;
 
             rightSeat.studentName = tempName;
             rightSeat.studentPhoto = tempPhoto;
             rightSeat.studentId = tempId;
+            rightSeat.to = tempTo;
           }
         }
       }
@@ -474,11 +513,19 @@ export default function AdminSoDoLopPage() {
     setTimeout(() => handleSaveChart(), 100);
   }
 
+  // Filtered Students for Modal
+  const modalFilteredStudents = modalFilterTo === 0 ? students : students.filter((s) => s.to === modalFilterTo);
+
   // Render Seat Card
   function renderSeatCard(slot: SeatSlotData) {
     const isSelected = selectedSlotForSwap === slot.id;
     const isDragOver = dragOverSlotId === slot.id;
     const hasStudent = !!slot.studentName;
+
+    // Filter by Tổ on Main Page
+    const isMatchingTo = filterTo === 0 || (slot.to !== null && slot.to !== undefined && slot.to === filterTo);
+    const isDimmed = filterTo !== 0 && (!slot.to || slot.to !== filterTo);
+    const toConfig = slot.to ? TO_COLORS[slot.to] : null;
 
     return (
       <div
@@ -494,9 +541,10 @@ export default function AdminSoDoLopPage() {
           alignItems: "center",
           cursor: "pointer",
           userSelect: "none",
-          transition: "all 0.15s ease",
+          transition: "all 0.2s ease",
           position: "relative",
-          transform: isDragOver ? "scale(1.06)" : isSelected ? "scale(1.04)" : "none",
+          opacity: isDimmed ? 0.35 : 1,
+          transform: isDragOver ? "scale(1.06)" : isSelected ? "scale(1.04)" : isMatchingTo && filterTo !== 0 ? "scale(1.03)" : "none",
           zIndex: isDragOver || isSelected ? 10 : 1,
         }}
       >
@@ -506,19 +554,25 @@ export default function AdminSoDoLopPage() {
             width: 68,
             height: 68,
             borderRadius: "50%",
-            background: hasStudent ? "#f1f5f9" : "#ffffff",
+            background: hasStudent ? (toConfig ? toConfig.bg : "#f1f5f9") : "#ffffff",
             border: isSelected
               ? "3px solid #0284c7"
               : isDragOver
               ? "3px dashed #0284c7"
+              : filterTo !== 0 && isMatchingTo
+              ? `3px solid ${toConfig?.border || "#0284c7"}`
               : hasStudent
-              ? "2px solid #cbd5e1"
+              ? `2px solid ${toConfig ? toConfig.border : "#cbd5e1"}`
               : "2px dashed #94a3b8",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
-            boxShadow: hasStudent ? "0 4px 8px rgba(0,0,0,0.06)" : "none",
+            boxShadow: filterTo !== 0 && isMatchingTo
+              ? `0 0 14px ${toConfig?.glow || "rgba(2,132,199,0.3)"}`
+              : hasStudent
+              ? "0 4px 8px rgba(0,0,0,0.06)"
+              : "none",
             marginBottom: 6,
             position: "relative",
             transition: "all 0.15s ease",
@@ -537,13 +591,13 @@ export default function AdminSoDoLopPage() {
                 style={{
                   width: "100%",
                   height: "100%",
-                  background: "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)",
+                  background: toConfig ? toConfig.bg : "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 900,
                   fontSize: "1.1rem",
-                  color: "#0369a1",
+                  color: toConfig ? toConfig.text : "#0369a1",
                 }}
               >
                 {slot.studentName?.substring(0, 2) || <User size={24} color="#0284c7" />}
@@ -552,6 +606,26 @@ export default function AdminSoDoLopPage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
               <Plus size={20} color="#94a3b8" />
+            </div>
+          )}
+
+          {/* Tổ Badge on Avatar corner */}
+          {hasStudent && slot.to && (
+            <div
+              title={`Tổ ${slot.to}`}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                background: toConfig?.border || "#0284c7",
+                color: "white",
+                fontSize: "0.58rem",
+                fontWeight: 900,
+                padding: "2px 5px",
+                borderRadius: "0 0 8px 0",
+              }}
+            >
+              T{slot.to}
             </div>
           )}
 
@@ -587,10 +661,12 @@ export default function AdminSoDoLopPage() {
             borderRadius: 14,
             border: isSelected
               ? "2px solid #0284c7"
+              : filterTo !== 0 && isMatchingTo
+              ? `2px solid ${toConfig?.border || "#000000"}`
               : hasStudent
               ? "2px solid #000000"
               : "1px dashed #cbd5e1",
-            background: isSelected ? "#e0f2fe" : hasStudent ? "#ffffff" : "#f8fafc",
+            background: isSelected ? "#e0f2fe" : filterTo !== 0 && isMatchingTo && toConfig ? toConfig.bg : hasStudent ? "#ffffff" : "#f8fafc",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -603,7 +679,7 @@ export default function AdminSoDoLopPage() {
             style={{
               fontSize: "0.68rem",
               fontWeight: 900,
-              color: hasStudent ? "#000000" : "#94a3b8",
+              color: filterTo !== 0 && isMatchingTo && toConfig ? toConfig.text : hasStudent ? "#000000" : "#94a3b8",
               lineHeight: 1.15,
               textTransform: "uppercase",
               wordBreak: "break-word",
@@ -672,10 +748,10 @@ export default function AdminSoDoLopPage() {
             </div>
             <div>
               <h1 style={{ fontSize: "1.35rem", fontWeight: 800, margin: 0 }}>
-                Sơ Đồ Lớp Học (2 Dãy Đều 7 Hàng Ngang • 56 Chỗ) — Lớp {selectedLop}
+                Sơ Đồ Lớp Học (56 Chỗ • Lọc Theo Tổ) — Lớp {selectedLop}
               </h1>
               <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: 0 }}>
-                2 Dãy bàn chuẩn đều 7 hàng ngang • Kéo thả đổi chỗ bằng chuột • Xuất PDF in bàn giáo viên
+                2 Dãy bàn đều 7 hàng ngang • Bộ lọc theo từng Tổ • Kéo thả đổi chỗ bằng chuột
               </p>
             </div>
           </div>
@@ -754,6 +830,42 @@ export default function AdminSoDoLopPage() {
               ))}
             </select>
           </div>
+
+          {/* Filter By Tổ (Tổ 1 - Tổ 4) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", padding: "4px 8px", borderRadius: 10, border: "1px solid var(--border)" }}>
+            <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>
+              <Filter size={12} /> Tổ:
+            </span>
+            {[
+              { id: 0, label: "Tất cả", color: "#64748b", bg: "#f1f5f9" },
+              { id: 1, label: "Tổ 1", color: "#0284c7", bg: "#e0f2fe" },
+              { id: 2, label: "Tổ 2", color: "#16a34a", bg: "#dcfce7" },
+              { id: 3, label: "Tổ 3", color: "#d97706", bg: "#fef3c7" },
+              { id: 4, label: "Tổ 4", color: "#9333ea", bg: "#f3e8ff" },
+            ].map((t) => {
+              const isActive = filterTo === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setFilterTo(t.id)}
+                  style={{
+                    border: isActive ? `2px solid ${t.color}` : "1px solid transparent",
+                    background: isActive ? t.bg : "transparent",
+                    color: isActive ? t.color : "#64748b",
+                    fontWeight: isActive ? 800 : 600,
+                    fontSize: "0.78rem",
+                    padding: "3px 9px",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Quick Rotation Buttons */}
@@ -763,7 +875,7 @@ export default function AdminSoDoLopPage() {
             onClick={handleRotateRows}
             title="Dời tiến 7 hàng ghế 1 bậc"
           >
-            <RotateCw size={13} /> Xoay vòng 7 hàng ghế
+            <RotateCw size={13} /> Xoay vòng hàng ghế
           </button>
           <button
             className="btn btn-secondary btn-sm"
@@ -800,7 +912,7 @@ export default function AdminSoDoLopPage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Move size={14} />
-          <span>💡 <strong>Hướng dẫn:</strong> Bấm vào bất kỳ ô <strong>TRỐNG</strong> nào để chọn học sinh / thêm ảnh thẻ. Kéo thả chuột giữa 2 ô để hoán đổi chỗ ngồi!</span>
+          <span>💡 <strong>Hướng dẫn:</strong> Bấm vào bất kỳ ô <strong>TRỐNG</strong> nào để chọn học sinh theo từng Tổ. Kéo thả chuột giữa 2 ô để hoán đổi chỗ ngồi!</span>
         </div>
         {selectedSlotForSwap && (
           <span style={{ color: "#0284c7", fontWeight: 800 }}>
@@ -828,7 +940,7 @@ export default function AdminSoDoLopPage() {
           margin: "0 auto",
         }}
       >
-        {/* Main 7 Rows Grid Layout (Both Left and Right Blocks have full 7 rows) */}
+        {/* Main 7 Rows Grid Layout */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
             const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
@@ -1017,7 +1129,7 @@ export default function AdminSoDoLopPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* EDIT SLOT MODAL (SELECT STUDENT, UPLOAD PHOTO, EDIT NAME) */}
+      {/* EDIT SLOT MODAL WITH TO FILTER (BỘ LỌC THEO TỔ)          */}
       {/* ========================================================= */}
       {editSlotModal && typeof document !== "undefined" && createPortal(
         <div style={{ position: "fixed", inset: 0, zIndex: 999999 }}>
@@ -1036,7 +1148,7 @@ export default function AdminSoDoLopPage() {
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
               padding: "26px 28px",
               width: "92%",
-              maxWidth: 480,
+              maxWidth: 490,
               animation: "fadeIn 0.15s ease",
             }}
           >
@@ -1046,7 +1158,7 @@ export default function AdminSoDoLopPage() {
                   Xếp chỗ: Hàng {editSlotModal.row} — {editSlotModal.block === "left" ? "Dãy Trái" : "Dãy Phải"} (Cột {editSlotModal.col})
                 </h3>
                 <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", margin: 0, marginTop: 2 }}>
-                  Chọn học sinh, tải ảnh đại diện hoặc xóa vị trí
+                  Chọn học sinh, lọc theo Tổ hoặc tải ảnh đại diện
                 </p>
               </div>
               <button
@@ -1058,21 +1170,64 @@ export default function AdminSoDoLopPage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Filter By Tổ Buttons inside Modal */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <label className="label" style={{ fontWeight: 800, margin: 0 }}>
+                    Bộ lọc theo Tổ:
+                  </label>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                    ({modalFilteredStudents.length} học sinh)
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {[
+                    { id: 0, label: "Tất cả tổ", color: "#64748b", bg: "#f1f5f9" },
+                    { id: 1, label: "🔵 Tổ 1", color: "#0284c7", bg: "#e0f2fe" },
+                    { id: 2, label: "🟢 Tổ 2", color: "#16a34a", bg: "#dcfce7" },
+                    { id: 3, label: "🟠 Tổ 3", color: "#d97706", bg: "#fef3c7" },
+                    { id: 4, label: "🟣 Tổ 4", color: "#9333ea", bg: "#f3e8ff" },
+                  ].map((t) => {
+                    const isActive = modalFilterTo === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setModalFilterTo(t.id)}
+                        style={{
+                          border: isActive ? `2px solid ${t.color}` : "1px solid #e2e8f0",
+                          background: isActive ? t.bg : "#ffffff",
+                          color: isActive ? t.color : "#475569",
+                          fontWeight: isActive ? 800 : 600,
+                          fontSize: "0.8rem",
+                          padding: "5px 10px",
+                          borderRadius: 8,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Select from existing students */}
               <div>
                 <label className="label" style={{ fontWeight: 800 }}>
-                  Chọn từ danh sách học sinh Lớp {selectedLop}:
+                  Chọn từ danh sách học sinh Lớp {selectedLop} {modalFilterTo !== 0 ? `(Tổ ${modalFilterTo})` : ""}:
                 </label>
                 <select
                   className="select"
-                  style={{ fontWeight: 700, width: "100%" }}
+                  style={{ fontWeight: 700, width: "100%", fontSize: "0.9rem" }}
                   value={slotForm.studentId || 0}
                   onChange={(e) => handleStudentSelect(Number(e.target.value))}
                 >
                   <option value={0}>-- Chọn học sinh có sẵn trong danh sách --</option>
-                  {students.map((st) => (
+                  {modalFilteredStudents.map((st) => (
                     <option key={st.id} value={st.id}>
-                      {st.hoTen} (Tổ {st.to})
+                      {st.hoTen} — Tổ {st.to} ({st.gioiTinh})
                     </option>
                   ))}
                 </select>
@@ -1103,8 +1258,8 @@ export default function AdminSoDoLopPage() {
                       width: 64,
                       height: 64,
                       borderRadius: "50%",
-                      background: "#f1f5f9",
-                      border: "2px solid #cbd5e1",
+                      background: slotForm.to ? TO_COLORS[slotForm.to]?.bg : "#f1f5f9",
+                      border: slotForm.to ? `2px solid ${TO_COLORS[slotForm.to]?.border}` : "2px solid #cbd5e1",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -1116,7 +1271,7 @@ export default function AdminSoDoLopPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={slotForm.studentPhoto} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
-                      <User size={24} color="#94a3b8" />
+                      <User size={24} color={slotForm.to ? TO_COLORS[slotForm.to]?.text : "#94a3b8"} />
                     )}
                   </div>
 

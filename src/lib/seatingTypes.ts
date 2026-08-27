@@ -9,6 +9,7 @@ export interface SeatSlotData {
   studentName?: string | null;
   studentPhoto?: string | null;
   gender?: string | null;
+  to?: number | null; // Tổ 1 - 4
 }
 
 // 56 slots trống hoàn toàn (2 dãy đều 7 hàng x 4 cột = 28 chỗ mỗi dãy)
@@ -25,6 +26,7 @@ export function generateEmptySlots(): SeatSlotData[] {
         block: "left",
         studentName: null,
         studentPhoto: null,
+        to: null,
       });
     }
 
@@ -37,6 +39,7 @@ export function generateEmptySlots(): SeatSlotData[] {
         block: "right",
         studentName: null,
         studentPhoto: null,
+        to: null,
       });
     }
   }
