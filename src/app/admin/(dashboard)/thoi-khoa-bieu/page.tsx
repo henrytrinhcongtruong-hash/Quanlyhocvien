@@ -373,15 +373,6 @@ export default function AdminThoiKhoaBieuPage() {
             <option value="HK2">Học kỳ II</option>
           </select>
         </div>
-
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-          <span className="badge" style={{ background: "#f5f3ff", color: "#6d28d9", border: "1px solid #ddd6fe", fontWeight: 700 }}>
-            🌙 Duy nhất Buổi Tối (5 Tiết)
-          </span>
-          <span className="badge" style={{ background: "#ecfdf5", color: "#047857", border: "1px solid #a7f3d0", fontWeight: 700 }}>
-            ✨ 9 Môn chuẩn + Chào cờ
-          </span>
-        </div>
       </div>
 
       {/* Main Timetable Table (Pixel Perfect match to User's Excel) */}
