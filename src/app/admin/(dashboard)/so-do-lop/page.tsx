@@ -27,6 +27,7 @@ import {
   Download,
 } from "lucide-react";
 import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
+import { compressImage } from "@/lib/imageUtils";
 
 interface StudentOption {
   id: number;
@@ -397,17 +398,22 @@ export default function AdminSoDoLopPage() {
     }
   }
 
-  // Photo Upload
-  function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  // Photo Upload with Auto-Compression
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setSlotForm((f) => ({ ...f, studentPhoto: base64 }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedBase64 = await compressImage(file, 360, 360, 0.85);
+      setSlotForm((f) => ({ ...f, studentPhoto: compressedBase64 }));
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setSlotForm((f) => ({ ...f, studentPhoto: base64 }));
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   function handleSaveSlot() {

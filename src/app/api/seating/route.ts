@@ -19,9 +19,9 @@ export async function GET(req: NextRequest) {
       chart = await prisma.seatingChart.create({
         data: {
           lop,
-          title: "CLASSROOM SEATING CHART",
-          gvcn: "Phí Huỳnh Anh Hào",
-          slogan: "Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển",
+          title: `SƠ ĐỒ LỚP ${lop}`,
+          gvcn: "KIM LIÊN",
+          slogan: "12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!",
           month,
           slotsData: JSON.stringify(initialSlots),
         },
@@ -35,11 +35,33 @@ export async function GET(req: NextRequest) {
       orderBy: { hoTen: "asc" },
     });
 
+    let parsedSlots: SeatSlotData[] = [];
+    try {
+      parsedSlots = JSON.parse(chart.slotsData);
+    } catch {
+      parsedSlots = generateEmptySlots();
+    }
+
+    // Auto-sync avatar and 'to' from Student record if slot avatar is missing
+    parsedSlots = parsedSlots.map((s) => {
+      if (s.studentId) {
+        const found = students.find((st) => st.id === s.studentId);
+        if (found) {
+          return {
+            ...s,
+            studentPhoto: s.studentPhoto || found.avatar || null,
+            to: s.to || found.to,
+          };
+        }
+      }
+      return s;
+    });
+
     return NextResponse.json({
       success: true,
       chart: {
         ...chart,
-        slots: JSON.parse(chart.slotsData),
+        slots: parsedSlots,
       },
       students,
     });
@@ -56,14 +78,15 @@ export async function POST(req: NextRequest) {
 
     const currentLop = lop?.trim() || "12T2";
     const currentMonth = month?.trim() || "Tháng 09/2025";
-    const slotsString = typeof slots === "string" ? slots : JSON.stringify(slots);
+    const parsedSlots: SeatSlotData[] = Array.isArray(slots) ? slots : JSON.parse(slots || "[]");
+    const slotsString = JSON.stringify(parsedSlots);
 
     let updated;
     if (id) {
       updated = await prisma.seatingChart.update({
         where: { id: Number(id) },
         data: {
-          title: title?.trim() || "CLASSROOM SEATING CHART",
+          title: title?.trim() || `SƠ ĐỒ LỚP ${currentLop}`,
           gvcn: gvcn?.trim() || "",
           slogan: slogan?.trim() || "",
           month: currentMonth,
@@ -90,12 +113,28 @@ export async function POST(req: NextRequest) {
           data: {
             lop: currentLop,
             month: currentMonth,
-            title: title?.trim() || "CLASSROOM SEATING CHART",
-            gvcn: gvcn?.trim() || "Phí Huỳnh Anh Hào",
-            slogan: slogan?.trim() || "Kỷ Cương - Trách Nhiệm - Hiệu Quả - Phát Triển",
+            title: title?.trim() || `SƠ ĐỒ LỚP ${currentLop}`,
+            gvcn: gvcn?.trim() || "KIM LIÊN",
+            slogan: slogan?.trim() || "12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!",
             slotsData: slotsString,
           },
         });
+      }
+    }
+
+    // Also persist avatar into Student table for any assigned students
+    if (Array.isArray(parsedSlots)) {
+      for (const slot of parsedSlots) {
+        if (slot.studentId && slot.studentPhoto) {
+          try {
+            await prisma.student.update({
+              where: { id: slot.studentId },
+              data: { avatar: slot.studentPhoto },
+            });
+          } catch {
+            // ignore non-critical individual student avatar update
+          }
+        }
       }
     }
 
