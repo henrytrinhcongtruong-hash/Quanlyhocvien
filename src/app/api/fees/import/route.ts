@@ -18,6 +18,17 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File;
     if (!file) return NextResponse.json({ error: "Không tìm thấy file" }, { status: 400 });
 
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "Dung lượng file vượt quá giới hạn 5MB" }, { status: 400 });
+    }
+
+    // Validate file extension
+    const fileName = file.name.toLowerCase();
+    if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
+      return NextResponse.json({ error: "Định dạng file không được hỗ trợ (chỉ chấp nhận .xlsx, .xls, .csv)" }, { status: 400 });
+    }
+
     const buffer = await file.arrayBuffer();
     const fees = parseFeesFromExcel(buffer);
     const expenses = parseExpensesFromExcel(buffer);

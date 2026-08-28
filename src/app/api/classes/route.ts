@@ -25,12 +25,22 @@ export async function GET() {
   }
 }
 
-// DELETE /api/classes?lop=12T2 — Xóa toàn bộ 1 lớp và cascade toàn bộ dữ liệu liên quan
+// DELETE /api/classes?lop=12T2 — Xóa toàn bộ 1 lớp (Chỉ SuperAdmin)
 export async function DELETE(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+    }
+
+    const isSuperAdmin = !!(
+      (session as { isSuperAdmin?: boolean })?.isSuperAdmin ||
+      (session?.user as { isSuperAdmin?: boolean })?.isSuperAdmin ||
+      session?.user?.id === "1"
+    );
+
+    if (!isSuperAdmin) {
+      return NextResponse.json({ error: "Chỉ Admin Tổng mới có quyền xóa toàn bộ lớp" }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);

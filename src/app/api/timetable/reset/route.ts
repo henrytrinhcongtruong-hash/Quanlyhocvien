@@ -1,6 +1,7 @@
 // src/app/api/timetable/reset/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 const DEFAULT_TIMETABLE_EVENING = [
   // Thứ 2
@@ -39,6 +40,11 @@ const DEFAULT_TIMETABLE_EVENING = [
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const lop = searchParams.get("lop") || "12T2";
     const hocKy = searchParams.get("hocKy") || "HK1";

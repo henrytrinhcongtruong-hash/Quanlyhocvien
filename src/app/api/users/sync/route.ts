@@ -1,11 +1,24 @@
 // src/app/api/users/sync/route.ts
-// Đồng bộ tài khoản người dùng tùy chỉnh giữa các Lambda instance trên Vercel
+// Đồng bộ tài khoản người dùng tùy chỉnh — Yêu cầu quyền SuperAdmin
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/permissions";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+    }
+
+    const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin || session.user.id === "1";
+    const isSA = isSuperAdmin || (await requireSuperAdmin(Number(session.user.id)));
+    if (!isSA) {
+      return NextResponse.json({ error: "Chỉ Admin Tổng mới có quyền đồng bộ người dùng" }, { status: 403 });
+    }
+
     const body = await req.json();
     const { customUsers } = body;
 
@@ -19,7 +32,7 @@ export async function POST(req: NextRequest) {
       if (!u.username || !u.hoTen) continue;
       const username = String(u.username).trim().toLowerCase();
 
-      // Kiểm tra xem user đã có trong DB của lambda này chưa
+      // Kiểm tra xem user đã có trong DB chưa
       const existing = await prisma.user.findUnique({
         where: { username },
         include: { permissions: true },

@@ -11,9 +11,35 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [lockoutRemaining, setLockoutRemaining] = useState<number>(0);
+
+  // Check lockout on mount & tick timer
+  React.useEffect(() => {
+    const checkLockout = () => {
+      try {
+        const lockoutUntil = Number(localStorage.getItem("admin_login_lockout_until") || "0");
+        const now = Date.now();
+        if (lockoutUntil > now) {
+          setLockoutRemaining(Math.ceil((lockoutUntil - now) / 1000));
+        } else {
+          setLockoutRemaining(0);
+        }
+      } catch {}
+    };
+
+    checkLockout();
+    const interval = setInterval(checkLockout, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (lockoutRemaining > 0) {
+      setError(`Bạn đã thử sai quá nhiều lần. Vui lòng chờ ${lockoutRemaining} giây.`);
+      return;
+    }
+
     if (!username || !password) {
       setError("Vui lòng nhập tên đăng nhập và mật khẩu.");
       return;
@@ -26,9 +52,31 @@ export default function LoginPage() {
         password,
         redirect: false,
       });
+
       if (result?.error) {
-        setError("Tên đăng nhập hoặc mật khẩu không đúng.");
+        // Track failed attempts
+        try {
+          const attempts = Number(localStorage.getItem("admin_login_failed_attempts") || "0") + 1;
+          localStorage.setItem("admin_login_failed_attempts", String(attempts));
+
+          if (attempts >= 5) {
+            const lockoutTime = Date.now() + 60 * 1000; // 60s lockout
+            localStorage.setItem("admin_login_lockout_until", String(lockoutTime));
+            localStorage.setItem("admin_login_failed_attempts", "0");
+            setLockoutRemaining(60);
+            setError("Đăng nhập sai 5 lần liên tiếp. Hệ thống đã tạm khóa 60 giây để bảo vệ tài khoản!");
+          } else {
+            setError(`Tên đăng nhập hoặc mật khẩu không đúng (Lần thử ${attempts}/5).`);
+          }
+        } catch {
+          setError("Tên đăng nhập hoặc mật khẩu không đúng.");
+        }
       } else {
+        // Reset failed attempts on success
+        try {
+          localStorage.removeItem("admin_login_failed_attempts");
+          localStorage.removeItem("admin_login_lockout_until");
+        } catch {}
         window.location.href = "/admin";
       }
     } catch {

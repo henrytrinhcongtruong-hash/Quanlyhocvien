@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
 
 export async function GET(req: NextRequest) {
@@ -73,6 +74,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { id, lop, month, title, gvcn, slogan, slots } = body;
 

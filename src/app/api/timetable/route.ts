@@ -1,6 +1,7 @@
 // src/app/api/timetable/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 // Khung giờ học Buổi Tối chuẩn Trung tâm GDNN - GDTX TP. Thủ Đức (Bắt đầu 18:00)
 export const EVENING_TIMES: Record<number, string> = {
@@ -105,6 +106,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { thu, tiet, monHoc, giaoVien, lop, hocKy, ghiChu } = body;
 
