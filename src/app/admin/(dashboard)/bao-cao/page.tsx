@@ -43,6 +43,30 @@ interface AttendanceRecord {
   student: { id: number; hoTen: string; tenGoi: string | null; to: number; lop: string; avatar?: string | null };
 }
 
+const CATEGORY_COLORS = [
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#ec4899",
+  "#8b5cf6",
+  "#06b6d4",
+  "#f97316",
+  "#64748b",
+];
+
+function formatShortVND(num: number): string {
+  if (num === 0) return "0đ";
+  if (num >= 1_000_000) {
+    const val = num / 1_000_000;
+    return `${Number.isInteger(val) ? val : val.toFixed(1)}Tr`;
+  }
+  if (num >= 1_000) {
+    const val = num / 1_000;
+    return `${Number.isInteger(val) ? val : val.toFixed(0)}k`;
+  }
+  return `${num}đ`;
+}
+
 type TimeRangeType = "all" | "day" | "week" | "month" | "year";
 
 export default function AdminBaoCaoPage() {
@@ -242,14 +266,16 @@ export default function AdminBaoCaoPage() {
     return list;
   }, [rawAttendance, violationSearch, violationLoai, violationSort]);
 
-  // Fee Bar Data
-  const feeBarData = summary
-    ? [
-        { name: "Tổng thu", amount: summary.tongThu },
-        { name: "Tổng chi", amount: summary.tongChi },
-        { name: "Số dư quỹ", amount: Math.max(0, summary.conLai) },
-      ]
-    : [];
+  // Expense Category Bar Chart Data
+  const expenseCategoryData = useMemo(() => {
+    if (!summary?.chiTheoHangMuc || summary.chiTheoHangMuc.length === 0) return [];
+    return summary.chiTheoHangMuc.map((item, idx) => ({
+      hangMucChi: item.hangMucChi,
+      total: item.total,
+      percent: summary.tongChi > 0 ? ((item.total / summary.tongChi) * 100).toFixed(1) : "0",
+      color: CATEGORY_COLORS[idx % CATEGORY_COLORS.length],
+    }));
+  }, [summary]);
 
   const handleExportAttendance = () => {
     const params = new URLSearchParams();
@@ -507,21 +533,71 @@ export default function AdminBaoCaoPage() {
 
           {/* ====== CHARTS ROW (FINANCIAL + ATTENDANCE 4 TRẠNG THÁI) ====== */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 16, marginBottom: 24 }}>
-            {/* Chart 1: Financial Overview */}
+            {/* Chart 1: Biểu đồ Chi tiêu theo Hạng mục */}
             <div className="card" style={{ padding: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>Cân đối Thu — Chi — Số dư quỹ</h3>
-                <span className="badge badge-neutral" style={{ fontSize: "0.75rem" }}>Tài chính lớp</span>
+                <div>
+                  <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Wallet size={16} color="var(--primary)" /> Chi tiêu theo Hạng mục
+                  </h3>
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>
+                    Phân bổ các khoản chi của quỹ lớp
+                  </div>
+                </div>
+                <span className="badge badge-neutral" style={{ fontSize: "0.78rem", fontWeight: 700 }}>
+                  Tổng chi: <strong style={{ color: "var(--danger)", marginLeft: 4 }}>{formatVND(summary?.tongChi || 0)}</strong>
+                </span>
               </div>
+
               <div style={{ width: "100%", height: 260 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={feeBarData}>
-                    <XAxis dataKey="name" stroke="#888888" fontSize={12} />
-                    <YAxis stroke="#888888" fontSize={12} tickFormatter={(v) => `${v / 1000000}M`} />
-                    <Tooltip formatter={(value: unknown) => [formatVND(Number(value)), "Số tiền"]} />
-                    <Bar dataKey="amount" fill="#105abc" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {expenseCategoryData.length === 0 ? (
+                  <div
+                    style={{
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--text-muted)",
+                      background: "#f8fafc",
+                      borderRadius: 10,
+                      border: "1px dashed var(--border)",
+                    }}
+                  >
+                    <Wallet size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
+                    <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Chưa có dữ liệu chi tiêu theo hạng mục</span>
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Các khoản chi sẽ tự động xuất hiện tại đây</span>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={expenseCategoryData} margin={{ top: 10, right: 10, left: -10, bottom: 25 }}>
+                      <XAxis
+                        dataKey="hangMucChi"
+                        stroke="#888888"
+                        fontSize={11}
+                        interval={0}
+                        angle={-15}
+                        textAnchor="end"
+                      />
+                      <YAxis
+                        stroke="#888888"
+                        fontSize={11}
+                        tickFormatter={(v) => formatShortVND(Number(v))}
+                      />
+                      <Tooltip
+                        formatter={(value: unknown) => [
+                          `${formatVND(Number(value))} (${summary && summary.tongChi > 0 ? ((Number(value) / summary.tongChi) * 100).toFixed(1) : 0}%)`,
+                          "Số tiền",
+                        ]}
+                      />
+                      <Bar dataKey="total" radius={[6, 6, 0, 0]}>
+                        {expenseCategoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
