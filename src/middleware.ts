@@ -15,12 +15,7 @@ export function middleware(req: NextRequest) {
   const isAdminRoute = nextUrl.pathname.startsWith("/admin");
   const isLoginPage = nextUrl.pathname === "/admin/login";
 
-  // Login page: chuyển sang /admin nếu đã đăng nhập
-  if (isLoginPage && hasSession) {
-    return NextResponse.redirect(new URL("/admin", nextUrl));
-  }
-
-  // Admin routes: chuyển sang login nếu chưa đăng nhập
+  // Admin routes (ngoại trừ /admin/login): chuyển sang login nếu không có session cookie
   if (isAdminRoute && !isLoginPage && !hasSession) {
     return NextResponse.redirect(new URL("/admin/login", nextUrl));
   }
