@@ -30,9 +30,12 @@ export async function PUT(
     if (!session?.user?.id) return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
 
     const userId = Number(session.user.id);
-    const userRole = (session.user as { role?: string })?.role;
+    const isSuperAdmin = !!(session.user as { isSuperAdmin?: boolean })?.isSuperAdmin;
     const { allowed } = await checkPermission(userId, "hoc_sinh", "toan_quyen");
-    if (!allowed && userRole !== "admin") return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
+
+    if (!allowed && !isSuperAdmin && userId !== 1) {
+      return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
+    }
 
     const body = await req.json();
     const updateData: Record<string, unknown> = {};
@@ -67,9 +70,12 @@ export async function DELETE(
     if (!session?.user?.id) return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
 
     const userId = Number(session.user.id);
-    const userRole = (session.user as { role?: string })?.role;
+    const isSuperAdmin = !!(session.user as { isSuperAdmin?: boolean })?.isSuperAdmin;
     const { allowed } = await checkPermission(userId, "hoc_sinh", "toan_quyen");
-    if (!allowed && userRole !== "admin") return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
+
+    if (!allowed && !isSuperAdmin && userId !== 1) {
+      return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
+    }
 
     await prisma.student.delete({
       where: { id: Number(id) },

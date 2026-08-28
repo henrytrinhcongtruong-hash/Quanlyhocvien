@@ -193,11 +193,23 @@ export default function AdminSoDoLopPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLop, selectedMonth]);
 
-  // Save Chart
+  // Save Chart (Lightweight 3KB payload, no heavy base64 strings)
   async function handleSaveChart(customSlots?: SeatSlotData[]) {
     setSaving(true);
     try {
-      const payloadSlots = customSlots || slots;
+      const rawSlots = customSlots || slots;
+      // Strip base64 photos from seating layout payload so size is always ~3KB
+      const lightweightSlots = rawSlots.map((s) => ({
+        id: s.id,
+        row: s.row,
+        col: s.col,
+        block: s.block,
+        studentId: s.studentId || null,
+        studentName: s.studentName ? s.studentName.toUpperCase() : null,
+        to: s.to || null,
+        gender: s.gender || null,
+      }));
+
       const res = await fetch("/api/seating", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -208,19 +220,24 @@ export default function AdminSoDoLopPage() {
           title,
           gvcn,
           slogan,
-          slots: payloadSlots,
+          slots: lightweightSlots,
         }),
       });
 
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || `Mã lỗi HTTP ${res.status}`);
+      }
+
       const data = await res.json();
-      if (res.ok && data.success) {
+      if (data.success) {
         showToast("Đã lưu sơ đồ lớp học thành công");
         if (data.data?.id) setChartId(data.data.id);
       } else {
         showToast(data.error || "Lỗi khi lưu sơ đồ", "error");
       }
     } catch (e) {
-      showToast("Lỗi kết nối máy chủ: " + (e instanceof Error ? e.message : ""), "error");
+      showToast("Lỗi kết nối máy chủ: " + (e instanceof Error ? e.message : String(e)), "error");
     } finally {
       setSaving(false);
     }
@@ -407,7 +424,7 @@ export default function AdminSoDoLopPage() {
     if (!file) return;
 
     try {
-      const compressedBase64 = await compressImage(file, 360, 360, 0.85);
+      const compressedBase64 = await compressImage(file, 280, 320, 0.8);
       setSlotForm((f) => ({ ...f, studentPhoto: compressedBase64 }));
     } catch {
       const reader = new FileReader();
@@ -422,13 +439,17 @@ export default function AdminSoDoLopPage() {
   async function handleSaveSlot() {
     if (!editSlotModal) return;
 
-    // If student has studentId, persist photo to Student.avatar
+    // 1. If student has studentId, persist photo directly to Student.avatar
     if (slotForm.studentId) {
-      fetch(`/api/students/${slotForm.studentId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatar: slotForm.studentPhoto }),
-      }).catch((err) => console.error("Student avatar save error:", err));
+      try {
+        await fetch(`/api/students/${slotForm.studentId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ avatar: slotForm.studentPhoto }),
+        });
+      } catch (err) {
+        console.error("Student avatar save error:", err);
+      }
 
       // Update local student list
       setStudents((prev) =>
@@ -436,23 +457,22 @@ export default function AdminSoDoLopPage() {
       );
     }
 
-    setSlots((prev) => {
-      const updated = prev.map((s) => {
-        if (s.id === editSlotModal.id) {
-          return {
-            ...s,
-            studentName: slotForm.studentName.trim() ? slotForm.studentName.trim().toUpperCase() : null,
-            studentPhoto: slotForm.studentPhoto,
-            studentId: slotForm.studentId,
-            to: slotForm.to,
-          };
-        }
-        return s;
-      });
-      handleSaveChart(updated);
-      return updated;
+    // 2. Update slot in seating chart state
+    const updated = slots.map((s) => {
+      if (s.id === editSlotModal.id) {
+        return {
+          ...s,
+          studentName: slotForm.studentName.trim() ? slotForm.studentName.trim().toUpperCase() : null,
+          studentPhoto: slotForm.studentPhoto,
+          studentId: slotForm.studentId,
+          to: slotForm.to,
+        };
+      }
+      return s;
     });
 
+    setSlots(updated);
+    handleSaveChart(updated);
     setEditSlotModal(null);
     showToast("Đã lưu vị trí và ảnh học sinh");
   }
