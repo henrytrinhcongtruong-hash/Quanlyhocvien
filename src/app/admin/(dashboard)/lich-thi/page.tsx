@@ -183,16 +183,6 @@ export default function LichThiAdminPage() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  // Load class list
-  useEffect(() => {
-    fetch("/api/classes")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.data && d.data.length > 0) setClassList(d.data);
-      })
-      .catch(() => {});
-  }, []);
-
   // Sync active class
   useEffect(() => {
     if (!isSuperAdmin && assignedLop) {
@@ -204,7 +194,7 @@ export default function LichThiAdminPage() {
     }
   }, [urlLop, isSuperAdmin, assignedLop]);
 
-  // Fetch Exams
+  // Fetch Exams & Class List in parallel
   const fetchExams = async () => {
     setLoading(true);
     const activeClass = !isSuperAdmin ? assignedLop : filterLop;
@@ -214,9 +204,13 @@ export default function LichThiAdminPage() {
     if (filterMon !== "Tất cả môn") params.set("mon", filterMon);
 
     try {
-      const res = await fetch(`/api/exams?${params}`);
-      const data = await res.json();
+      const [res, classRes] = await Promise.all([
+        fetch(`/api/exams?${params}`),
+        fetch("/api/classes"),
+      ]);
+      const [data, classData] = await Promise.all([res.json(), classRes.json()]);
       setExams(data.data || []);
+      if (classData.data && classData.data.length > 0) setClassList(classData.data);
     } catch {
       showToast("Lỗi kết nối khi tải lịch thi", "error");
     }

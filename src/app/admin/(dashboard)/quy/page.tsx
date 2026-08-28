@@ -128,21 +128,6 @@ export default function AdminQuyPage() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  // Load distinct classes
-  useEffect(() => {
-    fetch("/api/classes")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.data && d.data.length > 0) {
-          setClassList(d.data);
-          if (isSuperAdmin && !urlLop) {
-            setBatchForm((f) => ({ ...f, lop: d.data[0] }));
-          }
-        }
-      })
-      .catch(() => {});
-  }, [isSuperAdmin, urlLop]);
-
   // Sync with URL query parameter or assignedLop
   useEffect(() => {
     if (!isSuperAdmin && assignedLop) {
@@ -160,6 +145,7 @@ export default function AdminQuyPage() {
     ? (filterLop !== "ALL" ? filterLop : "11AT3")
     : assignedLop;
 
+  // Load ALL data in parallel (classes + summary + students + fees + expenses)
   const loadData = async () => {
     setLoading(true);
     try {
@@ -169,22 +155,28 @@ export default function AdminQuyPage() {
       if (filterKyThu) feeParams.set("kyThu", filterKyThu);
       if (activeClassForQuery && activeClassForQuery !== "ALL") feeParams.set("lop", activeClassForQuery);
 
-      const [sumRes, stdRes, feeRes, expRes] = await Promise.all([
+      const [sumRes, stdRes, feeRes, expRes, classRes] = await Promise.all([
         fetch(`/api/fees/summary${summaryParams}`),
         fetch(`/api/students${activeClassForQuery !== "ALL" ? `?lop=${activeClassForQuery}` : ""}`),
         fetch(`/api/fees?${feeParams.toString()}`),
         fetch("/api/expenses"),
+        fetch("/api/classes"),
       ]);
 
-      const sumData = await sumRes.json();
-      const stdData = await stdRes.json();
-      const feeData = await feeRes.json();
-      const expData = await expRes.json();
+      const [sumData, stdData, feeData, expData, classData] = await Promise.all([
+        sumRes.json(), stdRes.json(), feeRes.json(), expRes.json(), classRes.json(),
+      ]);
 
       setSummary(sumData);
       setStudents(stdData.data || []);
       setFees(feeData.data || []);
       setExpenses(expData.data || []);
+      if (classData.data && classData.data.length > 0) {
+        setClassList(classData.data);
+        if (isSuperAdmin && !urlLop) {
+          setBatchForm((f) => ({ ...f, lop: classData.data[0] }));
+        }
+      }
     } catch {
       showToast("Lỗi tải dữ liệu", "error");
     } finally {

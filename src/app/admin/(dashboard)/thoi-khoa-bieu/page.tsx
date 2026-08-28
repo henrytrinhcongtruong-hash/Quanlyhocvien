@@ -137,16 +137,6 @@ export default function AdminThoiKhoaBieuPage() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  // Load classes
-  useEffect(() => {
-    fetch("/api/classes")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.data && d.data.length > 0) setClassList(d.data);
-      })
-      .catch(() => {});
-  }, []);
-
   // Sync selectedLop
   useEffect(() => {
     if (!isSuperAdmin && assignedLop) {
@@ -158,13 +148,17 @@ export default function AdminThoiKhoaBieuPage() {
     }
   }, [urlLop, isSuperAdmin, assignedLop]);
 
-  // Load Timetable
+  // Load Timetable & Classes in parallel
   const loadTimetable = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/timetable?lop=${selectedLop}&hocKy=${selectedHocKy}`);
-      const data = await res.json();
+      const [res, classRes] = await Promise.all([
+        fetch(`/api/timetable?lop=${selectedLop}&hocKy=${selectedHocKy}`),
+        fetch("/api/classes"),
+      ]);
+      const [data, classData] = await Promise.all([res.json(), classRes.json()]);
       setTimetable(data.data || []);
+      if (classData.data && classData.data.length > 0) setClassList(classData.data);
     } catch {
       showToast("Lỗi tải thời khóa biểu", "error");
     } finally {

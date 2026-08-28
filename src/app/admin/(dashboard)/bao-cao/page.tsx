@@ -40,16 +40,6 @@ export default function AdminBaoCaoPage() {
   const [attendanceStats, setAttendanceStats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
-  // Load distinct classes
-  useEffect(() => {
-    fetch("/api/classes")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.data && d.data.length > 0) setClassList(d.data);
-      })
-      .catch(() => {});
-  }, []);
-
   // Sync with URL query parameter or assignedLop
   useEffect(() => {
     if (!isSuperAdmin && assignedLop) {
@@ -65,14 +55,17 @@ export default function AdminBaoCaoPage() {
       try {
         const activeClass = !isSuperAdmin ? assignedLop : filterLop;
         const lopQuery = activeClass !== "ALL" ? `?lop=${activeClass}` : "";
-        const [feeRes, attRes] = await Promise.all([
+        const [feeRes, attRes, classRes] = await Promise.all([
           fetch(`/api/fees/summary${lopQuery}`),
           fetch(`/api/attendance${lopQuery}`),
+          fetch("/api/classes"),
         ]);
-        const feeData = await feeRes.json();
-        const attData = await attRes.json();
+        const [feeData, attData, classData] = await Promise.all([
+          feeRes.json(), attRes.json(), classRes.json(),
+        ]);
 
         setSummary(feeData);
+        if (classData.data && classData.data.length > 0) setClassList(classData.data);
 
         // Calculate attendance breakdown
         const counts: Record<string, number> = {

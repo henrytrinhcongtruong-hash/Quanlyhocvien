@@ -69,16 +69,6 @@ export default function AdminLichTrucPage() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  // Load distinct classes
-  useEffect(() => {
-    fetch("/api/classes")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.data && d.data.length > 0) setClassList(d.data);
-      })
-      .catch(() => {});
-  }, []);
-
   // Sync with URL query parameter or assignedLop
   useEffect(() => {
     if (!isSuperAdmin && assignedLop) {
@@ -92,20 +82,24 @@ export default function AdminLichTrucPage() {
     ? (filterLop !== "ALL" ? filterLop : "Toàn trường")
     : assignedLop;
 
+  // Load classes, students & duties in parallel
   const loadData = async () => {
     setLoading(true);
     try {
       const activeClass = isSuperAdmin ? filterLop : assignedLop;
       const lopQuery = activeClass !== "ALL" ? `&lop=${activeClass}` : "";
-      const [stdRes, dutyRes] = await Promise.all([
+      const [stdRes, dutyRes, classRes] = await Promise.all([
         fetch(`/api/students${activeClass !== "ALL" ? `?lop=${activeClass}` : ""}`),
         fetch(`/api/duty?week=${currentWeek}${lopQuery}`),
+        fetch("/api/classes"),
       ]);
-      const stdData = await stdRes.json();
-      const dutyData = await dutyRes.json();
+      const [stdData, dutyData, classData] = await Promise.all([
+        stdRes.json(), dutyRes.json(), classRes.json(),
+      ]);
 
       setStudents(stdData.data || []);
       setEntries(dutyData.entries || []);
+      if (classData.data && classData.data.length > 0) setClassList(classData.data);
     } catch {
       showToast("Lỗi tải lịch trực nhật", "error");
     } finally {

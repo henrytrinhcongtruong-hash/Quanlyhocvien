@@ -206,6 +206,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.targetHref}
+                  prefetch={true}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -237,6 +238,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
             {/* Quản Trị Button */}
             <Link
               href={`/admin?lop=${activeClass}`}
+              prefetch={true}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -301,6 +303,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.targetHref}
+                  prefetch={true}
                   onClick={() => setMenuOpen(false)}
                   style={{
                     display: "flex",
@@ -325,6 +328,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
 
             <Link
               href={`/admin?lop=${activeClass}`}
+              prefetch={true}
               onClick={() => setMenuOpen(false)}
               style={{
                 display: "flex",

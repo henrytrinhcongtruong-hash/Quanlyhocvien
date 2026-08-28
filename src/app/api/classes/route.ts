@@ -16,7 +16,9 @@ export async function GET() {
       classes.push("11AT3");
     }
 
-    return NextResponse.json({ data: classes });
+    return NextResponse.json({ data: classes }, {
+      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+    });
   } catch (e) {
     console.error("Classes API error:", e);
     return NextResponse.json({ data: ["12T2", "11AT3"] });

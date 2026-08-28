@@ -51,34 +51,30 @@ function PublicSoDoLopContent() {
     }
   }, [urlLop]);
 
-  // Load Months
-  useEffect(() => {
-    fetch(`/api/seating/months?lop=${activeLop}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.months && d.months.length > 0) {
-          setMonthList(d.months);
-          if (!d.months.includes(selectedMonth)) {
-            setSelectedMonth(d.months[0]);
-          }
-        }
-      })
-      .catch(() => {});
-  }, [activeLop, selectedMonth]);
-
-  // Load Chart
+  // Load months + chart in parallel — 2x faster
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/seating?lop=${activeLop}&month=${encodeURIComponent(selectedMonth)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success && d.chart) {
-          setTitle(d.chart.title || `SƠ ĐỒ LỚP ${activeLop}`);
-          setGvcn(d.chart.gvcn || "KIM LIÊN");
-          setSlogan(d.chart.slogan || "12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!");
+    Promise.all([
+      fetch(`/api/seating/months?lop=${activeLop}`).then(r => r.json()),
+      fetch(`/api/seating?lop=${activeLop}&month=${encodeURIComponent(selectedMonth)}`).then(r => r.json()),
+    ])
+      .then(([monthData, chartData]) => {
+        // Months
+        if (monthData.months && monthData.months.length > 0) {
+          setMonthList(monthData.months);
+          if (!monthData.months.includes(selectedMonth)) {
+            setSelectedMonth(monthData.months[0]);
+          }
+        }
 
-          const studentsList = d.students || [];
-          let loadedSlots: SeatSlotData[] = d.chart.slots || [];
+        // Chart
+        if (chartData.success && chartData.chart) {
+          setTitle(chartData.chart.title || `SƠ ĐỒ LỚP ${activeLop}`);
+          setGvcn(chartData.chart.gvcn || "KIM LIÊN");
+          setSlogan(chartData.chart.slogan || "12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!");
+
+          const studentsList = chartData.students || [];
+          let loadedSlots: SeatSlotData[] = chartData.chart.slots || [];
           if (loadedSlots.length < 56) {
             const empty = generateEmptySlots();
             loadedSlots = empty.map((e) => {

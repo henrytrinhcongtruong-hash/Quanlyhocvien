@@ -64,40 +64,24 @@ export default function DiemDanhAdminPage() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  // Load distinct classes
-  useEffect(() => {
-    fetch("/api/classes")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.data && d.data.length > 0) setClassList(d.data);
-      })
-      .catch(() => {});
-  }, []);
-
-  // Sync with URL query parameter or assignedLop
-  useEffect(() => {
-    if (!isSuperAdmin && assignedLop) {
-      setFilterLop(assignedLop);
-      return;
-    }
-    if (urlLop) setFilterLop(urlLop);
-  }, [urlLop, isSuperAdmin, assignedLop]);
-
-  // Load students & records
+  // Load students, records & classes in parallel
   const loadData = async () => {
     setLoading(true);
     try {
       const activeClass = !isSuperAdmin ? assignedLop : filterLop;
       const lopQuery = activeClass !== "ALL" ? `&lop=${activeClass}` : "";
-      const [stdRes, attRes] = await Promise.all([
+      const [stdRes, attRes, classRes] = await Promise.all([
         fetch(`/api/students${activeClass !== "ALL" ? `?lop=${activeClass}` : ""}`),
         fetch(`/api/attendance?ngay=${selectedDate}${lopQuery}`),
+        fetch("/api/classes"),
       ]);
-      const stdData = await stdRes.json();
-      const attData = await attRes.json();
+      const [stdData, attData, classData] = await Promise.all([
+        stdRes.json(), attRes.json(), classRes.json(),
+      ]);
 
       setStudents(stdData.data || []);
       setRecords(attData.data || []);
+      if (classData.data && classData.data.length > 0) setClassList(classData.data);
     } catch {
       showToast("Lỗi tải dữ liệu", "error");
     } finally {

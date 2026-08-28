@@ -140,7 +140,7 @@ export default function HocSinhPage() {
   }, [urlLop, isSuperAdmin, assignedLop]);
 
   // ==================
-  // FETCH
+  // FETCH — parallel classes + students
   // ==================
   const fetchStudents = async () => {
     setLoading(true);
@@ -153,10 +153,21 @@ export default function HocSinhPage() {
     if (filterTo > 0) params.set("to", String(filterTo));
     if (activeClass && activeClass !== "ALL") params.set("lop", activeClass);
 
-    const res = await fetch(`/api/students?${params}`);
-    const data = await res.json();
-    setStudents(data.data || []);
-    setTotal(data.total || 0);
+    try {
+      const [studentRes, classRes] = await Promise.all([
+        fetch(`/api/students?${params}`),
+        fetch("/api/classes"),
+      ]);
+      const [data, classData] = await Promise.all([
+        studentRes.json(), classRes.json(),
+      ]);
+      setStudents(data.data || []);
+      setTotal(data.total || 0);
+      if (classData.data && classData.data.length > 0) setClassList(classData.data);
+    } catch {
+      setStudents([]);
+      setTotal(0);
+    }
     setLoading(false);
   };
 

@@ -198,6 +198,7 @@ export default function AdminLayout({
             <Link
               key={item.href}
               href={targetHref}
+              prefetch={true}
               onClick={() => mobile && setSidebarOpen(false)}
               style={{
                 display: "flex",
@@ -226,6 +227,7 @@ export default function AdminLayout({
       <div style={{ padding: "10px", borderTop: "1px solid var(--border)" }}>
         <Link
           href={`/?lop=${currentClassForPublic}`}
+          prefetch={true}
           style={{
             display: "flex",
             alignItems: "center",
