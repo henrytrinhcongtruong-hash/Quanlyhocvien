@@ -194,7 +194,12 @@ export default function AdminSoDoLopPage() {
   }, [selectedLop, selectedMonth]);
 
   // Save Chart (Lightweight 3KB payload, no heavy base64 strings)
-  async function handleSaveChart(customSlots?: SeatSlotData[]) {
+  async function handleSaveChart(
+    customSlots?: SeatSlotData[],
+    customTitle?: string,
+    customGvcn?: string,
+    customSlogan?: string
+  ) {
     setSaving(true);
     try {
       const rawSlots = customSlots || slots;
@@ -210,6 +215,10 @@ export default function AdminSoDoLopPage() {
         gender: s.gender || null,
       }));
 
+      const finalTitle = customTitle !== undefined ? customTitle : title;
+      const finalGvcn = customGvcn !== undefined ? customGvcn : gvcn;
+      const finalSlogan = customSlogan !== undefined ? customSlogan : slogan;
+
       const res = await fetch("/api/seating", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -217,9 +226,9 @@ export default function AdminSoDoLopPage() {
           id: chartId,
           lop: selectedLop,
           month: selectedMonth,
-          title,
-          gvcn,
-          slogan,
+          title: finalTitle,
+          gvcn: finalGvcn,
+          slogan: finalSlogan,
           slots: lightweightSlots,
         }),
       });
@@ -596,13 +605,17 @@ export default function AdminSoDoLopPage() {
     setSettingsModalOpen(true);
   }
 
-  function handleSaveSettings() {
-    setTitle(settingsForm.title.trim() || `SƠ ĐỒ LỚP ${selectedLop}`);
-    setGvcn(settingsForm.gvcn.trim() || "KIM LIÊN");
-    setSlogan(settingsForm.slogan.trim() || "12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!");
+  async function handleSaveSettings() {
+    const newTitle = settingsForm.title.trim() || `SƠ ĐỒ LỚP ${selectedLop}`;
+    const newGvcn = settingsForm.gvcn.trim() || "CHỀNH KIM LIÊN";
+    const newSlogan = settingsForm.slogan.trim() || "12T2 CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG!";
+
+    setTitle(newTitle);
+    setGvcn(newGvcn);
+    setSlogan(newSlogan);
     setSettingsModalOpen(false);
-    showToast("Đã cập nhật thông tin sơ đồ");
-    setTimeout(() => handleSaveChart(), 100);
+
+    await handleSaveChart(slots, newTitle, newGvcn, newSlogan);
   }
 
   // Filtered Students for Modal
