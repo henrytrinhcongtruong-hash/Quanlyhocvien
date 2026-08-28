@@ -157,11 +157,11 @@ function PublicSoDoLopContent() {
       slot.studentName.toLowerCase().includes(searchQuery.trim().toLowerCase());
 
     const hasStudent = !!slot.studentName;
-    const slotTo = slot.to || getSlotTo(slot.col);
+    const slotTo = slot.to || 1;
     const toConfig = TO_COLORS[slotTo] || TO_COLORS[1];
 
-    const isMatchingTo = filterTo === 0 || slotTo === filterTo;
-    const isDimmed = filterTo !== 0 && slotTo !== filterTo;
+    const isMatchingTo = filterTo === 0 || (hasStudent && slotTo === filterTo);
+    const isDimmed = filterTo !== 0 && (!hasStudent || slotTo !== filterTo);
 
     return (
       <div
@@ -552,109 +552,7 @@ function PublicSoDoLopContent() {
               margin: "0 auto",
             }}
           >
-            {/* Tổ Column Header Banners */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 34px 1fr",
-                gap: 12,
-                marginBottom: 10,
-                alignItems: "center",
-              }}
-            >
-              {/* Dãy Trái: Cột 1-2 (Tổ 1) & Cột 3-4 (Tổ 2) */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div
-                  style={{
-                    background: "#e0f2fe",
-                    border: "2px solid #38bdf8",
-                    borderRadius: 10,
-                    padding: "6px 8px",
-                    textAlign: "center",
-                    fontWeight: 900,
-                    fontSize: "0.82rem",
-                    color: "#0369a1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    boxShadow: "0 2px 5px rgba(2, 132, 199, 0.15)",
-                  }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0284c7" }}></span>
-                  🔵 TỔ 1 (BÀN 1 - 2)
-                </div>
-                <div
-                  style={{
-                    background: "#dcfce7",
-                    border: "2px solid #4ade80",
-                    borderRadius: 10,
-                    padding: "6px 8px",
-                    textAlign: "center",
-                    fontWeight: 900,
-                    fontSize: "0.82rem",
-                    color: "#15803d",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    boxShadow: "0 2px 5px rgba(22, 163, 74, 0.15)",
-                  }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a" }}></span>
-                  🟢 TỔ 2 (BÀN 3 - 4)
-                </div>
-              </div>
 
-              {/* Lối Đi */}
-              <div style={{ textAlign: "center", fontSize: "0.68rem", fontWeight: 900, color: "#94a3b8", letterSpacing: "0.5px" }}>
-                LỐI ĐI
-              </div>
-
-              {/* Dãy Phải: Cột 5-6 (Tổ 3) & Cột 7-8 (Tổ 4) */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div
-                  style={{
-                    background: "#fef3c7",
-                    border: "2px solid #fcd34d",
-                    borderRadius: 10,
-                    padding: "6px 8px",
-                    textAlign: "center",
-                    fontWeight: 900,
-                    fontSize: "0.82rem",
-                    color: "#b45309",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    boxShadow: "0 2px 5px rgba(217, 119, 6, 0.15)",
-                  }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#d97706" }}></span>
-                  🟡 TỔ 3 (BÀN 5 - 6)
-                </div>
-                <div
-                  style={{
-                    background: "#f3e8ff",
-                    border: "2px solid #c084fc",
-                    borderRadius: 10,
-                    padding: "6px 8px",
-                    textAlign: "center",
-                    fontWeight: 900,
-                    fontSize: "0.82rem",
-                    color: "#7e22ce",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    boxShadow: "0 2px 5px rgba(147, 51, 234, 0.15)",
-                  }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#9333ea" }}></span>
-                  🟣 TỔ 4 (BÀN 7 - 8)
-                </div>
-              </div>
-            </div>
 
             {/* 7 Rows Grid */}
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

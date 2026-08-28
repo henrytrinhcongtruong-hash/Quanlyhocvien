@@ -328,9 +328,7 @@ export default function AdminSoDoLopPage() {
       const tempPhoto = newSlots[srcIdx].studentPhoto;
       const tempId = newSlots[srcIdx].studentId;
       const tempGender = newSlots[srcIdx].gender;
-
-      const newSrcTo = getSlotTo(newSlots[srcIdx].col);
-      const newTgtTo = getSlotTo(newSlots[tgtIdx].col);
+      const tempTo = newSlots[srcIdx].to;
 
       newSlots[srcIdx] = {
         ...newSlots[srcIdx],
@@ -338,7 +336,7 @@ export default function AdminSoDoLopPage() {
         studentPhoto: newSlots[tgtIdx].studentPhoto,
         studentId: newSlots[tgtIdx].studentId,
         gender: newSlots[tgtIdx].gender,
-        to: newSrcTo,
+        to: newSlots[tgtIdx].to,
       };
 
       newSlots[tgtIdx] = {
@@ -347,26 +345,14 @@ export default function AdminSoDoLopPage() {
         studentPhoto: tempPhoto,
         studentId: tempId,
         gender: tempGender,
-        to: newTgtTo,
+        to: tempTo,
       };
-
-      // Update local students list state so student.to reflects the change immediately
-      if (newSlots[srcIdx].studentId) {
-        setStudents((prevSt) =>
-          prevSt.map((st) => (st.id === newSlots[srcIdx].studentId ? { ...st, to: newSrcTo } : st))
-        );
-      }
-      if (newSlots[tgtIdx].studentId) {
-        setStudents((prevSt) =>
-          prevSt.map((st) => (st.id === newSlots[tgtIdx].studentId ? { ...st, to: newTgtTo } : st))
-        );
-      }
 
       handleSaveChart(newSlots);
       return newSlots;
     });
 
-    showToast("Đã đổi chỗ và cập nhật Tổ mới thành công");
+    showToast("Đã đổi chỗ ngồi thành công");
     setSelectedSlotForSwap(null);
     setDraggedSlotId(null);
     setDragOverSlotId(null);
@@ -412,7 +398,7 @@ export default function AdminSoDoLopPage() {
 
   // Edit Slot Modal
   function openEditSlotModal(slot: SeatSlotData) {
-    const slotTo = getSlotTo(slot.col);
+    const slotTo = slot.to || (slot.studentId ? students.find(s => s.id === slot.studentId)?.to : null) || 1;
     setEditSlotModal(slot);
     setModalFilterTo(slotTo);
     setSlotForm({
@@ -425,9 +411,8 @@ export default function AdminSoDoLopPage() {
 
   function handleStudentSelect(stId: number) {
     if (!editSlotModal) return;
-    const computedTo = getSlotTo(editSlotModal.col);
     if (stId === 0) {
-      setSlotForm({ studentId: null, studentName: "", studentPhoto: null, to: computedTo });
+      setSlotForm({ studentId: null, studentName: "", studentPhoto: null, to: null });
       return;
     }
     const st = students.find((s) => s.id === stId);
@@ -436,7 +421,7 @@ export default function AdminSoDoLopPage() {
         studentId: st.id,
         studentName: st.hoTen.toUpperCase(),
         studentPhoto: st.avatar || null,
-        to: computedTo,
+        to: st.to,
       });
     }
   }
@@ -461,32 +446,31 @@ export default function AdminSoDoLopPage() {
 
   async function handleSaveSlot() {
     if (!editSlotModal) return;
-    const computedTo = getSlotTo(editSlotModal.col);
 
-    // 1. If student has studentId, persist photo and new Tổ directly to Student table
+    // 1. If student has studentId, persist photo to Student table
     if (slotForm.studentId) {
       try {
         await fetch(`/api/students/${slotForm.studentId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            to: computedTo,
             avatar: slotForm.studentPhoto,
           }),
         });
       } catch (err) {
-        console.error("Student avatar/to save error:", err);
+        console.error("Student avatar save error:", err);
       }
 
       // Update local student list
       setStudents((prev) =>
         prev.map((st) =>
-          st.id === slotForm.studentId ? { ...st, to: computedTo, avatar: slotForm.studentPhoto } : st
+          st.id === slotForm.studentId ? { ...st, avatar: slotForm.studentPhoto } : st
         )
       );
     }
 
     // 2. Update slot in seating chart state
+    const studentTo = slotForm.to || (slotForm.studentId ? students.find(s => s.id === slotForm.studentId)?.to : null) || null;
     const updated = slots.map((s) => {
       if (s.id === editSlotModal.id) {
         return {
@@ -494,7 +478,7 @@ export default function AdminSoDoLopPage() {
           studentName: slotForm.studentName.trim() ? slotForm.studentName.trim().toUpperCase() : null,
           studentPhoto: slotForm.studentPhoto,
           studentId: slotForm.studentId,
-          to: computedTo,
+          to: studentTo,
         };
       }
       return s;
@@ -503,16 +487,15 @@ export default function AdminSoDoLopPage() {
     setSlots(updated);
     handleSaveChart(updated);
     setEditSlotModal(null);
-    showToast(`Đã lưu vị trí và cập nhật học sinh vào Tổ ${computedTo}`);
+    showToast("Đã lưu vị trí chỗ ngồi thành công");
   }
 
   function handleClearSlot() {
     if (!editSlotModal) return;
-    const computedTo = getSlotTo(editSlotModal.col);
     setSlots((prev) => {
       const updated = prev.map((s) => {
         if (s.id === editSlotModal.id) {
-          return { ...s, studentName: null, studentPhoto: null, studentId: null, to: computedTo };
+          return { ...s, studentName: null, studentPhoto: null, studentId: null, to: null };
         }
         return s;
       });
@@ -530,7 +513,6 @@ export default function AdminSoDoLopPage() {
     setSlots((prev) => {
       const newSlots = [...prev];
       for (let c = 1; c <= 8; c++) {
-        const colTo = getSlotTo(c);
         const colSeats = [1, 2, 3, 4, 5, 6, 7].map((r) => newSlots.find((s) => s.row === r && s.col === c)!);
         const lastSeat = { ...colSeats[6] };
         for (let r = 6; r >= 1; r--) {
@@ -538,12 +520,12 @@ export default function AdminSoDoLopPage() {
           colSeats[r].studentName = prevSeat.studentName;
           colSeats[r].studentPhoto = prevSeat.studentPhoto;
           colSeats[r].studentId = prevSeat.studentId;
-          colSeats[r].to = colTo;
+          colSeats[r].to = prevSeat.to;
         }
         colSeats[0].studentName = lastSeat.studentName;
         colSeats[0].studentPhoto = lastSeat.studentPhoto;
         colSeats[0].studentId = lastSeat.studentId;
-        colSeats[0].to = colTo;
+        colSeats[0].to = lastSeat.to;
       }
 
       handleSaveChart(newSlots);
@@ -554,7 +536,7 @@ export default function AdminSoDoLopPage() {
   }
 
   function handleSwapBlocks() {
-    if (!confirm("Bạn có muốn đổi chỗ giữa Dãy Trái và Dãy Phải không? (Tổ của học sinh sẽ tự động cập nhật theo dãy mới)")) return;
+    if (!confirm("Bạn có muốn đổi chỗ giữa Dãy Trái và Dãy Phải không?")) return;
 
     setSlots((prev) => {
       const newSlots = [...prev];
@@ -567,30 +549,17 @@ export default function AdminSoDoLopPage() {
             const tempName = leftSeat.studentName;
             const tempPhoto = leftSeat.studentPhoto;
             const tempId = leftSeat.studentId;
+            const tempTo = leftSeat.to;
 
             leftSeat.studentName = rightSeat.studentName;
             leftSeat.studentPhoto = rightSeat.studentPhoto;
             leftSeat.studentId = rightSeat.studentId;
-            leftSeat.to = getSlotTo(leftSeat.col);
+            leftSeat.to = rightSeat.to;
 
             rightSeat.studentName = tempName;
             rightSeat.studentPhoto = tempPhoto;
             rightSeat.studentId = tempId;
-            rightSeat.to = getSlotTo(rightSeat.col);
-
-            // Update local students list state
-            if (leftSeat.studentId) {
-              const newLeftTo = getSlotTo(leftSeat.col);
-              setStudents((prevSt) =>
-                prevSt.map((st) => (st.id === leftSeat.studentId ? { ...st, to: newLeftTo } : st))
-              );
-            }
-            if (rightSeat.studentId) {
-              const newRightTo = getSlotTo(rightSeat.col);
-              setStudents((prevSt) =>
-                prevSt.map((st) => (st.id === rightSeat.studentId ? { ...st, to: newRightTo } : st))
-              );
-            }
+            rightSeat.to = tempTo;
           }
         }
       }
@@ -598,7 +567,7 @@ export default function AdminSoDoLopPage() {
       return newSlots;
     });
 
-    showToast("Đã hoán đổi vị trí 2 dãy bàn và cập nhật Tổ mới!");
+    showToast("Đã hoán đổi vị trí 2 dãy bàn thành công!");
   }
 
   // Create New Month
@@ -662,13 +631,13 @@ export default function AdminSoDoLopPage() {
     const isDragOver = dragOverSlotId === slot.id;
     const hasStudent = !!slot.studentName;
 
-    // Derived Tổ based on position / slot.to
-    const slotTo = slot.to || getSlotTo(slot.col);
+    // Derived Tổ strictly from student's assigned Tổ (color follows the student)
+    const slotTo = slot.to || (slot.studentId ? students.find((st) => st.id === slot.studentId)?.to : null) || 1;
     const toConfig = TO_COLORS[slotTo] || TO_COLORS[1];
 
     // Filter by Tổ on Main Page
-    const isMatchingTo = filterTo === 0 || slotTo === filterTo;
-    const isDimmed = filterTo !== 0 && slotTo !== filterTo;
+    const isMatchingTo = filterTo === 0 || (hasStudent && slotTo === filterTo);
+    const isDimmed = filterTo !== 0 && (!hasStudent || slotTo !== filterTo);
 
     return (
       <div
@@ -1172,109 +1141,7 @@ export default function AdminSoDoLopPage() {
             margin: "0 auto",
           }}
         >
-        {/* Tổ Column Header Banners */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 34px 1fr",
-            gap: 12,
-            marginBottom: 10,
-            alignItems: "center",
-          }}
-        >
-          {/* Dãy Trái: Cột 1-2 (Tổ 1) & Cột 3-4 (Tổ 2) */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div
-              style={{
-                background: "#e0f2fe",
-                border: "2px solid #38bdf8",
-                borderRadius: 10,
-                padding: "6px 8px",
-                textAlign: "center",
-                fontWeight: 900,
-                fontSize: "0.82rem",
-                color: "#0369a1",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                boxShadow: "0 2px 5px rgba(2, 132, 199, 0.15)",
-              }}
-            >
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0284c7" }}></span>
-              🔵 TỔ 1 (BÀN 1 - 2)
-            </div>
-            <div
-              style={{
-                background: "#dcfce7",
-                border: "2px solid #4ade80",
-                borderRadius: 10,
-                padding: "6px 8px",
-                textAlign: "center",
-                fontWeight: 900,
-                fontSize: "0.82rem",
-                color: "#15803d",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                boxShadow: "0 2px 5px rgba(22, 163, 74, 0.15)",
-              }}
-            >
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a" }}></span>
-              🟢 TỔ 2 (BÀN 3 - 4)
-            </div>
-          </div>
 
-          {/* Lối Đi */}
-          <div style={{ textAlign: "center", fontSize: "0.68rem", fontWeight: 900, color: "#94a3b8", letterSpacing: "0.5px" }}>
-            LỐI ĐI
-          </div>
-
-          {/* Dãy Phải: Cột 5-6 (Tổ 3) & Cột 7-8 (Tổ 4) */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div
-              style={{
-                background: "#fef3c7",
-                border: "2px solid #fcd34d",
-                borderRadius: 10,
-                padding: "6px 8px",
-                textAlign: "center",
-                fontWeight: 900,
-                fontSize: "0.82rem",
-                color: "#b45309",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                boxShadow: "0 2px 5px rgba(217, 119, 6, 0.15)",
-              }}
-            >
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#d97706" }}></span>
-              🟡 TỔ 3 (BÀN 5 - 6)
-            </div>
-            <div
-              style={{
-                background: "#f3e8ff",
-                border: "2px solid #c084fc",
-                borderRadius: 10,
-                padding: "6px 8px",
-                textAlign: "center",
-                fontWeight: 900,
-                fontSize: "0.82rem",
-                color: "#7e22ce",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                boxShadow: "0 2px 5px rgba(147, 51, 234, 0.15)",
-              }}
-            >
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#9333ea" }}></span>
-              🟣 TỔ 4 (BÀN 7 - 8)
-            </div>
-          </div>
-        </div>
 
         {/* Main 7 Rows Grid Layout */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

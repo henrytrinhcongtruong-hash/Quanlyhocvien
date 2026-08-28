@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { SeatSlotData, generateEmptySlots, getSlotTo } from "@/lib/seatingTypes";
+import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Get list of all students of this class with avatars
+    // Get list of all students of this class with avatars and their assigned Tổ
     const students = await prisma.student.findMany({
       where: { lop },
       select: { id: true, hoTen: true, tenGoi: true, gioiTinh: true, avatar: true, to: true },
@@ -42,23 +42,35 @@ export async function GET(req: NextRequest) {
       parsedSlots = generateEmptySlots();
     }
 
-    // Merge student info into slots and ensure Tổ aligns with seat column
+    // Merge student info into slots — student's Tổ (color) strictly comes from their student record
     parsedSlots = parsedSlots.map((s) => {
-      const computedTo = getSlotTo(s.col);
       if (s.studentId) {
         const found = students.find((st) => st.id === s.studentId);
         if (found) {
           return {
             ...s,
             studentPhoto: s.studentPhoto || found.avatar || null,
-            to: computedTo,
+            to: found.to, // Preserves student's true assigned Tổ
             studentName: s.studentName || found.hoTen.toUpperCase(),
+          };
+        }
+      }
+      if (s.studentName) {
+        const found = students.find(
+          (st) => st.hoTen.toLowerCase().trim() === s.studentName?.toLowerCase().trim()
+        );
+        if (found) {
+          return {
+            ...s,
+            studentId: found.id,
+            studentPhoto: s.studentPhoto || found.avatar || null,
+            to: found.to,
           };
         }
       }
       return {
         ...s,
-        to: computedTo,
+        to: s.to || null,
       };
     });
 
@@ -90,16 +102,8 @@ export async function POST(req: NextRequest) {
     const currentMonth = month?.trim() || "Tháng 09/2025";
     const parsedSlots: SeatSlotData[] = Array.isArray(slots) ? slots : JSON.parse(slots || "[]");
 
-    // Automatically synchronize student's Tổ with the seat column (Col 1,2 = Tổ 1; Col 3,4 = Tổ 2; Col 5,6 = Tổ 3; Col 7,8 = Tổ 4)
-    const normalizedSlots = parsedSlots.map((s) => {
-      const computedTo = getSlotTo(s.col);
-      return {
-        ...s,
-        to: computedTo,
-      };
-    });
-
-    const slotsString = JSON.stringify(normalizedSlots);
+    // Keep student's Tổ (color) intact without overriding by column index
+    const slotsString = JSON.stringify(parsedSlots);
 
     let updated;
     if (id) {
@@ -142,23 +146,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Sync Tổ (to) and avatar directly to Student table in database
-    if (Array.isArray(normalizedSlots)) {
-      const seatedStudents = normalizedSlots.filter((s) => s.studentId);
-      if (seatedStudents.length > 0) {
+    // If avatar was updated on slot, sync avatar to student record
+    if (Array.isArray(parsedSlots)) {
+      const seatedStudentsWithPhoto = parsedSlots.filter((s) => s.studentId && s.studentPhoto);
+      if (seatedStudentsWithPhoto.length > 0) {
         await Promise.allSettled(
-          seatedStudents.map((s) => {
-            const updateData: { to: number; avatar?: string } = {
-              to: getSlotTo(s.col),
-            };
-            if (s.studentPhoto) {
-              updateData.avatar = s.studentPhoto;
-            }
-            return prisma.student.update({
+          seatedStudentsWithPhoto.map((s) =>
+            prisma.student.update({
               where: { id: Number(s.studentId) },
-              data: updateData,
-            });
-          })
+              data: { avatar: s.studentPhoto },
+            })
+          )
         );
       }
     }

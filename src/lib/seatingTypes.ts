@@ -9,10 +9,10 @@ export interface SeatSlotData {
   studentName?: string | null;
   studentPhoto?: string | null;
   gender?: string | null;
-  to?: number | null; // Tổ 1 - 4
+  to?: number | null; // Tổ 1 - 4 của học sinh
 }
 
-// Helper lấy Tổ dựa theo Cột ghế (Cột 1,2 = Tổ 1; Cột 3,4 = Tổ 2; Cột 5,6 = Tổ 3; Cột 7,8 = Tổ 4)
+// Helper lấy Tổ mặc định nếu cần
 export function getSlotTo(col: number): number {
   if (col <= 2) return 1;
   if (col <= 4) return 2;
@@ -44,7 +44,7 @@ export function generateEmptySlots(): SeatSlotData[] {
         block: "left",
         studentName: null,
         studentPhoto: null,
-        to: getSlotTo(c),
+        to: null,
       });
     }
 
@@ -57,11 +57,10 @@ export function generateEmptySlots(): SeatSlotData[] {
         block: "right",
         studentName: null,
         studentPhoto: null,
-        to: getSlotTo(c),
+        to: null,
       });
     }
   }
 
   return slots;
 }
-
