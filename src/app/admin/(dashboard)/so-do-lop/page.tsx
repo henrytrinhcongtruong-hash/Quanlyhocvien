@@ -631,8 +631,13 @@ export default function AdminSoDoLopPage() {
     const isDragOver = dragOverSlotId === slot.id;
     const hasStudent = !!slot.studentName;
 
-    // Derived Tổ strictly from student's assigned Tổ (color follows the student)
-    const slotTo = slot.to || (slot.studentId ? students.find((st) => st.id === slot.studentId)?.to : null) || 1;
+    // Derived Tổ strictly from student's assigned Tổ in database (color follows student info)
+    const matchedStudent = students.find(
+      (st) =>
+        (slot.studentId && st.id === slot.studentId) ||
+        (slot.studentName && st.hoTen.trim().toLowerCase() === slot.studentName.trim().toLowerCase())
+    );
+    const slotTo = (matchedStudent && matchedStudent.to) ? matchedStudent.to : (slot.to || 1);
     const toConfig = TO_COLORS[slotTo] || TO_COLORS[1];
 
     // Filter by Tổ on Main Page
@@ -1142,6 +1147,126 @@ export default function AdminSoDoLopPage() {
           }}
         >
 
+
+        {/* Top 4 Tổ Banners Header Above Desks */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 34px 1fr",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          {/* Dãy Trái: Tổ 1 (Bàn 1-2) và Tổ 2 (Bàn 3-4) */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div
+              style={{
+                background: "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)",
+                border: "2px solid #38bdf8",
+                borderRadius: 14,
+                padding: "8px 12px",
+                textAlign: "center",
+                fontWeight: 900,
+                fontSize: "0.85rem",
+                color: "#0369a1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                boxShadow: "0 2px 6px rgba(2, 132, 199, 0.15)",
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0284c7" }} />
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#38bdf8" }} />
+              TỔ 1 (BÀN 1 - 2)
+            </div>
+            <div
+              style={{
+                background: "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)",
+                border: "2px solid #4ade80",
+                borderRadius: 14,
+                padding: "8px 12px",
+                textAlign: "center",
+                fontWeight: 900,
+                fontSize: "0.85rem",
+                color: "#15803d",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                boxShadow: "0 2px 6px rgba(22, 163, 74, 0.15)",
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a" }} />
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ade80" }} />
+              TỔ 2 (BÀN 3 - 4)
+            </div>
+          </div>
+
+          {/* Lối đi Header */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.65rem",
+              fontWeight: 900,
+              color: "#64748b",
+              lineHeight: 1.1,
+              letterSpacing: "0.5px",
+            }}
+          >
+            <span>LỐI</span>
+            <span>ĐI</span>
+          </div>
+
+          {/* Dãy Phải: Tổ 3 (Bàn 5-6) và Tổ 4 (Bàn 7-8) */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div
+              style={{
+                background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+                border: "2px solid #fcd34d",
+                borderRadius: 14,
+                padding: "8px 12px",
+                textAlign: "center",
+                fontWeight: 900,
+                fontSize: "0.85rem",
+                color: "#b45309",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                boxShadow: "0 2px 6px rgba(217, 119, 6, 0.15)",
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#d97706" }} />
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#fcd34d" }} />
+              TỔ 3 (BÀN 5 - 6)
+            </div>
+            <div
+              style={{
+                background: "linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)",
+                border: "2px solid #c084fc",
+                borderRadius: 14,
+                padding: "8px 12px",
+                textAlign: "center",
+                fontWeight: 900,
+                fontSize: "0.85rem",
+                color: "#7e22ce",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                boxShadow: "0 2px 6px rgba(147, 51, 234, 0.15)",
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#9333ea" }} />
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#c084fc" }} />
+              TỔ 4 (BÀN 7 - 8)
+            </div>
+          </div>
+        </div>
 
         {/* Main 7 Rows Grid Layout */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
