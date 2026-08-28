@@ -5,9 +5,10 @@ import { useSession } from "next-auth/react";
 import {
   Users, Plus, Search, Filter, Edit2, Trash2, Upload,
   Download, ChevronLeft, ChevronRight, X, Save, AlertCircle,
-  User, CheckCircle, School,
+  User, CheckCircle, School, ArrowUpDown, ArrowUpAZ, ArrowDownAZ,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { compareVietnameseNames } from "@/lib/utils";
 
 // ==================
 // TYPES
@@ -56,6 +57,7 @@ export default function HocSinhPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">("default");
   const [filterTo, setFilterTo] = useState(0);
   const [filterLop, setFilterLop] = useState(() => {
     if (!isSuperAdmin && assignedLop) return assignedLop;
@@ -309,6 +311,11 @@ export default function HocSinhPage() {
   const totalPages = Math.ceil(total / PER_PAGE);
   const byTo = [1, 2, 3, 4].map((t) => students.filter((s) => s.to === t).length);
 
+  const sortedStudents = React.useMemo(() => {
+    if (sortOrder === "default") return students;
+    return [...students].sort((a, b) => compareVietnameseNames(a.hoTen, b.hoTen, sortOrder));
+  }, [students, sortOrder]);
+
   return (
     <div className="animate-fade-in">
       {/* Toast */}
@@ -406,8 +413,8 @@ export default function HocSinhPage() {
         ))}
       </div>
 
-      {/* Search + Filter */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+      {/* Search + Filter + Sort */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ position: "relative", flex: "1 1 200px" }}>
           <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
           <input
@@ -417,6 +424,15 @@ export default function HocSinhPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 2 }}
+            >
+              <X size={13} />
+            </button>
+          )}
         </div>
         <select
           className="select"
@@ -440,10 +456,38 @@ export default function HocSinhPage() {
           <option value={0}>Tất cả tổ</option>
           {[1, 2, 3, 4].map((t) => <option key={t} value={t}>Tổ {t}</option>)}
         </select>
-        {(search || filterTo > 0 || filterLop !== "ALL") && (
+
+        {/* Nút Sort Tên A-Z / Z-A */}
+        <button
+          type="button"
+          className={`btn btn-sm ${sortOrder !== "default" ? "btn-primary" : "btn-secondary"}`}
+          onClick={() => {
+            if (sortOrder === "default") setSortOrder("asc");
+            else if (sortOrder === "asc") setSortOrder("desc");
+            else setSortOrder("default");
+          }}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700 }}
+          title="Bấm để đổi sắp xếp tên: A-Z -> Z-A -> Mặc định"
+        >
+          {sortOrder === "asc" ? (
+            <>
+              <ArrowUpAZ size={15} /> Tên: A $\rightarrow$ Z
+            </>
+          ) : sortOrder === "desc" ? (
+            <>
+              <ArrowDownAZ size={15} /> Tên: Z $\rightarrow$ A
+            </>
+          ) : (
+            <>
+              <ArrowUpDown size={14} /> Sắp xếp tên
+            </>
+          )}
+        </button>
+
+        {(search || filterTo > 0 || filterLop !== "ALL" || sortOrder !== "default") && (
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => { setSearch(""); setFilterTo(0); setFilterLop("ALL"); }}
+            onClick={() => { setSearch(""); setFilterTo(0); setFilterLop("ALL"); setSortOrder("default"); }}
           >
             <X size={13} /> Bỏ lọc
           </button>
@@ -458,7 +502,7 @@ export default function HocSinhPage() {
               <div key={i} className="skeleton" style={{ height: 42, marginBottom: 6, borderRadius: 6 }} />
             ))}
           </div>
-        ) : students.length === 0 ? (
+        ) : sortedStudents.length === 0 ? (
           <div style={{ padding: 64, textAlign: "center", color: "var(--text-muted)" }}>
             <Users size={40} style={{ margin: "0 auto 12px", display: "block", opacity: 0.3 }} />
             <p style={{ fontWeight: 600 }}>Không tìm thấy học sinh nào</p>
@@ -469,7 +513,30 @@ export default function HocSinhPage() {
               <thead>
                 <tr>
                   <th style={{ width: 40 }}>#</th>
-                  <th>Họ và tên</th>
+                  <th
+                    style={{ cursor: "pointer", userSelect: "none" }}
+                    onClick={() => {
+                      if (sortOrder === "default") setSortOrder("asc");
+                      else if (sortOrder === "asc") setSortOrder("desc");
+                      else setSortOrder("default");
+                    }}
+                    title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
+                  >
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span>Họ và tên</span>
+                      {sortOrder === "asc" ? (
+                        <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                          <ArrowUpAZ size={12} /> A-Z
+                        </span>
+                      ) : sortOrder === "desc" ? (
+                        <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                          <ArrowDownAZ size={12} /> Z-A
+                        </span>
+                      ) : (
+                        <ArrowUpDown size={12} style={{ color: "var(--text-muted)" }} />
+                      )}
+                    </div>
+                  </th>
                   <th>Tên gọi</th>
                   <th>Lớp</th>
                   <th>Tổ</th>
@@ -479,7 +546,7 @@ export default function HocSinhPage() {
                 </tr>
               </thead>
               <tbody>
-                {students.map((s, idx) => (
+                {sortedStudents.map((s, idx) => (
                   <tr key={s.id}>
                     <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
                       {(page - 1) * PER_PAGE + idx + 1}

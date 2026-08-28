@@ -6,8 +6,10 @@ import {
   Wallet, TrendingUp, AlertCircle, Plus, Edit2, Trash2,
   Upload, Download, Search, CheckCircle, XCircle, Filter,
   DollarSign, ArrowUpRight, ArrowDownRight, Save, X, Settings2, Sparkles, School,
+  ArrowUpDown, ArrowUpAZ, ArrowDownAZ,
 } from "lucide-react";
 import { formatVND, formatDate } from "@/lib/format";
+import { compareVietnameseNames } from "@/lib/utils";
 
 interface Student {
   id: number;
@@ -80,6 +82,7 @@ export default function AdminQuyPage() {
 
   // Filters for Receipts
   const [search, setSearch] = useState("");
+  const [feeSortOrder, setFeeSortOrder] = useState<"default" | "asc" | "desc">("default");
   const [filterKyThu, setFilterKyThu] = useState("HK1");
   const [filterTrangThai, setFilterTrangThai] = useState("ALL");
   const [filterLop, setFilterLop] = useState(() => {
@@ -380,14 +383,21 @@ export default function AdminQuyPage() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  const filteredFees = fees.filter(f => {
-    const matchSearch = !search || f.student.hoTen.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterTrangThai === "ALL" || f.trangThai === filterTrangThai;
-    const matchLop = isSuperAdmin
-      ? (filterLop === "ALL" || f.student.lop === filterLop)
-      : f.student.lop === assignedLop;
-    return matchSearch && matchStatus && matchLop;
-  });
+  const filteredFees = React.useMemo(() => {
+    let list = fees.filter(f => {
+      const matchSearch = !search || f.student.hoTen.toLowerCase().includes(search.toLowerCase());
+      const matchStatus = filterTrangThai === "ALL" || f.trangThai === filterTrangThai;
+      const matchLop = isSuperAdmin
+        ? (filterLop === "ALL" || f.student.lop === filterLop)
+        : f.student.lop === assignedLop;
+      return matchSearch && matchStatus && matchLop;
+    });
+
+    if (feeSortOrder !== "default") {
+      list = [...list].sort((a, b) => compareVietnameseNames(a.student.hoTen, b.student.hoTen, feeSortOrder));
+    }
+    return list;
+  }, [fees, search, filterTrangThai, filterLop, isSuperAdmin, assignedLop, feeSortOrder]);
 
   const filteredExpenses = expenses.filter(e => {
     const matchSearch = !expenseSearch || e.danhSachChi.toLowerCase().includes(expenseSearch.toLowerCase());
@@ -627,7 +637,7 @@ export default function AdminQuyPage() {
           </div>
 
           {/* Controls */}
-          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
             <div style={{ position: "relative", flex: "1 1 200px" }}>
               <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
               <input
@@ -637,6 +647,15 @@ export default function AdminQuyPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 2 }}
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
             {isSuperAdmin && (
               <select
@@ -671,6 +690,42 @@ export default function AdminQuyPage() {
               <option value="Đã Đóng">Đã Đóng</option>
               <option value="Chưa Đóng">Chưa Đóng</option>
             </select>
+
+            {/* Nút Sort Tên A-Z / Z-A */}
+            <button
+              type="button"
+              className={`btn btn-sm ${feeSortOrder !== "default" ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => {
+                if (feeSortOrder === "default") setFeeSortOrder("asc");
+                else if (feeSortOrder === "asc") setFeeSortOrder("desc");
+                else setFeeSortOrder("default");
+              }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700 }}
+              title="Bấm để đổi sắp xếp tên: A-Z -> Z-A -> Mặc định"
+            >
+              {feeSortOrder === "asc" ? (
+                <>
+                  <ArrowUpAZ size={15} /> Tên: A $\rightarrow$ Z
+                </>
+              ) : feeSortOrder === "desc" ? (
+                <>
+                  <ArrowDownAZ size={15} /> Tên: Z $\rightarrow$ A
+                </>
+              ) : (
+                <>
+                  <ArrowUpDown size={14} /> Sắp xếp tên
+                </>
+              )}
+            </button>
+
+            {(search || filterTrangThai !== "ALL" || (isSuperAdmin && filterLop !== "ALL") || feeSortOrder !== "default") && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => { setSearch(""); setFilterTrangThai("ALL"); if (isSuperAdmin) setFilterLop("ALL"); setFeeSortOrder("default"); }}
+              >
+                <X size={13} /> Bỏ lọc
+              </button>
+            )}
           </div>
 
           {/* Table */}
@@ -699,7 +754,30 @@ export default function AdminQuyPage() {
                   <thead>
                     <tr>
                       <th style={{ width: 40 }}>#</th>
-                      <th>Họ và tên</th>
+                      <th
+                        style={{ cursor: "pointer", userSelect: "none" }}
+                        onClick={() => {
+                          if (feeSortOrder === "default") setFeeSortOrder("asc");
+                          else if (feeSortOrder === "asc") setFeeSortOrder("desc");
+                          else setFeeSortOrder("default");
+                        }}
+                        title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
+                      >
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span>Họ và tên</span>
+                          {feeSortOrder === "asc" ? (
+                            <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                              <ArrowUpAZ size={12} /> A-Z
+                            </span>
+                          ) : feeSortOrder === "desc" ? (
+                            <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                              <ArrowDownAZ size={12} /> Z-A
+                            </span>
+                          ) : (
+                            <ArrowUpDown size={12} style={{ color: "var(--text-muted)" }} />
+                          )}
+                        </div>
+                      </th>
                       <th>Lớp</th>
                       <th>Tổ</th>
                       <th>Kỳ thu</th>

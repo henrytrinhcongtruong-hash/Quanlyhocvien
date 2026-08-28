@@ -5,9 +5,10 @@ import { useSession } from "next-auth/react";
 import {
   BookOpen, Calendar as CalendarIcon, CheckCircle, XCircle, Clock,
   Upload, Download, Plus, Trash2, Filter, AlertCircle, Save,
-  Search, Users, X, School,
+  Search, Users, X, School, ArrowUpDown, ArrowUpAZ, ArrowDownAZ,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { compareVietnameseNames } from "@/lib/utils";
 
 interface Student {
   id: number;
@@ -40,6 +41,8 @@ export default function DiemDanhAdminPage() {
     return new Date().toISOString().split("T")[0];
   });
   const [selectedTo, setSelectedTo] = useState(0);
+  const [search, setSearch] = useState("");
+  const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">("default");
   const [filterLop, setFilterLop] = useState(() => {
     if (!isSuperAdmin && assignedLop) return assignedLop;
     return urlLop || "ALL";
@@ -196,11 +199,22 @@ export default function DiemDanhAdminPage() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  const filteredStudents = students.filter(s => {
-    const matchTo = selectedTo === 0 || s.to === selectedTo;
-    const matchLop = filterLop === "ALL" || s.lop === filterLop;
-    return matchTo && matchLop;
-  });
+  const filteredStudents = React.useMemo(() => {
+    let list = students.filter(s => {
+      const matchTo = selectedTo === 0 || s.to === selectedTo;
+      const matchLop = filterLop === "ALL" || s.lop === filterLop;
+      const matchSearch =
+        !search ||
+        s.hoTen.toLowerCase().includes(search.toLowerCase()) ||
+        (s.tenGoi && s.tenGoi.toLowerCase().includes(search.toLowerCase()));
+      return matchTo && matchLop && matchSearch;
+    });
+
+    if (sortOrder !== "default") {
+      list = [...list].sort((a, b) => compareVietnameseNames(a.hoTen, b.hoTen, sortOrder));
+    }
+    return list;
+  }, [students, selectedTo, filterLop, search, sortOrder]);
 
   const vangCoPhep = records.filter(r => r.loai === "Vắng có phép").length;
   const vangKhongPhep = records.filter(r => r.loai === "Vắng không phép").length;
@@ -251,15 +265,15 @@ export default function DiemDanhAdminPage() {
         </div>
       </div>
 
-      {/* Controls Bar: Date + Class Filter + Tổ */}
-      <div className="card" style={{ padding: "16px 20px", marginBottom: 20, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      {/* Controls Bar: Date + Class Filter + Tổ + Search + Sort */}
+      <div className="card" style={{ padding: "16px 20px", marginBottom: 20, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flex: "1 1 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <CalendarIcon size={16} color="var(--primary)" />
             <input
               type="date"
               className="input"
-              style={{ minHeight: 36, padding: "4px 10px", width: 150 }}
+              style={{ minHeight: 36, padding: "4px 10px", width: 145 }}
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
             />
@@ -267,11 +281,11 @@ export default function DiemDanhAdminPage() {
 
           <select
             className="select"
-            style={{ width: 160, fontWeight: 700, color: "var(--primary)" }}
+            style={{ width: 145, fontWeight: 700, color: "var(--primary)", minHeight: 36 }}
             value={filterLop}
             onChange={(e) => setFilterLop(e.target.value)}
           >
-            <option value="ALL">🏫 Tất cả các lớp</option>
+            <option value="ALL">🏫 Tất cả lớp</option>
             {classList.map(c => (
               <option key={c} value={c}>Lớp {c}</option>
             ))}
@@ -279,27 +293,85 @@ export default function DiemDanhAdminPage() {
 
           <select
             className="select"
-            style={{ width: 130 }}
+            style={{ width: 120, minHeight: 36 }}
             value={selectedTo}
             onChange={(e) => setSelectedTo(Number(e.target.value))}
           >
             <option value={0}>Tất cả tổ</option>
             {[1, 2, 3, 4].map(t => <option key={t} value={t}>Tổ {t}</option>)}
           </select>
+
+          {/* Thanh gõ tìm kiếm tên học sinh */}
+          <div style={{ position: "relative", minWidth: 180, flex: "1 1 180px" }}>
+            <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+            <input
+              className="input"
+              style={{ paddingLeft: 34, minHeight: 36 }}
+              placeholder="Tìm tên học sinh..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 2 }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* Nút Sort Tên A-Z / Z-A */}
+          <button
+            type="button"
+            className={`btn btn-sm ${sortOrder !== "default" ? "btn-primary" : "btn-secondary"}`}
+            onClick={() => {
+              if (sortOrder === "default") setSortOrder("asc");
+              else if (sortOrder === "asc") setSortOrder("desc");
+              else setSortOrder("default");
+            }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, minHeight: 36 }}
+            title="Bấm để đổi sắp xếp tên: A-Z -> Z-A -> Mặc định"
+          >
+            {sortOrder === "asc" ? (
+              <>
+                <ArrowUpAZ size={15} /> Tên: A $\rightarrow$ Z
+              </>
+            ) : sortOrder === "desc" ? (
+              <>
+                <ArrowDownAZ size={15} /> Tên: Z $\rightarrow$ A
+              </>
+            ) : (
+              <>
+                <ArrowUpDown size={14} /> Sắp xếp tên
+              </>
+            )}
+          </button>
+
+          {(search || selectedTo > 0 || filterLop !== "ALL" || sortOrder !== "default") && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => { setSearch(""); setSelectedTo(0); setFilterLop("ALL"); setSortOrder("default"); }}
+              style={{ minHeight: 36 }}
+            >
+              <X size={13} /> Bỏ lọc
+            </button>
+          )}
         </div>
 
         {/* Quick Stats on selected day */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <span className="badge badge-success" style={{ padding: "6px 12px", fontSize: "0.82rem" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <span className="badge badge-success" style={{ padding: "6px 10px", fontSize: "0.8rem" }}>
             Có mặt: {coMat}
           </span>
-          <span className="badge badge-warning" style={{ padding: "6px 12px", fontSize: "0.82rem" }}>
+          <span className="badge badge-warning" style={{ padding: "6px 10px", fontSize: "0.8rem" }}>
             Có phép: {vangCoPhep}
           </span>
-          <span className="badge badge-danger" style={{ padding: "6px 12px", fontSize: "0.82rem" }}>
+          <span className="badge badge-danger" style={{ padding: "6px 10px", fontSize: "0.8rem" }}>
             Không phép: {vangKhongPhep}
           </span>
-          <span className="badge badge-info" style={{ padding: "6px 12px", fontSize: "0.82rem" }}>
+          <span className="badge badge-info" style={{ padding: "6px 10px", fontSize: "0.8rem" }}>
             Đi trễ: {diTre}
           </span>
         </div>
@@ -324,7 +396,30 @@ export default function DiemDanhAdminPage() {
               <thead>
                 <tr>
                   <th style={{ width: 40 }}>#</th>
-                  <th>Họ và tên</th>
+                  <th
+                    style={{ cursor: "pointer", userSelect: "none" }}
+                    onClick={() => {
+                      if (sortOrder === "default") setSortOrder("asc");
+                      else if (sortOrder === "asc") setSortOrder("desc");
+                      else setSortOrder("default");
+                    }}
+                    title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
+                  >
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span>Họ và tên</span>
+                      {sortOrder === "asc" ? (
+                        <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                          <ArrowUpAZ size={12} /> A-Z
+                        </span>
+                      ) : sortOrder === "desc" ? (
+                        <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                          <ArrowDownAZ size={12} /> Z-A
+                        </span>
+                      ) : (
+                        <ArrowUpDown size={12} style={{ color: "var(--text-muted)" }} />
+                      )}
+                    </div>
+                  </th>
                   <th>Lớp</th>
                   <th>Tổ</th>
                   <th style={{ textAlign: "center" }}>Trạng thái ngày {formatDate(selectedDate)}</th>

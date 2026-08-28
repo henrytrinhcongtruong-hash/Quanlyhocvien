@@ -14,9 +14,14 @@ import {
   TrendingUp,
   AlertCircle,
   Info,
+  ArrowUpDown,
+  ArrowUpAZ,
+  ArrowDownAZ,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { formatVND, formatDate } from "@/lib/format";
+import { compareVietnameseNames } from "@/lib/utils";
 
 // ==================
 // TYPES
@@ -113,6 +118,7 @@ export default function PublicHomePage() {
   const [tab, setTab] = useState<"danh-sach" | "quy" | "diem-danh">("danh-sach");
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState("");
+  const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">("default");
   const [filterTo, setFilterTo] = useState(0);
   const [loadingStudents, setLoadingStudents] = useState(true);
 
@@ -187,11 +193,17 @@ export default function PublicHomePage() {
     return matchTo && matchSearch;
   });
 
-  // Group by tổ
-  const byTo = [1, 2, 3, 4].map((t) => ({
-    to: t,
-    students: filtered.filter((s) => s.to === t),
-  }));
+  // Group by tổ with Vietnamese alphabetical name sort
+  const byTo = [1, 2, 3, 4].map((t) => {
+    let group = filtered.filter((s) => s.to === t);
+    if (sortOrder !== "default") {
+      group = [...group].sort((a, b) => compareVietnameseNames(a.hoTen, b.hoTen, sortOrder));
+    }
+    return {
+      to: t,
+      students: group,
+    };
+  });
 
   return (
     <div className="animate-fade-in">
@@ -343,8 +355,8 @@ export default function PublicHomePage() {
       {/* ====== TAB: DANH SÁCH ====== */}
       {tab === "danh-sach" && (
         <div>
-          {/* Search + filter */}
-          <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+          {/* Search + filter + sort */}
+          <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
             <div style={{ position: "relative", flex: "1 1 220px" }}>
               <Search
                 size={15}
@@ -363,6 +375,15 @@ export default function PublicHomePage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 2 }}
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
             <select
               className="select"
@@ -377,6 +398,42 @@ export default function PublicHomePage() {
                 </option>
               ))}
             </select>
+
+            {/* Nút Sort Tên A-Z / Z-A */}
+            <button
+              type="button"
+              className={`btn btn-sm ${sortOrder !== "default" ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => {
+                if (sortOrder === "default") setSortOrder("asc");
+                else if (sortOrder === "asc") setSortOrder("desc");
+                else setSortOrder("default");
+              }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700 }}
+              title="Bấm để đổi sắp xếp tên: A-Z -> Z-A -> Mặc định"
+            >
+              {sortOrder === "asc" ? (
+                <>
+                  <ArrowUpAZ size={15} /> Tên: A $\rightarrow$ Z
+                </>
+              ) : sortOrder === "desc" ? (
+                <>
+                  <ArrowDownAZ size={15} /> Tên: Z $\rightarrow$ A
+                </>
+              ) : (
+                <>
+                  <ArrowUpDown size={14} /> Sắp xếp tên
+                </>
+              )}
+            </button>
+
+            {(search || filterTo > 0 || sortOrder !== "default") && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => { setSearch(""); setFilterTo(0); setSortOrder("default"); }}
+              >
+                <X size={13} /> Bỏ lọc
+              </button>
+            )}
           </div>
 
           {loadingStudents ? (
@@ -416,7 +473,30 @@ export default function PublicHomePage() {
                         <thead>
                           <tr>
                             <th style={{ width: 40 }}>#</th>
-                            <th>Họ và tên</th>
+                            <th
+                              style={{ cursor: "pointer", userSelect: "none" }}
+                              onClick={() => {
+                                if (sortOrder === "default") setSortOrder("asc");
+                                else if (sortOrder === "asc") setSortOrder("desc");
+                                else setSortOrder("default");
+                              }}
+                              title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
+                            >
+                              <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                <span>Họ và tên</span>
+                                {sortOrder === "asc" ? (
+                                  <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                                    <ArrowUpAZ size={12} /> A-Z
+                                  </span>
+                                ) : sortOrder === "desc" ? (
+                                  <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                                    <ArrowDownAZ size={12} /> Z-A
+                                  </span>
+                                ) : (
+                                  <ArrowUpDown size={12} style={{ color: "var(--text-muted)" }} />
+                                )}
+                              </div>
+                            </th>
                             <th>Tên gọi</th>
                             <th>Giới tính</th>
                             <th>Ngày sinh</th>
