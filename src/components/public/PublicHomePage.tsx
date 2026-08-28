@@ -251,6 +251,19 @@ export default function PublicHomePage() {
       .catch(() => {});
   }, [activeLop]);
 
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedStudent(null);
+      }
+    };
+    if (selectedStudent) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedStudent]);
+
   // Load student profile details when clicked
   const openStudentModal = async (st: Student) => {
     setSelectedStudent(st);
@@ -1643,6 +1656,19 @@ export default function PublicHomePage() {
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(16px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
     </div>
   );
 }
