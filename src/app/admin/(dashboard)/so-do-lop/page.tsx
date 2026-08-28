@@ -1356,29 +1356,41 @@ export default function AdminSoDoLopPage() {
       {/* EDIT SLOT MODAL WITH TO FILTER                            */}
       {/* ========================================================= */}
       {editSlotModal && typeof document !== "undefined" && createPortal(
-        <div style={{ position: "fixed", inset: 0, zIndex: 999999 }}>
-          <div
-            style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.65)", backdropFilter: "blur(4px)" }}
-            onClick={() => setEditSlotModal(null)}
-          />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setEditSlotModal(null)}
+        >
           <div
             style={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%,-50%)",
+              position: "relative",
               background: "white",
               borderRadius: 20,
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              padding: "22px 20px",
-              width: "94%",
-              maxWidth: 490,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              animation: "fadeIn 0.15s ease",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.3)",
+              padding: "24px 24px",
+              width: "100%",
+              maxWidth: 500,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              display: "flex",
+              flexDirection: "column",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 10, flexShrink: 0 }}>
               <div>
                 <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "#0284c7" }}>
                   Xếp chỗ: Hàng {editSlotModal.row} — {editSlotModal.block === "left" ? "Dãy Trái" : "Dãy Phải"} (Cột {editSlotModal.col})
@@ -1395,7 +1407,7 @@ export default function AdminSoDoLopPage() {
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ overflowY: "auto", flex: 1, paddingRight: 4, display: "flex", flexDirection: "column", gap: 14 }}>
               {/* Filter By Tổ Buttons inside Modal */}
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -1421,12 +1433,12 @@ export default function AdminSoDoLopPage() {
                         type="button"
                         onClick={() => setModalFilterTo(t.id)}
                         style={{
-                          border: isActive ? `2px solid ${t.color}` : "1px solid #e2e8f0",
+                          border: isActive ? `2px solid ${t.color}` : "1px solid var(--border)",
                           background: isActive ? t.bg : "#ffffff",
                           color: isActive ? t.color : "#475569",
                           fontWeight: isActive ? 800 : 600,
-                          fontSize: "0.8rem",
-                          padding: "5px 10px",
+                          fontSize: "0.78rem",
+                          padding: "4px 8px",
                           borderRadius: 8,
                           cursor: "pointer",
                           transition: "all 0.15s ease",
@@ -1439,53 +1451,47 @@ export default function AdminSoDoLopPage() {
                 </div>
               </div>
 
-              {/* Select from existing students */}
+              {/* Student Select Dropdown */}
               <div>
-                <label className="label" style={{ fontWeight: 800 }}>
-                  Chọn từ danh sách học sinh Lớp {selectedLop} {modalFilterTo !== 0 ? `(Tổ ${modalFilterTo})` : ""}:
-                </label>
+                <label className="label" style={{ fontWeight: 800 }}>Chọn học sinh từ danh sách:</label>
                 <select
                   className="select"
-                  style={{ fontWeight: 700, width: "100%", fontSize: "0.9rem" }}
                   value={slotForm.studentId || 0}
                   onChange={(e) => handleStudentSelect(Number(e.target.value))}
+                  style={{ fontWeight: 700 }}
                 >
-                  <option value={0}>-- Chọn học sinh có sẵn trong danh sách --</option>
+                  <option value={0}>-- Chọn học sinh hoặc để trống --</option>
                   {modalFilteredStudents.map((st) => (
                     <option key={st.id} value={st.id}>
-                      {st.hoTen} — Tổ {st.to} ({st.gioiTinh})
+                      {st.hoTen} ({st.gioiTinh}) - Tổ {st.to}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Student Name */}
+              {/* Student Name Display/Input */}
               <div>
-                <label className="label" style={{ fontWeight: 800 }}>
-                  Họ và tên học sinh (In hoa):
-                </label>
+                <label className="label" style={{ fontWeight: 800 }}>Họ và tên học sinh:</label>
                 <input
                   className="input"
-                  style={{ fontWeight: 800, textTransform: "uppercase" }}
                   value={slotForm.studentName}
                   onChange={(e) => setSlotForm((f) => ({ ...f, studentName: e.target.value }))}
-                  placeholder="VD: TRẦN HOÀNG QUÂN"
+                  placeholder="Nhập tên học sinh (HOẶC CHỌN Ở TRÊN)"
+                  style={{ textTransform: "uppercase", fontWeight: 800 }}
                 />
               </div>
 
-              {/* Photo Upload & Preview */}
+              {/* Photo Upload with Live Preview */}
               <div>
-                <label className="label" style={{ fontWeight: 800 }}>
-                  Ảnh thẻ / Avatar học sinh:
-                </label>
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <label className="label" style={{ fontWeight: 800 }}>Ảnh đại diện học sinh (Chân dung):</label>
+                <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
                   <div
                     style={{
-                      width: 68,
-                      height: 78,
-                      borderRadius: 12,
-                      background: slotForm.to ? TO_COLORS[slotForm.to]?.bg : "#f1f5f9",
-                      border: slotForm.to ? `2px solid ${TO_COLORS[slotForm.to]?.border}` : "2px solid #cbd5e1",
+                      width: 60,
+                      height: 66,
+                      borderRadius: 10,
+                      border: "2px solid var(--border)",
+                      background: "#f8fafc",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -1495,54 +1501,43 @@ export default function AdminSoDoLopPage() {
                   >
                     {slotForm.studentPhoto ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={slotForm.studentPhoto} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img
+                        src={slotForm.studentPhoto}
+                        alt="Preview"
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
                     ) : (
-                      <User size={24} color={slotForm.to ? TO_COLORS[slotForm.to]?.text : "#94a3b8"} />
+                      <User size={24} color="#94a3b8" />
                     )}
                   </div>
-
                   <div style={{ flex: 1 }}>
-                    <label
-                      className="btn btn-secondary btn-sm"
-                      style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
-                    >
-                      <Upload size={14} /> Tải ảnh lên (.jpg, .png)
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoUpload}
-                        style={{ display: "none" }}
-                      />
-                    </label>
-                    {slotForm.studentPhoto && (
-                      <button
-                        type="button"
-                        className="btn btn-sm"
-                        style={{ marginLeft: 8, color: "#dc2626", background: "#fee2e2", border: "none" }}
-                        onClick={() => setSlotForm((f) => ({ ...f, studentPhoto: null }))}
-                      >
-                        Xóa ảnh
-                      </button>
-                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      style={{ fontSize: "0.8rem" }}
+                    />
+                    <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "4px 0 0" }}>
+                      Hệ thống tự nén ảnh tối ưu tốc độ và độ sắc nét khi in A4.
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 22, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 18, paddingTop: 12, borderTop: "1px solid var(--border)", flexShrink: 0 }}>
               <button
-                type="button"
-                className="btn"
-                style={{ background: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5" }}
+                className="btn btn-secondary btn-sm"
+                style={{ color: "var(--danger)", borderColor: "var(--danger-border)" }}
                 onClick={handleClearSlot}
               >
-                <Trash2 size={14} /> Để trống
+                Để trống
               </button>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setEditSlotModal(null)}>
                 Hủy
               </button>
               <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSaveSlot}>
-                <Save size={14} /> Lưu vị trí
+                <Save size={15} /> Lưu vị trí
               </button>
             </div>
           </div>
@@ -1554,29 +1549,41 @@ export default function AdminSoDoLopPage() {
       {/* SETTINGS MODAL (EDIT TITLE, GVCN, SLOGAN)                 */}
       {/* ========================================================= */}
       {settingsModalOpen && typeof document !== "undefined" && createPortal(
-        <div style={{ position: "fixed", inset: 0, zIndex: 999999 }}>
-          <div
-            style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.65)", backdropFilter: "blur(4px)" }}
-            onClick={() => setSettingsModalOpen(false)}
-          />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setSettingsModalOpen(false)}
+        >
           <div
             style={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%,-50%)",
+              position: "relative",
               background: "white",
               borderRadius: 20,
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              padding: "22px 20px",
-              width: "94%",
-              maxWidth: 460,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              animation: "fadeIn 0.15s ease",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.3)",
+              padding: "24px 24px",
+              width: "100%",
+              maxWidth: 480,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              display: "flex",
+              flexDirection: "column",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 10, flexShrink: 0 }}>
               <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "var(--primary)" }}>
                 Cấu hình thông tin sơ đồ
               </h3>
@@ -1588,7 +1595,7 @@ export default function AdminSoDoLopPage() {
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ overflowY: "auto", flex: 1, paddingRight: 4, display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label className="label" style={{ fontWeight: 800 }}>Tiêu đề sơ đồ:</label>
                 <input
@@ -1620,12 +1627,12 @@ export default function AdminSoDoLopPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border)", flexShrink: 0 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setSettingsModalOpen(false)}>
                 Hủy
               </button>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSaveSettings}>
-                <Save size={14} /> Lưu thông tin
+              <button className="btn btn-primary" style={{ flex: 1.5 }} onClick={handleSaveSettings}>
+                <Save size={15} /> Lưu thông tin
               </button>
             </div>
           </div>
@@ -1637,27 +1644,36 @@ export default function AdminSoDoLopPage() {
       {/* NEW MONTH MODAL                                           */}
       {/* ========================================================= */}
       {newMonthModalOpen && typeof document !== "undefined" && createPortal(
-        <div style={{ position: "fixed", inset: 0, zIndex: 999999 }}>
-          <div
-            style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.65)" }}
-            onClick={() => setNewMonthModalOpen(false)}
-          />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setNewMonthModalOpen(false)}
+        >
           <div
             style={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%,-50%)",
+              position: "relative",
               background: "white",
               borderRadius: 20,
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              padding: "22px 20px",
-              width: "94%",
-              maxWidth: 420,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              animation: "fadeIn 0.15s ease",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.3)",
+              padding: "24px 24px",
+              width: "100%",
+              maxWidth: 440,
+              margin: "auto",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, color: "var(--primary)" }}>
@@ -1671,7 +1687,7 @@ export default function AdminSoDoLopPage() {
               </button>
             </div>
 
-            <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: "0 0 14px" }}>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: "0 0 14px", lineHeight: 1.5 }}>
               Hệ thống sẽ sao chép vị trí chỗ ngồi từ <strong>{selectedMonth}</strong> sang tháng mới để bạn dễ dàng xoay vòng hoặc chỉnh sửa đổi chỗ.
             </p>
 

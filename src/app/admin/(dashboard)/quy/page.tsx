@@ -973,30 +973,57 @@ export default function AdminQuyPage() {
 
       {/* ====== MODAL THIẾT LẬP ĐỢT THU QUỸ THEO LỚP ====== */}
       {batchModalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} onClick={() => setBatchModalOpen(false)} />
-          <div style={{
-            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            background: "white", borderRadius: 14, boxShadow: "var(--shadow-lg)", padding: "28px",
-            width: "100%", maxWidth: 460, animation: "fadeIn 0.2s ease",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setBatchModalOpen(false)}
+        >
+          <div
+            style={{
+              position: "relative",
+              background: "white",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "24px 26px",
+              width: "100%",
+              maxWidth: 500,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              display: "flex",
+              flexDirection: "column",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--primary-light)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)" }}>
                   <Settings2 size={20} />
                 </div>
-                <h3 style={{ margin: 0, fontSize: "1.15rem" }}>Thiết lập mức thu quỹ lớp</h3>
+                <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800 }}>Thiết lập mức thu quỹ lớp</h3>
               </div>
               <button onClick={() => setBatchModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
-                <X size={18} color="var(--text-muted)" />
+                <X size={20} color="var(--text-muted)" />
               </button>
             </div>
 
-            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 18 }}>
-              Nhập số tiền cần thu (VD: <strong>50k</strong>, <strong>50.000</strong>). Hệ thống sẽ tự động cập nhật danh sách cho tất cả học sinh trong lớp.
-            </p>
+            <div style={{ overflowY: "auto", flex: 1, paddingRight: 4, display: "flex", flexDirection: "column", gap: 14 }}>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Nhập số tiền cần thu (VD: <strong>50k</strong>, <strong>50.000</strong>). Hệ thống sẽ tự động cập nhật danh sách cho tất cả học sinh trong lớp.
+              </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label className="label">Chọn Lớp cần áp dụng mức thu *</label>
                 {isSuperAdmin ? (
@@ -1046,10 +1073,10 @@ export default function AdminQuyPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border)", flexShrink: 0 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setBatchModalOpen(false)}>Hủy</button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSaveBatchFee} disabled={saving}>
-                {saving ? "Đang áp dụng..." : <><Save size={14} /> Áp dụng cho cả lớp</>}
+              <button className="btn btn-primary" style={{ flex: 1.6 }} onClick={handleSaveBatchFee} disabled={saving}>
+                {saving ? "Đang áp dụng..." : <><Save size={15} /> Áp dụng cho cả lớp</>}
               </button>
             </div>
           </div>
@@ -1058,16 +1085,46 @@ export default function AdminQuyPage() {
 
       {/* ====== MODAL SỬA SỐ TIỀN CÁ NHÂN ====== */}
       {editingSingleFee && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} onClick={() => setEditingSingleFee(null)} />
-          <div style={{
-            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            background: "white", borderRadius: 14, boxShadow: "var(--shadow-lg)", padding: "28px",
-            width: "100%", maxWidth: 420, animation: "fadeIn 0.2s ease",
-          }}>
-            <h3 style={{ marginBottom: 14 }}>
-              Chỉnh sửa mức thu: {editingSingleFee.student.hoTen}
-            </h3>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setEditingSingleFee(null)}
+        >
+          <div
+            style={{
+              position: "relative",
+              background: "white",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "24px 26px",
+              width: "100%",
+              maxWidth: 440,
+              margin: "auto",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>
+                Chỉnh sửa mức thu: {editingSingleFee.student.hoTen}
+              </h3>
+              <button onClick={() => setEditingSingleFee(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+                <X size={20} color="var(--text-muted)" />
+              </button>
+            </div>
+
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
                 <label className="label">Số tiền cần thu (VNĐ) *</label>
@@ -1088,10 +1145,11 @@ export default function AdminQuyPage() {
                 />
               </div>
             </div>
+
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setEditingSingleFee(null)}>Hủy</button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSaveSingleFee} disabled={saving}>
-                {saving ? "Đang lưu..." : <><Save size={14} /> Lưu thay đổi</>}
+              <button className="btn btn-primary" style={{ flex: 1.5 }} onClick={handleSaveSingleFee} disabled={saving}>
+                {saving ? "Đang lưu..." : <><Save size={15} /> Lưu thay đổi</>}
               </button>
             </div>
           </div>
@@ -1100,17 +1158,50 @@ export default function AdminQuyPage() {
 
       {/* ====== MODAL CHI TIÊU ====== */}
       {expenseModalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} onClick={() => setExpenseModalOpen(false)} />
-          <div style={{
-            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            background: "white", borderRadius: 14, boxShadow: "var(--shadow-lg)", padding: "28px",
-            width: "100%", maxWidth: 460, animation: "fadeIn 0.2s ease",
-          }}>
-            <h3 style={{ marginBottom: 16 }}>
-              {editingExpense ? "Sửa khoản chi" : "Thêm khoản chi mới"}
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setExpenseModalOpen(false)}
+        >
+          <div
+            style={{
+              position: "relative",
+              background: "white",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "24px 26px",
+              width: "100%",
+              maxWidth: 480,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              display: "flex",
+              flexDirection: "column",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+              <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800 }}>
+                {editingExpense ? "Sửa khoản chi tiêu" : "Thêm khoản chi tiêu mới"}
+              </h3>
+              <button onClick={() => setExpenseModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+                <X size={20} color="var(--text-muted)" />
+              </button>
+            </div>
+
+            <div style={{ overflowY: "auto", flex: 1, paddingRight: 4, display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label className="label">Nội dung chi *</label>
                 <input
@@ -1173,10 +1264,11 @@ export default function AdminQuyPage() {
                 />
               </div>
             </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border)", flexShrink: 0 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setExpenseModalOpen(false)}>Hủy</button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSaveExpense} disabled={saving}>
-                {saving ? "Đang lưu..." : <><Save size={14} /> Lưu khoản chi</>}
+              <button className="btn btn-primary" style={{ flex: 1.5 }} onClick={handleSaveExpense} disabled={saving}>
+                {saving ? "Đang lưu..." : <><Save size={15} /> Lưu khoản chi</>}
               </button>
             </div>
           </div>

@@ -547,8 +547,10 @@ export default function AdminLayout({
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, padding: "24px 24px", overflowX: "hidden" }}>
-          {children}
+        <main style={{ flex: 1, padding: "20px 24px", overflowX: "hidden" }}>
+          <div style={{ maxWidth: 1560, margin: "0 auto", width: "100%" }}>
+            {children}
+          </div>
         </main>
       </div>
 
@@ -558,13 +560,15 @@ export default function AdminLayout({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.45)",
-            backdropFilter: "blur(4px)",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 1000,
-            padding: 16,
+            zIndex: 99999,
+            padding: "20px 16px",
+            overflowY: "auto",
           }}
           onClick={() => setChangePassOpen(false)}
         >
@@ -572,12 +576,16 @@ export default function AdminLayout({
             className="card"
             style={{
               width: "100%",
-              maxWidth: 440,
+              maxWidth: 460,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
               padding: "24px 26px",
-              borderRadius: 16,
-              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
               background: "#ffffff",
               position: "relative",
+              border: "1px solid var(--border)",
+              overflowY: "auto",
             }}
             onClick={(e) => e.stopPropagation()}
           >

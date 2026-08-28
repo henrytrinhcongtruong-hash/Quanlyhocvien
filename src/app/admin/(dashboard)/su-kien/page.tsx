@@ -436,42 +436,54 @@ export default function AdminSuKienPage() {
 
       {/* ====== ADD / EDIT MODAL ====== */}
       {modalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div
-            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
-            onClick={() => setModalOpen(false)}
-          />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setModalOpen(false)}
+        >
           <div
             style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%,-50%)",
+              position: "relative",
               background: "white",
-              borderRadius: 16,
-              boxShadow: "var(--shadow-xl)",
-              padding: "28px",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "24px 26px",
               width: "100%",
-              maxWidth: 500,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              animation: "fadeIn 0.2s ease",
+              maxWidth: 520,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              display: "flex",
+              flexDirection: "column",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
                 <Star size={20} color="#eab308" />
                 {editing ? "Chỉnh sửa sự kiện" : "Thêm sự kiện mới"}
               </h3>
               <button
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}
                 onClick={() => setModalOpen(false)}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ overflowY: "auto", flex: 1, paddingRight: 4, display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label className="label">Tên sự kiện / công việc *</label>
                 <input
@@ -551,12 +563,12 @@ export default function AdminSuKienPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border)", flexShrink: 0 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setModalOpen(false)}>
                 Hủy
               </button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSave} disabled={saving}>
-                {saving ? "Đang lưu..." : <><Save size={14} /> {editing ? "Lưu thay đổi" : "Lưu sự kiện"}</>}
+              <button className="btn btn-primary" style={{ flex: 1.5 }} onClick={handleSave} disabled={saving}>
+                {saving ? "Đang lưu..." : <><Save size={15} /> {editing ? "Lưu thay đổi" : "Lưu sự kiện"}</>}
               </button>
             </div>
           </div>
@@ -565,31 +577,42 @@ export default function AdminSuKienPage() {
 
       {/* ====== DELETE CONFIRM MODAL ====== */}
       {deleteId !== null && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div
-            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }}
-            onClick={() => setDeleteId(null)}
-          />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setDeleteId(null)}
+        >
           <div
             style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%,-50%)",
+              position: "relative",
               background: "white",
-              borderRadius: 14,
-              boxShadow: "var(--shadow-lg)",
-              padding: "26px",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "26px 24px",
               width: "100%",
-              maxWidth: 380,
-              animation: "fadeIn 0.2s ease",
+              maxWidth: 400,
+              margin: "auto",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div style={{ textAlign: "center", marginBottom: 16 }}>
               <div
                 style={{
-                  width: 48,
-                  height: 48,
+                  width: 52,
+                  height: 52,
                   background: "var(--danger-light)",
                   borderRadius: "50%",
                   display: "flex",
@@ -598,10 +621,10 @@ export default function AdminSuKienPage() {
                   margin: "0 auto 12px",
                 }}
               >
-                <Trash2 size={22} color="var(--danger)" />
+                <Trash2 size={24} color="var(--danger)" />
               </div>
-              <h3 style={{ fontSize: "1.15rem", marginBottom: 6 }}>Xác nhận xóa sự kiện?</h3>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
+              <h3 style={{ fontSize: "1.15rem", margin: 0 }}>Xác nhận xóa sự kiện?</h3>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: "6px 0 0" }}>
                 Sự kiện và danh sách phân công liên quan sẽ bị xóa khỏi hệ thống.
               </p>
             </div>
@@ -610,7 +633,7 @@ export default function AdminSuKienPage() {
                 Hủy
               </button>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={handleDelete} disabled={deleting}>
-                {deleting ? "Đang xóa..." : "Xóa sự kiện"}
+                {deleting ? "Đang xóa..." : "Xác nhận xóa"}
               </button>
             </div>
           </div>

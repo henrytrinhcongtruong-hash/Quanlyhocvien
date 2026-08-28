@@ -661,38 +661,64 @@ export default function HocSinhPage() {
 
       {/* ====== ADD/EDIT MODAL ====== */}
       {modalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} onClick={() => setModalOpen(false)} />
-          <div style={{
-            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            background: "white", borderRadius: 14, boxShadow: "var(--shadow-lg)", padding: "28px 28px",
-            width: "100%", maxWidth: 480, maxHeight: "90dvh", overflowY: "auto",
-            animation: "fadeIn 0.2s ease",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-              <h3 style={{ margin: 0 }}>
-                {editing ? "Cập nhật học sinh" : "Thêm học sinh mới"}
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setModalOpen(false)}
+        >
+          <div
+            style={{
+              position: "relative",
+              background: "white",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "24px 26px",
+              width: "100%",
+              maxWidth: 520,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              display: "flex",
+              flexDirection: "column",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexShrink: 0 }}>
+              <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800 }}>
+                {editing ? "Cập nhật thông tin học sinh" : "Thêm học sinh mới"}
               </h3>
               <button onClick={() => setModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
-                <X size={18} color="var(--text-muted)" />
+                <X size={20} color="var(--text-muted)" />
               </button>
             </div>
 
-            {formError && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "var(--danger-light)", border: "1px solid var(--danger-border)", borderRadius: 8, color: "var(--danger)", fontSize: "0.875rem", fontWeight: 600, marginBottom: 16 }}>
-                <AlertCircle size={14} />
-                {formError}
-              </div>
-            )}
+            <div style={{ overflowY: "auto", flex: 1, paddingRight: 4, display: "flex", flexDirection: "column", gap: 14 }}>
+              {formError && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "var(--danger-light)", border: "1px solid var(--danger-border)", borderRadius: 10, color: "var(--danger)", fontSize: "0.875rem", fontWeight: 600 }}>
+                  <AlertCircle size={16} />
+                  {formError}
+                </div>
+              )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label className="label">Họ và tên *</label>
                 <input className="input" value={form.hoTen} onChange={(e) => setForm(f => ({ ...f, hoTen: e.target.value }))} placeholder="Nguyễn Văn A" />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label className="label">Tên gọi</label>
+                  <label className="label">Tên gọi / Biệt danh</label>
                   <input className="input" value={form.tenGoi} onChange={(e) => setForm(f => ({ ...f, tenGoi: e.target.value }))} placeholder="An" />
                 </div>
                 <div>
@@ -724,12 +750,12 @@ export default function HocSinhPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border)", flexShrink: 0 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setModalOpen(false)}>
                 Hủy
               </button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSave} disabled={saving}>
-                {saving ? "Đang lưu..." : (<><Save size={14} /> Lưu</>)}
+              <button className="btn btn-primary" style={{ flex: 1.5 }} onClick={handleSave} disabled={saving}>
+                {saving ? "Đang lưu..." : (<><Save size={15} /> Lưu học sinh</>)}
               </button>
             </div>
           </div>
@@ -738,26 +764,50 @@ export default function HocSinhPage() {
 
       {/* ====== DELETE CONFIRM ====== */}
       {deleteId !== null && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} onClick={() => setDeleteId(null)} />
-          <div style={{
-            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            background: "white", borderRadius: 14, boxShadow: "var(--shadow-lg)", padding: "28px",
-            width: "100%", maxWidth: 380, animation: "fadeIn 0.2s ease",
-          }}>
-            <div style={{ textAlign: "center", marginBottom: 16 }}>
-              <div style={{ width: 48, height: 48, background: "var(--danger-light)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                <Trash2 size={22} color="var(--danger)" />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setDeleteId(null)}
+        >
+          <div
+            style={{
+              position: "relative",
+              background: "white",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "26px 24px",
+              width: "100%",
+              maxWidth: 400,
+              margin: "auto",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ textAlign: "center", marginBottom: 18 }}>
+              <div style={{ width: 52, height: 52, background: "var(--danger-light)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                <Trash2 size={24} color="var(--danger)" />
               </div>
-              <h3>Xác nhận xóa?</h3>
-              <p style={{ color: "var(--text-muted)", marginTop: 8, fontSize: "0.875rem" }}>
-                Tất cả dữ liệu liên quan sẽ bị xóa theo.
+              <h3 style={{ margin: 0, fontSize: "1.15rem" }}>Xác nhận xóa học sinh?</h3>
+              <p style={{ color: "var(--text-muted)", marginTop: 8, fontSize: "0.875rem", margin: "6px 0 0" }}>
+                Tất cả dữ liệu điểm danh, đóng quỹ liên quan sẽ bị xóa theo.
               </p>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setDeleteId(null)}>Hủy</button>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={handleDelete} disabled={deleting}>
-                {deleting ? "Đang xóa..." : "Xóa"}
+                {deleting ? "Đang xóa..." : "Xác nhận xóa"}
               </button>
             </div>
           </div>
@@ -766,16 +816,39 @@ export default function HocSinhPage() {
 
       {/* ====== DELETE CLASS CONFIRM MODAL ====== */}
       {deleteClassModalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 250 }}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => !deletingClass && setDeleteClassModalOpen(false)}
+        >
           <div
-            style={{ position: "absolute", inset: 0, background: "rgba(15, 23, 42, 0.65)", backdropFilter: "blur(4px)" }}
-            onClick={() => !deletingClass && setDeleteClassModalOpen(false)}
-          />
-          <div style={{
-            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            background: "white", borderRadius: 18, boxShadow: "var(--shadow-xl)", padding: "28px 24px",
-            width: "100%", maxWidth: 440, animation: "fadeIn 0.2s ease", border: "1px solid var(--border)"
-          }}>
+            style={{
+              position: "relative",
+              background: "white",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "26px 24px",
+              width: "100%",
+              maxWidth: 460,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div style={{ textAlign: "center", marginBottom: 18 }}>
               <div style={{
                 width: 56, height: 56, background: "#fee2e2", borderRadius: "50%",

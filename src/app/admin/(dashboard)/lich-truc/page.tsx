@@ -487,30 +487,57 @@ export default function AdminLichTrucPage() {
 
       {/* ====== MODAL THIẾT LẬP LẠI / TỰ ĐỘNG XẾP LỊCH TRỰC NHẬT ====== */}
       {autoModalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} onClick={() => setAutoModalOpen(false)} />
-          <div style={{
-            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            background: "white", borderRadius: 14, boxShadow: "var(--shadow-lg)", padding: "28px",
-            width: "100%", maxWidth: 460, animation: "fadeIn 0.2s ease",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setAutoModalOpen(false)}
+        >
+          <div
+            style={{
+              position: "relative",
+              background: "white",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "24px 26px",
+              width: "100%",
+              maxWidth: 480,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              display: "flex",
+              flexDirection: "column",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--primary-light)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)" }}>
                   <Sparkles size={20} />
                 </div>
-                <h3 style={{ margin: 0, fontSize: "1.15rem" }}>Tự động thiết lập lịch trực nhật</h3>
+                <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800 }}>Tự động xếp lịch trực nhật</h3>
               </div>
               <button onClick={() => setAutoModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
-                <X size={18} color="var(--text-muted)" />
+                <X size={20} color="var(--text-muted)" />
               </button>
             </div>
 
-            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 18 }}>
-              Áp dụng cho <strong>Tuần {currentWeek}</strong> — Lớp <strong>{currentDisplayClass}</strong>.
-            </p>
+            <div style={{ overflowY: "auto", flex: 1, paddingRight: 4, display: "flex", flexDirection: "column", gap: 14 }}>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Áp dụng cho <strong>Tuần {currentWeek}</strong> — Lớp <strong>{currentDisplayClass}</strong>.
+              </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label className="label">Chọn hình thức phân công *</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -568,7 +595,7 @@ export default function AdminLichTrucPage() {
                 </div>
               )}
 
-              <div style={{ background: "var(--bg-muted)", padding: "12px 14px", borderRadius: 8, marginTop: 4 }}>
+              <div style={{ background: "var(--bg-muted)", padding: "12px 14px", borderRadius: 8 }}>
                 <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.875rem", fontWeight: 600 }}>
                   <input
                     type="checkbox"
@@ -581,10 +608,10 @@ export default function AdminLichTrucPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border)", flexShrink: 0 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setAutoModalOpen(false)}>Hủy</button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleAutoAssign} disabled={saving}>
-                {saving ? "Đang xử lý..." : <><Sparkles size={14} /> Khởi tạo lịch tuần</>}
+              <button className="btn btn-primary" style={{ flex: 1.6 }} onClick={handleAutoAssign} disabled={saving}>
+                {saving ? "Đang xử lý..." : <><Sparkles size={15} /> Khởi tạo lịch tuần</>}
               </button>
             </div>
           </div>
@@ -593,19 +620,43 @@ export default function AdminLichTrucPage() {
 
       {/* ====== ADD / EDIT SINGLE ENTRY MODAL ====== */}
       {modalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} onClick={() => setModalOpen(false)} />
-          <div style={{
-            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            background: "white", borderRadius: 14, boxShadow: "var(--shadow-lg)", padding: "28px",
-            width: "100%", maxWidth: 440, animation: "fadeIn 0.2s ease",
-          }}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setModalOpen(false)}
+        >
+          <div
+            style={{
+              position: "relative",
+              background: "white",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "24px 26px",
+              width: "100%",
+              maxWidth: 460,
+              margin: "auto",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: "1.15rem" }}>
+              <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800 }}>
                 {editingItem ? "Chỉnh sửa phân công trực nhật" : "Thêm phân công trực nhật"}
               </h3>
               <button onClick={() => setModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
-                <X size={18} color="var(--text-muted)" />
+                <X size={20} color="var(--text-muted)" />
               </button>
             </div>
 
@@ -654,10 +705,10 @@ export default function AdminLichTrucPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setModalOpen(false)}>Hủy</button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSaveEntry} disabled={saving}>
-                {saving ? "Đang lưu..." : <><Save size={14} /> {editingItem ? "Cập nhật" : "Lưu phân công"}</>}
+              <button className="btn btn-primary" style={{ flex: 1.6 }} onClick={handleSaveEntry} disabled={saving}>
+                {saving ? "Đang lưu..." : <><Save size={15} /> {editingItem ? "Cập nhật" : "Lưu phân công"}</>}
               </button>
             </div>
           </div>

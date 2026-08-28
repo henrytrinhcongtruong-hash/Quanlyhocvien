@@ -787,60 +787,71 @@ export default function LichThiAdminPage() {
 
       {/* ====== ADD / EDIT MODAL ====== */}
       {modalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div
-            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
-            onClick={() => setModalOpen(false)}
-          />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setModalOpen(false)}
+        >
           <div
             style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%,-50%)",
+              position: "relative",
               background: "white",
-              borderRadius: 16,
-              boxShadow: "var(--shadow-xl)",
-              padding: "26px 28px",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "24px 26px",
               width: "100%",
-              maxWidth: 540,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              animation: "fadeIn 0.2s ease",
+              maxWidth: 580,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              display: "flex",
+              flexDirection: "column",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-              <h2 style={{ fontSize: "1.2rem", fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexShrink: 0 }}>
+              <h2 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
                 <GraduationCap size={22} color="var(--primary)" />
                 {editing ? "Chỉnh sửa lịch thi" : "Thêm lịch thi & kiểm tra mới"}
               </h2>
               <button
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}
                 onClick={() => setModalOpen(false)}
               >
                 <X size={20} />
               </button>
             </div>
 
-            {formError && (
-              <div
-                style={{
-                  background: "var(--danger-light)",
-                  color: "var(--danger)",
-                  padding: "10px 14px",
-                  borderRadius: 8,
-                  fontSize: "0.85rem",
-                  marginBottom: 16,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <AlertCircle size={15} /> {formError}
-              </div>
-            )}
+            <div style={{ overflowY: "auto", flex: 1, paddingRight: 4, display: "flex", flexDirection: "column", gap: 14 }}>
+              {formError && (
+                <div
+                  style={{
+                    background: "var(--danger-light)",
+                    color: "var(--danger)",
+                    padding: "10px 14px",
+                    borderRadius: 8,
+                    fontSize: "0.85rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <AlertCircle size={15} /> {formError}
+                </div>
+              )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {/* Row 1: Mon hoc & Loai ky thi */}
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
                 <div>
@@ -950,9 +961,9 @@ export default function LichThiAdminPage() {
                   >
                     <option value="Trắc nghiệm">Trắc nghiệm</option>
                     <option value="Tự luận">Tự luận</option>
-                    <option value="Trắc nghiệm + Tự luận">Trắc nghiệm + Tự luận</option>
-                    <option value="Thực hành">Thực hành</option>
+                    <option value="Trắc nghiệm + Tự luận">TN + Tự luận</option>
                     <option value="Vấn đáp">Vấn đáp</option>
+                    <option value="Thực hành">Thực hành</option>
                   </select>
                 </div>
                 <div>
@@ -961,7 +972,7 @@ export default function LichThiAdminPage() {
                     className="input"
                     value={form.phongThi}
                     onChange={(e) => setForm((f) => ({ ...f, phongThi: e.target.value }))}
-                    placeholder="Phòng 201..."
+                    placeholder="Phòng 201"
                   />
                 </div>
                 <div>
@@ -998,12 +1009,12 @@ export default function LichThiAdminPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border)", flexShrink: 0 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setModalOpen(false)}>
                 Hủy
               </button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSave} disabled={saving}>
-                {saving ? "Đang lưu..." : <><Save size={14} /> Lưu lịch thi</>}
+              <button className="btn btn-primary" style={{ flex: 1.5 }} onClick={handleSave} disabled={saving}>
+                {saving ? "Đang lưu..." : <><Save size={15} /> Lưu lịch thi</>}
               </button>
             </div>
           </div>
@@ -1012,31 +1023,42 @@ export default function LichThiAdminPage() {
 
       {/* ====== DELETE CONFIRM MODAL ====== */}
       {deleteId !== null && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div
-            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }}
-            onClick={() => setDeleteId(null)}
-          />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setDeleteId(null)}
+        >
           <div
             style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%,-50%)",
+              position: "relative",
               background: "white",
-              borderRadius: 14,
-              boxShadow: "var(--shadow-lg)",
-              padding: "26px",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "26px 24px",
               width: "100%",
-              maxWidth: 380,
-              animation: "fadeIn 0.2s ease",
+              maxWidth: 400,
+              margin: "auto",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ textAlign: "center", marginBottom: 16 }}>
+            <div style={{ textAlign: "center", marginBottom: 18 }}>
               <div
                 style={{
-                  width: 48,
-                  height: 48,
+                  width: 52,
+                  height: 52,
                   background: "var(--danger-light)",
                   borderRadius: "50%",
                   display: "flex",
@@ -1045,9 +1067,9 @@ export default function LichThiAdminPage() {
                   margin: "0 auto 12px",
                 }}
               >
-                <Trash2 size={22} color="var(--danger)" />
+                <Trash2 size={24} color="var(--danger)" />
               </div>
-              <h3>Xác nhận xóa lịch thi?</h3>
+              <h3 style={{ margin: 0, fontSize: "1.15rem" }}>Xác nhận xóa lịch thi?</h3>
               <p style={{ color: "var(--text-muted)", marginTop: 6, fontSize: "0.875rem" }}>
                 Lịch kiểm tra này sẽ bị xóa khỏi hệ thống.
               </p>

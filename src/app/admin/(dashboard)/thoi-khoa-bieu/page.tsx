@@ -576,29 +576,41 @@ export default function AdminThoiKhoaBieuPage() {
 
       {/* ====== QUICK EDIT / SELECT SUBJECT MODAL ====== */}
       {modalOpen && typeof document !== "undefined" && createPortal(
-        <div style={{ position: "fixed", inset: 0, zIndex: 999999 }}>
-          <div
-            style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.65)", backdropFilter: "blur(4px)" }}
-            onClick={() => setModalOpen(false)}
-          />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setModalOpen(false)}
+        >
           <div
             style={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%,-50%)",
+              position: "relative",
               background: "white",
               borderRadius: 20,
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              padding: "26px 28px",
-              width: "92%",
-              maxWidth: 520,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              animation: "fadeIn 0.15s ease",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.3)",
+              padding: "24px 26px",
+              width: "100%",
+              maxWidth: 540,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              display: "flex",
+              flexDirection: "column",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12, flexShrink: 0 }}>
               <div>
                 <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "#0891b2" }}>
                   Xếp Môn: Thứ {form.thu} — Tiết {form.tiet}

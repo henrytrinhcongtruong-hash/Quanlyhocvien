@@ -526,21 +526,48 @@ export default function DiemDanhAdminPage() {
 
       {/* Manual Modal */}
       {modalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} onClick={() => setModalOpen(false)} />
-          <div style={{
-            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            background: "white", borderRadius: 14, boxShadow: "var(--shadow-lg)", padding: "28px",
-            width: "100%", maxWidth: 440, animation: "fadeIn 0.2s ease",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: "1.15rem" }}>Ghi nhận điểm danh chi tiết</h3>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => setModalOpen(false)}
+        >
+          <div
+            style={{
+              position: "relative",
+              background: "white",
+              borderRadius: 18,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              padding: "24px 26px",
+              width: "100%",
+              maxWidth: 460,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              display: "flex",
+              flexDirection: "column",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.18s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
+              <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800 }}>Ghi nhận điểm danh chi tiết</h3>
               <button onClick={() => setModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
-                <X size={18} color="var(--text-muted)" />
+                <X size={20} color="var(--text-muted)" />
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ overflowY: "auto", flex: 1, paddingRight: 4, display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label className="label">Chọn học sinh *</label>
                 <select
@@ -587,10 +614,10 @@ export default function DiemDanhAdminPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--border)", flexShrink: 0 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setModalOpen(false)}>Hủy</button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={handleSaveManual}>
-                <Save size={14} /> Lưu ghi nhận
+              <button className="btn btn-primary" style={{ flex: 1.6 }} onClick={handleSaveManual}>
+                <Save size={15} /> Lưu ghi nhận
               </button>
             </div>
           </div>

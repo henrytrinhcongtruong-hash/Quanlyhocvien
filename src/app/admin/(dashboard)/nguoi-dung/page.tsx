@@ -748,11 +748,13 @@ export default function AdminNguoiDungPage() {
                 boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.4)",
                 width: "100%",
                 maxWidth: 960,
-                maxHeight: "92vh",
+                maxHeight: "calc(100vh - 40px)",
+                margin: "auto",
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
                 border: "1px solid var(--border)",
+                animation: "slideUp 0.18s ease-out",
               }}
             >
               {/* Header */}
@@ -1269,13 +1271,15 @@ export default function AdminNguoiDungPage() {
             style={{
               position: "fixed",
               inset: 0,
-              background: "rgba(0, 0, 0, 0.45)",
-              backdropFilter: "blur(4px)",
+              background: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              zIndex: 1000,
-              padding: 16,
+              zIndex: 999999,
+              padding: "20px 16px",
+              overflowY: "auto",
             }}
             onClick={() => setResetPassUser(null)}
           >
@@ -1283,11 +1287,16 @@ export default function AdminNguoiDungPage() {
               className="card"
               style={{
                 width: "100%",
-                maxWidth: 440,
+                maxWidth: 460,
+                maxHeight: "calc(100vh - 40px)",
+                margin: "auto",
                 padding: "24px 26px",
-                borderRadius: 16,
-                boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+                borderRadius: 18,
+                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
                 background: "#ffffff",
+                border: "1px solid var(--border)",
+                animation: "slideUp 0.18s ease-out",
+                overflowY: "auto",
               }}
               onClick={(e) => e.stopPropagation()}
             >
