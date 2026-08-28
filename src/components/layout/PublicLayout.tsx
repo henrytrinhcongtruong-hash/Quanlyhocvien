@@ -19,14 +19,14 @@ import {
 } from "lucide-react";
 
 const NAV_BASE = [
-  { href: "/", icon: Users, label: "Danh sách lớp", exact: true },
+  { href: "/", icon: Users, label: "Danh sách", exact: true },
   { href: "/so-do-lop", icon: LayoutGrid, label: "Sơ đồ lớp" },
   { href: "/thoi-khoa-bieu", icon: CalendarDays, label: "Thời khóa biểu" },
-  { href: "/lich-thi", icon: GraduationCap, label: "Lịch thi & KT" },
+  { href: "/lich-thi", icon: GraduationCap, label: "Lịch thi" },
   { href: "/quy-lop", icon: Wallet, label: "Quỹ lớp" },
-  { href: "/lich-truc", icon: Calendar, label: "Lịch trực nhật" },
+  { href: "/lich-truc", icon: Calendar, label: "Trực nhật" },
   { href: "/su-kien", icon: Star, label: "Sự kiện" },
-  { href: "/diem-danh-cua-toi", icon: BookOpen, label: "Điểm danh của tôi" },
+  { href: "/diem-danh-cua-toi", icon: BookOpen, label: "Điểm danh" },
 ];
 
 function PublicLayoutInner({ children }: { children: React.ReactNode }) {
@@ -93,92 +93,110 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--bg-page)" }}>
+    <div style={{ minHeight: "100dvh", background: "var(--bg-page)", display: "flex", flexDirection: "column" }}>
       {/* ====== TOP NAV ====== */}
       <nav
         style={{
           position: "sticky",
           top: 0,
           zIndex: 50,
-          background: "rgba(255,255,255,0.92)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid var(--border)",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+          background: "rgba(255, 255, 255, 0.90)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          borderBottom: "1px solid rgba(226, 232, 240, 0.9)",
+          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.03)",
         }}
       >
         <div
           style={{
-            maxWidth: 1100,
+            maxWidth: 1380,
             margin: "0 auto",
-            padding: "0 16px",
-            height: 60,
+            padding: "0 20px",
+            height: 64,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: 16,
           }}
         >
-          {/* Logo with dynamic class name */}
-          <Link href={`/?lop=${activeClass}`} style={{ textDecoration: "none" }}>
-            <div className="flex items-center gap-3">
+          {/* Left: Brand Logo & Class Info */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+            <Link href={`/?lop=${activeClass}`} style={{ textDecoration: "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    background: "linear-gradient(135deg, #0284c7 0%, #4f46e5 100%)",
+                    borderRadius: 11,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    boxShadow: "0 3px 10px rgba(2, 132, 199, 0.28)",
+                  }}
+                >
+                  <GraduationCap size={22} color="white" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: "1.08rem", lineHeight: 1.15, color: "#0f172a", letterSpacing: "-0.4px" }}>
+                    Quanlyhocvien
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>
+                    Lớp {activeClass} • 2025–2026
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+            {/* Class Switcher on Public Top Nav — ONLY for SuperAdmin */}
+            {isSuperAdmin && (
               <div
                 style={{
-                  width: 40,
-                  height: 40,
-                  background: "linear-gradient(135deg, #0891b2 0%, #4f46e5 100%)",
-                  borderRadius: 10,
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  boxShadow: "0 3px 8px rgba(8,145,178,0.3)",
+                  gap: 6,
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: 20,
+                  padding: "2px 10px 2px 8px",
                 }}
               >
-                <GraduationCap size={22} color="white" />
+                <School size={13} color="#16a34a" />
+                <select
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    fontSize: "0.78rem",
+                    fontWeight: 800,
+                    color: "#15803d",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                  value={activeClass}
+                  onChange={(e) => handleClassChange(e.target.value)}
+                  title="Quyền Admin Tổng: Chuyển xem giao diện các lớp"
+                >
+                  {classList.map((c) => (
+                    <option key={c} value={c}>
+                      Lớp {c}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: "1.05rem", lineHeight: 1.2, color: "var(--text-primary)", letterSpacing: "-0.3px" }}>
-                  Quanlyhocvien
-                </div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
-                  Lớp {activeClass} • Năm học 2025–2026
-                </div>
-              </div>
-            </div>
-          </Link>
+            )}
+          </div>
 
-          {/* Class Switcher on Public Top Nav — ONLY for SuperAdmin */}
-          {isSuperAdmin && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <School size={15} color="var(--primary)" />
-              <select
-                className="select"
-                style={{
-                  minHeight: 32,
-                  padding: "3px 26px 3px 8px",
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--primary)",
-                  border: "1px solid var(--primary-light)",
-                  background: "var(--primary-light)",
-                }}
-                value={activeClass}
-                onChange={(e) => handleClassChange(e.target.value)}
-                title="Quyền Admin Tổng: Chuyển xem giao diện các lớp"
-              >
-                {classList.map((c) => (
-                  <option key={c} value={c}>
-                    Lớp {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Desktop nav */}
+          {/* Center/Right: Desktop Navigation Bar */}
           <div
             className="desktop-nav"
-            style={{ display: "flex", alignItems: "center", gap: 4 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              flexWrap: "nowrap",
+            }}
           >
             {navItems.map((item) => {
               const active = item.exact
@@ -189,71 +207,90 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.targetHref}
                   style={{
-                    display: "flex",
+                    display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
                     padding: "6px 12px",
-                    borderRadius: 8,
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
+                    borderRadius: 9,
+                    fontSize: "0.84rem",
+                    fontWeight: active ? 800 : 650,
+                    whiteSpace: "nowrap",
                     textDecoration: "none",
-                    color: active ? "var(--primary)" : "var(--text-secondary)",
-                    background: active ? "var(--primary-light)" : "transparent",
-                    transition: "all 0.15s",
+                    color: active ? "#0369a1" : "#475569",
+                    background: active
+                      ? "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)"
+                      : "transparent",
+                    border: active ? "1px solid #7dd3fc" : "1px solid transparent",
+                    boxShadow: active ? "0 2px 6px rgba(2,132,199,0.12)" : "none",
+                    transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
+                    flexShrink: 0,
                   }}
                 >
-                  <item.icon size={15} />
-                  {item.label}
+                  <item.icon size={15} color={active ? "#0284c7" : "#64748b"} />
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
-            <div style={{ width: 1, height: 24, background: "var(--border)", margin: "0 8px" }} />
+
+            <div style={{ width: 1, height: 22, background: "var(--border)", margin: "0 6px", flexShrink: 0 }} />
+
+            {/* Quản Trị Button */}
             <Link
               href={`/admin?lop=${activeClass}`}
               style={{
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                padding: "7px 14px",
-                borderRadius: 8,
-                fontSize: "0.85rem",
-                fontWeight: 600,
+                padding: "7px 16px",
+                borderRadius: 10,
+                fontSize: "0.84rem",
+                fontWeight: 800,
+                whiteSpace: "nowrap",
                 textDecoration: "none",
-                background: "var(--primary)",
+                background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
                 color: "white",
-                transition: "all 0.15s",
+                boxShadow: "0 2px 8px rgba(2,132,199,0.3)",
+                transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
+                flexShrink: 0,
               }}
             >
-              Quản trị
+              <span>Quản trị</span>
               <ChevronRight size={14} />
             </Link>
           </div>
 
-          {/* Mobile hamburger */}
+          {/* Mobile hamburger button */}
           <button
             className="mobile-menu-btn"
             onClick={() => setMenuOpen(!menuOpen)}
             style={{
-              background: "none",
-              border: "none",
+              background: "#f1f5f9",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
               cursor: "pointer",
-              padding: 8,
-              color: "var(--text-primary)",
+              padding: "7px 10px",
+              color: "#0f172a",
               display: "none",
+              alignItems: "center",
+              justifyContent: "center",
             }}
             aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
           >
-            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu dropdown */}
         {menuOpen && (
           <div
             style={{
               background: "white",
               borderTop: "1px solid var(--border)",
-              padding: "12px 16px",
+              padding: "14px 18px",
+              boxShadow: "0 12px 24px rgba(0,0,0,0.08)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
             }}
           >
             {navItems.map((item) => {
@@ -269,21 +306,23 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                     display: "flex",
                     alignItems: "center",
                     gap: 10,
-                    padding: "11px 12px",
-                    borderRadius: 8,
+                    padding: "10px 14px",
+                    borderRadius: 10,
                     fontSize: "0.9rem",
-                    fontWeight: 600,
+                    fontWeight: active ? 800 : 650,
                     textDecoration: "none",
-                    color: active ? "var(--primary)" : "var(--text-primary)",
-                    background: active ? "var(--primary-light)" : "transparent",
-                    marginBottom: 2,
+                    color: active ? "#0369a1" : "#334155",
+                    background: active ? "#e0f2fe" : "transparent",
                   }}
                 >
-                  <item.icon size={17} />
+                  <item.icon size={18} color={active ? "#0284c7" : "#64748b"} />
                   {item.label}
                 </Link>
               );
             })}
+
+            <div style={{ height: 1, background: "var(--border)", margin: "6px 0" }} />
+
             <Link
               href={`/admin?lop=${activeClass}`}
               onClick={() => setMenuOpen(false)}
@@ -293,48 +332,47 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                 justifyContent: "center",
                 gap: 8,
                 padding: "11px 16px",
-                borderRadius: 8,
+                borderRadius: 10,
                 fontSize: "0.9rem",
-                fontWeight: 700,
+                fontWeight: 800,
                 textDecoration: "none",
-                background: "var(--primary)",
+                background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
                 color: "white",
-                marginTop: 8,
+                boxShadow: "0 2px 8px rgba(2,132,199,0.3)",
               }}
             >
-              Vào trang Quản trị
-              <ChevronRight size={15} />
+              <span>Trang Quản trị Lớp {activeClass}</span>
+              <ChevronRight size={16} />
             </Link>
           </div>
         )}
       </nav>
 
-      {/* ====== CONTENT ====== */}
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px" }}>
-        {children}
-      </main>
+      {/* Main Content */}
+      <main style={{ flex: 1 }}>{children}</main>
 
-      {/* ====== FOOTER ====== */}
+      {/* Footer */}
       <footer
         style={{
           borderTop: "1px solid var(--border)",
           marginTop: 48,
-          padding: "20px 16px",
+          padding: "24px 16px",
           textAlign: "center",
           color: "var(--text-muted)",
-          fontSize: "0.8rem",
+          fontSize: "0.825rem",
+          background: "white",
         }}
       >
         <p>Lớp {activeClass} — Trường THPT • Năm học 2025–2026</p>
         <p style={{ marginTop: 4 }}>
-          <Link href={`/admin?lop=${activeClass}`} style={{ color: "var(--primary)", textDecoration: "none" }}>
+          <Link href={`/admin?lop=${activeClass}`} style={{ color: "var(--primary)", textDecoration: "none", fontWeight: 700 }}>
             Trang quản trị Lớp {activeClass}
           </Link>
         </p>
       </footer>
 
       <style>{`
-        @media (max-width: 768px) {
+        @media (max-width: 1100px) {
           .desktop-nav { display: none !important; }
           .mobile-menu-btn { display: flex !important; }
         }
