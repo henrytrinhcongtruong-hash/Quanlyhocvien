@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -87,6 +88,20 @@ export async function POST(req: NextRequest) {
         passwordHash,
         plainPassword: newPassword.trim(),
       },
+    });
+
+    // Ghi log hoạt động đổi mật khẩu
+    logActivity({
+      userId: user.id,
+      userName: user.hoTen || user.username,
+      userRole: user.roleLabel || "User",
+      userLop: user.assignedLop,
+      action: "CHANGE_PASSWORD",
+      target: "User",
+      targetId: user.id,
+      details: `Người dùng "${user.hoTen || user.username}" (${user.username}) đã đổi mật khẩu tài khoản`,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json({

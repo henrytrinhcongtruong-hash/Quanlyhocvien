@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function GET(
   _req: NextRequest,
@@ -49,10 +50,31 @@ export async function PUT(
     if (body.ghiChu !== undefined) updateData.ghiChu = body.ghiChu?.trim() || null;
     if (body.avatar !== undefined) updateData.avatar = body.avatar;
 
+    const oldStudent = await prisma.student.findUnique({
+      where: { id: Number(id) },
+    });
+
     const student = await prisma.student.update({
       where: { id: Number(id) },
       data: updateData,
     });
+
+    // Ghi audit log sửa học sinh
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Admin",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Admin",
+      userLop: student.lop,
+      action: "UPDATE",
+      target: "Student",
+      targetId: student.id,
+      details: `Cập nhật thông tin học sinh "${student.hoTen}" (Tổ ${student.to}, Lớp ${student.lop})`,
+      oldValue: oldStudent,
+      newValue: student,
+      req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json(student);
   } catch (e) {
     console.error("PUT student error:", e);
@@ -61,7 +83,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -77,9 +99,29 @@ export async function DELETE(
       return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
     }
 
+    const oldStudent = await prisma.student.findUnique({
+      where: { id: Number(id) },
+    });
+
     await prisma.student.delete({
       where: { id: Number(id) },
     });
+
+    // Ghi audit log xóa học sinh
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Admin",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Admin",
+      userLop: oldStudent?.lop,
+      action: "DELETE",
+      target: "Student",
+      targetId: id,
+      details: `Xóa học sinh "${oldStudent?.hoTen || id}" (Lớp ${oldStudent?.lop || "—"})`,
+      oldValue: oldStudent,
+      req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Lỗi server" }, { status: 500 });

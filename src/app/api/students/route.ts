@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission, getScopeFilter } from "@/lib/permissions";
+import { logActivity } from "@/lib/auditLogger";
 
 // GET /api/students - Lấy danh sách học sinh (có filter theo scope quyền)
 export async function GET(req: NextRequest) {
@@ -135,6 +136,21 @@ export async function POST(req: NextRequest) {
         ghiChu: ghiChu?.trim() || null,
         avatar: avatar || null,
       },
+    });
+
+    // Ghi audit log tạo học sinh
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Admin",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Admin",
+      userLop: student.lop,
+      action: "CREATE",
+      target: "Student",
+      targetId: student.id,
+      details: `Thêm mới học sinh "${student.hoTen}" vào Tổ ${student.to} (Lớp ${student.lop})`,
+      newValue: student,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json(student, { status: 201 });

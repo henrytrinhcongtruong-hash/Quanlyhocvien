@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -149,6 +150,21 @@ export async function POST(req: NextRequest) {
         assignedLop: true,
         roleLabel: true,
       },
+    });
+
+    // Ghi log hoạt động đăng ký tài khoản học viên (Async non-blocking)
+    logActivity({
+      userId: newUser.id,
+      userName: newUser.hoTen,
+      userRole: "Học viên",
+      userLop: newUser.assignedLop,
+      action: "REGISTER",
+      target: "User",
+      targetId: newUser.id,
+      details: `Học sinh "${newUser.hoTen}" tự đăng ký tài khoản thành công (Username: ${newUser.username}, Lớp ${newUser.assignedLop})`,
+      newValue: { username: newUser.username, hoTen: newUser.hoTen, lop: newUser.assignedLop },
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json({

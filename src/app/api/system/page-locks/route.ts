@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logActivity } from "@/lib/auditLogger";
 
 export const DEFAULT_STUDENT_PAGES = [
   {
@@ -172,6 +173,21 @@ export async function POST(req: NextRequest) {
         lockUntil: lockUntil ? new Date(lockUntil) : null,
         lockedBy: session.user.name || (session.user as { username?: string })?.username || "Admin",
       },
+    });
+
+    // Ghi audit log
+    logActivity({
+      userName: session.user.name || (session.user as { username?: string })?.username || "Admin",
+      userRole: userRole || "Admin",
+      action: isLocked ? "LOCK_PAGE" : "UNLOCK_PAGE",
+      target: "PageLock",
+      targetId: path,
+      details: isLocked
+        ? `Khóa trang "${updated.title}" (${path}) để nâng cấp: ${lockReason || "Không có lý do cụ thể"}`
+        : `Mở khóa trang "${updated.title}" (${path}) cho học viên truy cập`,
+      newValue: { path, isLocked, lockReason, lockUntil },
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json({

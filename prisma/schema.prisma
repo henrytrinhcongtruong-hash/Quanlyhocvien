@@ -274,3 +274,55 @@ model PageLock {
   @@index([path])
   @@index([isLocked])
 }
+
+// =========================================
+// LỊCH SỬ HOẠT ĐỘNG (AUDIT LOG)
+// =========================================
+model ActivityLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int?     // null nếu thao tác ẩn danh / khách vãng lai
+  userName    String?  // Họ tên hoặc username
+  userRole    String?  // "Admin Tổng", "GVCN", "Học viên", "Guest"...
+  userLop     String?  // Lớp của user (VD: "12T2")
+  action      String   // "LOGIN" | "LOGOUT" | "CREATE" | "UPDATE" | "DELETE" | "REGISTER" | "LOCK_PAGE" | "UNLOCK_PAGE" | "EXPORT" | "IMPORT" | "CHANGE_PASSWORD"
+  target      String   // "Student" | "Attendance" | "FeeCollection" | "Expense" | "SeatingChart" | "Timetable" | "Event" | "ExamSchedule" | "DutyRoster" | "User" | "PageLock" | "Auth"
+  targetId    String?  // ID của bản ghi bị tác động
+  details     String?  // Mô tả ngắn gọn dễ đọc
+  oldValue    String?  // JSON string giá trị cũ
+  newValue    String?  // JSON string giá trị mới
+  ipAddress   String?  // IP của client
+  userAgent   String?  // Thiết bị / Trình duyệt
+  status      String   @default("SUCCESS") // "SUCCESS" | "FAILED" | "WARNING"
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([action])
+  @@index([target])
+  @@index([userLop])
+  @@index([status])
+}
+
+// =========================================
+// TỔNG HỢP HOẠT ĐỘNG ĐỊNH KỲ (HOURLY SUMMARY)
+// =========================================
+model ActivitySummary {
+  id              Int      @id @default(autoincrement())
+  timeBucket      DateTime // Bắt đầu của khung giờ (VD: 2026-08-28 23:00:00)
+  totalActions    Int      @default(0)
+  loginCount      Int      @default(0)
+  createCount     Int      @default(0)
+  updateCount     Int      @default(0)
+  deleteCount     Int      @default(0)
+  otherCount      Int      @default(0)
+  successCount    Int      @default(0)
+  failedCount     Int      @default(0)
+  activeUserCount Int      @default(0)
+  topUsersJson    String?  // JSON string mảng top user
+  topTargetsJson  String?  // JSON string mảng top target
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([timeBucket])
+  @@index([timeBucket])
+}

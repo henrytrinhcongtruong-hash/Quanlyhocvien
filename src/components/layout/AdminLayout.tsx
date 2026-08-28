@@ -27,6 +27,7 @@ import {
   EyeOff,
   CheckCircle2,
   ShieldAlert,
+  History,
 } from "lucide-react";
 
 // Nav items với icon và label
@@ -145,6 +146,7 @@ export default function AdminLayout({
         ...NAV_BASE,
         { href: "/admin/nguoi-dung", icon: UserCog, label: "Người dùng", module: "nguoi_dung" },
         { href: "/admin/quan-ly-link", icon: ShieldAlert, label: "Quản lý Link & Khóa", module: "quan_ly_link" },
+        { href: "/admin/lich-su-hoat-dong", icon: History, label: "Lịch sử hoạt động", module: "lich_su_hoat_dong" },
       ]
     : NAV_BASE;
 
