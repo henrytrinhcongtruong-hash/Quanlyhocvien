@@ -181,6 +181,70 @@ export default function AdminNguoiDungPage() {
   const [quickSaving, setQuickSaving] = useState(false);
   const [quickError, setQuickError] = useState("");
 
+  // Self Change Password Modal State for Logged in Admin
+  const [selfPassModalOpen, setSelfPassModalOpen] = useState(false);
+  const [selfOldPassword, setSelfOldPassword] = useState("");
+  const [selfNewPassword, setSelfNewPassword] = useState("");
+  const [selfConfirmPassword, setSelfConfirmPassword] = useState("");
+  const [selfShowOld, setSelfShowOld] = useState(false);
+  const [selfShowNew, setSelfShowNew] = useState(false);
+  const [selfShowConfirm, setSelfShowConfirm] = useState(false);
+  const [selfSaving, setSelfSaving] = useState(false);
+  const [selfError, setSelfError] = useState("");
+
+  const openSelfChangePass = () => {
+    setSelfOldPassword("");
+    setSelfNewPassword("");
+    setSelfConfirmPassword("");
+    setSelfShowOld(false);
+    setSelfShowNew(false);
+    setSelfShowConfirm(false);
+    setSelfError("");
+    setSelfPassModalOpen(true);
+  };
+
+  const handleSelfChangePassSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSelfError("");
+    if (!selfOldPassword.trim() || !selfNewPassword.trim()) {
+      setSelfError("Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới");
+      return;
+    }
+    if (selfNewPassword.length < 6) {
+      setSelfError("Mật khẩu mới phải có ít nhất 6 ký tự");
+      return;
+    }
+    if (selfNewPassword !== selfConfirmPassword) {
+      setSelfError("Xác nhận mật khẩu mới không khớp");
+      return;
+    }
+
+    setSelfSaving(true);
+    try {
+      const res = await fetch("/api/users/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          oldPassword: selfOldPassword,
+          newPassword: selfNewPassword,
+          confirmPassword: selfConfirmPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSelfError(data.error || "Đổi mật khẩu thất bại");
+      } else {
+        showToast("Đổi mật khẩu tài khoản Admin của bạn thành công!", "success");
+        setSelfPassModalOpen(false);
+        await loadData();
+      }
+    } catch {
+      setSelfError("Lỗi kết nối máy chủ");
+    } finally {
+      setSelfSaving(false);
+    }
+  };
+
   // Delete State
   const [deleteUser, setDeleteUser] = useState<UserItem | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -518,9 +582,19 @@ export default function AdminNguoiDungPage() {
             Phân quyền chi tiết cho từng lớp học, GVCN, Ban cán sự và Tổ trưởng
           </p>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={openCreate}>
-          <Plus size={15} /> Thêm tài khoản mới
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={openSelfChangePass}
+            style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <Key size={15} color="var(--primary)" /> Đổi mật khẩu của tôi
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={openCreate}>
+            <Plus size={15} /> Thêm tài khoản mới
+          </button>
+        </div>
       </div>
 
       {/* User Table */}
@@ -660,36 +734,36 @@ export default function AdminNguoiDungPage() {
                       )}
                     </td>
                     <td style={{ textAlign: "right" }}>
-                      {!u.isSuperAdmin && (
-                        <div style={{ display: "inline-flex", gap: 6, justifyContent: "flex-end" }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setResetPassUser(u);
-                              setQuickNewPassword("");
-                              setQuickError("");
-                              setQuickShowPassword(false);
-                            }}
-                            className="btn btn-sm"
-                            style={{
-                              background: "#eff6ff",
-                              color: "#2563eb",
-                              border: "1px solid #bfdbfe",
-                              padding: "4px 8px",
-                            }}
-                            title="Đổi mật khẩu cho người dùng này"
-                          >
-                            <Key size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openEdit(u)}
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: "4px 8px" }}
-                            title="Chỉnh sửa thông tin & phân quyền"
-                          >
-                            <Edit2 size={13} />
-                          </button>
+                      <div style={{ display: "inline-flex", gap: 6, justifyContent: "flex-end" }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResetPassUser(u);
+                            setQuickNewPassword("");
+                            setQuickError("");
+                            setQuickShowPassword(false);
+                          }}
+                          className="btn btn-sm"
+                          style={{
+                            background: "#eff6ff",
+                            color: "#2563eb",
+                            border: "1px solid #bfdbfe",
+                            padding: "4px 8px",
+                          }}
+                          title={`Đổi mật khẩu cho ${u.hoTen} (@${u.username})`}
+                        >
+                          <Key size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(u)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: "4px 8px" }}
+                          title="Chỉnh sửa thông tin & phân quyền"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        {!u.isSuperAdmin && (
                           <button
                             type="button"
                             onClick={() => setDeleteUser(u)}
@@ -704,8 +778,8 @@ export default function AdminNguoiDungPage() {
                           >
                             <Trash2 size={13} />
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1472,6 +1546,236 @@ export default function AdminNguoiDungPage() {
                     style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
                   >
                     {quickSaving ? "Đang lưu..." : "Lưu mật khẩu mới"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* ====== TỰ ĐỔI MẬT KHẨU CHO CHÍNH ADMIN ĐANG ĐĂNG NHẬP ====== */}
+      {mounted &&
+        selfPassModalOpen &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 99999,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: "20px 16px",
+              background: "rgba(15, 23, 42, 0.7)",
+              backdropFilter: "blur(8px)",
+              animation: "fadeIn 0.15s ease",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelfPassModalOpen(false);
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                background: "#ffffff",
+                borderRadius: 20,
+                boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.4)",
+                width: "100%",
+                maxWidth: 460,
+                padding: "26px 24px",
+                border: "1px solid var(--border)",
+                animation: "slideUp 0.18s ease-out",
+              }}
+            >
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: "#eff6ff",
+                      color: "#2563eb",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Key size={22} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
+                      Đổi Mật Khẩu Tài Khoản Của Tôi
+                    </h3>
+                    <p style={{ margin: "2px 0 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                      Cập nhật mật khẩu bảo mật cho tài khoản Admin của bạn
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelfPassModalOpen(false)}
+                  style={{
+                    background: "#f1f5f9",
+                    border: "none",
+                    borderRadius: "50%",
+                    width: 32,
+                    height: 32,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {selfError && (
+                <div
+                  style={{
+                    padding: "8px 12px",
+                    background: "#fee2e2",
+                    color: "#dc2626",
+                    borderRadius: 8,
+                    fontSize: "0.82rem",
+                    marginBottom: 14,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <AlertCircle size={14} />
+                  <span>{selfError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSelfChangePassSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {/* Mật khẩu cũ */}
+                <div>
+                  <label className="label" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
+                    Mật khẩu hiện tại *
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={selfShowOld ? "text" : "password"}
+                      className="input"
+                      placeholder="Nhập mật khẩu hiện tại..."
+                      value={selfOldPassword}
+                      onChange={(e) => setSelfOldPassword(e.target.value)}
+                      style={{ paddingRight: 38 }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSelfShowOld(!selfShowOld)}
+                      style={{
+                        position: "absolute",
+                        right: 10,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--text-muted)",
+                        padding: 2,
+                      }}
+                    >
+                      {selfShowOld ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mật khẩu mới */}
+                <div>
+                  <label className="label" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
+                    Mật khẩu mới (tối thiểu 6 ký tự) *
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={selfShowNew ? "text" : "password"}
+                      className="input"
+                      placeholder="Nhập mật khẩu mới..."
+                      value={selfNewPassword}
+                      onChange={(e) => setSelfNewPassword(e.target.value)}
+                      style={{ paddingRight: 38 }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSelfShowNew(!selfShowNew)}
+                      style={{
+                        position: "absolute",
+                        right: 10,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--text-muted)",
+                        padding: 2,
+                      }}
+                    >
+                      {selfShowNew ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Xác nhận mật khẩu mới */}
+                <div>
+                  <label className="label" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
+                    Xác nhận mật khẩu mới *
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={selfShowConfirm ? "text" : "password"}
+                      className="input"
+                      placeholder="Nhập lại mật khẩu mới..."
+                      value={selfConfirmPassword}
+                      onChange={(e) => setSelfConfirmPassword(e.target.value)}
+                      style={{ paddingRight: 38 }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSelfShowConfirm(!selfShowConfirm)}
+                      style={{
+                        position: "absolute",
+                        right: 10,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--text-muted)",
+                        padding: 2,
+                      }}
+                    >
+                      {selfShowConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setSelfPassModalOpen(false)}
+                    disabled={selfSaving}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-sm"
+                    disabled={selfSaving}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                  >
+                    {selfSaving ? "Đang xử lý..." : "Cập nhật mật khẩu"}
                   </button>
                 </div>
               </form>
