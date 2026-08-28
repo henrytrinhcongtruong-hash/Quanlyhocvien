@@ -110,30 +110,58 @@ export default function DiemDanhAdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, filterLop]);
 
-  // Fast toggle attendance for a student
+  // Fast toggle attendance for a student — OPTIMISTIC UI (instant, no reload)
   async function handleToggleStatus(studentId: number, loai: string) {
     const existing = records.find(r => r.studentId === studentId && r.loai === loai);
     if (existing) {
-      // Remove record (Mark present)
+      // Optimistic: remove from local state immediately
+      setRecords(prev => prev.filter(r => r.id !== existing.id));
+      showToast("Đã hủy ghi nhận (Có mặt)");
+
+      // Fire API in background
       const res = await fetch(`/api/attendance?id=${existing.id}`, { method: "DELETE" });
-      if (res.ok) {
-        showToast("Đã hủy ghi nhận (Có mặt)");
-        loadData();
-      } else {
-        showToast("Lỗi khi hủy", "error");
+      if (!res.ok) {
+        // Rollback on failure
+        setRecords(prev => [...prev, existing]);
+        showToast("Lỗi khi hủy — đã khôi phục", "error");
       }
     } else {
-      // Add record
+      // Optimistic: add a temporary record to local state immediately
+      const student = students.find(s => s.id === studentId);
+      const tempId = -(Date.now()); // negative temp ID
+      const tempRecord: AttendanceRecord = {
+        id: tempId,
+        studentId,
+        ngay: selectedDate,
+        loai,
+        ghiChu: null,
+        student: student
+          ? { id: student.id, hoTen: student.hoTen, tenGoi: student.tenGoi, to: student.to, lop: student.lop }
+          : { id: studentId, hoTen: "", tenGoi: null, to: 0, lop: "" },
+      };
+      setRecords(prev => [...prev, tempRecord]);
+      showToast(`Đã ghi nhận: ${loai}`);
+
+      // Fire API in background
       const res = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId, ngay: selectedDate, loai }),
       });
       if (res.ok) {
-        showToast(`Đã ghi nhận: ${loai}`);
-        loadData();
+        // Replace temp record with real server record
+        const serverRecord = await res.json();
+        setRecords(prev =>
+          prev.map(r =>
+            r.id === tempId
+              ? { ...tempRecord, id: serverRecord.id ?? tempRecord.id }
+              : r
+          )
+        );
       } else {
-        showToast("Lỗi khi ghi nhận", "error");
+        // Rollback on failure
+        setRecords(prev => prev.filter(r => r.id !== tempId));
+        showToast("Lỗi khi ghi nhận — đã khôi phục", "error");
       }
     }
   }
