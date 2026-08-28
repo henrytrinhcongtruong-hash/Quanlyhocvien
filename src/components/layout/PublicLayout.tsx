@@ -353,7 +353,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Main Content */}
-      <main style={{ flex: 1 }}>{children}</main>
+      <main style={{ flex: 1, padding: "20px 24px" }}>{children}</main>
 
       {/* Footer */}
       <footer
