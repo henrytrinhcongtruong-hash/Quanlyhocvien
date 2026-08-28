@@ -57,7 +57,20 @@ export default function HocSinhPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">("default");
+  const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("admin_student_sort_order") as "default" | "asc" | "desc") || "default";
+    }
+    return "default";
+  });
+
+  const handleSetSortOrder = (newOrder: "default" | "asc" | "desc") => {
+    setSortOrder(newOrder);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("admin_student_sort_order", newOrder);
+    }
+  };
+
   const [filterTo, setFilterTo] = useState(0);
   const [filterLop, setFilterLop] = useState(() => {
     if (!isSuperAdmin && assignedLop) return assignedLop;
@@ -462,20 +475,20 @@ export default function HocSinhPage() {
           type="button"
           className={`btn btn-sm ${sortOrder !== "default" ? "btn-primary" : "btn-secondary"}`}
           onClick={() => {
-            if (sortOrder === "default") setSortOrder("asc");
-            else if (sortOrder === "asc") setSortOrder("desc");
-            else setSortOrder("default");
+            if (sortOrder === "default") handleSetSortOrder("asc");
+            else if (sortOrder === "asc") handleSetSortOrder("desc");
+            else handleSetSortOrder("default");
           }}
           style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700 }}
           title="Bấm để đổi sắp xếp tên: A-Z -> Z-A -> Mặc định"
         >
           {sortOrder === "asc" ? (
             <>
-              <ArrowUpAZ size={15} /> Tên: A $\rightarrow$ Z
+              <ArrowUpAZ size={15} /> Tên: A → Z
             </>
           ) : sortOrder === "desc" ? (
             <>
-              <ArrowDownAZ size={15} /> Tên: Z $\rightarrow$ A
+              <ArrowDownAZ size={15} /> Tên: Z → A
             </>
           ) : (
             <>
@@ -487,7 +500,7 @@ export default function HocSinhPage() {
         {(search || filterTo > 0 || filterLop !== "ALL" || sortOrder !== "default") && (
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => { setSearch(""); setFilterTo(0); setFilterLop("ALL"); setSortOrder("default"); }}
+            onClick={() => { setSearch(""); setFilterTo(0); setFilterLop("ALL"); handleSetSortOrder("default"); }}
           >
             <X size={13} /> Bỏ lọc
           </button>
@@ -516,9 +529,9 @@ export default function HocSinhPage() {
                   <th
                     style={{ cursor: "pointer", userSelect: "none" }}
                     onClick={() => {
-                      if (sortOrder === "default") setSortOrder("asc");
-                      else if (sortOrder === "asc") setSortOrder("desc");
-                      else setSortOrder("default");
+                      if (sortOrder === "default") handleSetSortOrder("asc");
+                      else if (sortOrder === "asc") handleSetSortOrder("desc");
+                      else handleSetSortOrder("default");
                     }}
                     title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
                   >

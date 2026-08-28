@@ -560,10 +560,10 @@ export default function AdminLichTrucPage() {
                     value={selectedToNum}
                     onChange={(e) => setSelectedToNum(Number(e.target.value))}
                   >
-                    <option value={1}>Tổ 1 (Chia đều Thứ 2 $\rightarrow$ Thứ 6)</option>
-                    <option value={2}>Tổ 2 (Chia đều Thứ 2 $\rightarrow$ Thứ 6)</option>
-                    <option value={3}>Tổ 3 (Chia đều Thứ 2 $\rightarrow$ Thứ 6)</option>
-                    <option value={4}>Tổ 4 (Chia đều Thứ 2 $\rightarrow$ Thứ 6)</option>
+                    <option value={1}>Tổ 1 (Chia đều Thứ 2 → Thứ 6)</option>
+                    <option value={2}>Tổ 2 (Chia đều Thứ 2 → Thứ 6)</option>
+                    <option value={3}>Tổ 3 (Chia đều Thứ 2 → Thứ 6)</option>
+                    <option value={4}>Tổ 4 (Chia đều Thứ 2 → Thứ 6)</option>
                   </select>
                 </div>
               )}

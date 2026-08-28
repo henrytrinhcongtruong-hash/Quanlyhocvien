@@ -82,7 +82,20 @@ export default function AdminQuyPage() {
 
   // Filters for Receipts
   const [search, setSearch] = useState("");
-  const [feeSortOrder, setFeeSortOrder] = useState<"default" | "asc" | "desc">("default");
+  const [feeSortOrder, setFeeSortOrder] = useState<"default" | "asc" | "desc">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("admin_fee_sort_order") as "default" | "asc" | "desc") || "default";
+    }
+    return "default";
+  });
+
+  const handleSetFeeSortOrder = (newOrder: "default" | "asc" | "desc") => {
+    setFeeSortOrder(newOrder);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("admin_fee_sort_order", newOrder);
+    }
+  };
+
   const [filterKyThu, setFilterKyThu] = useState("HK1");
   const [filterTrangThai, setFilterTrangThai] = useState("ALL");
   const [filterLop, setFilterLop] = useState(() => {
@@ -696,20 +709,20 @@ export default function AdminQuyPage() {
               type="button"
               className={`btn btn-sm ${feeSortOrder !== "default" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => {
-                if (feeSortOrder === "default") setFeeSortOrder("asc");
-                else if (feeSortOrder === "asc") setFeeSortOrder("desc");
-                else setFeeSortOrder("default");
+                if (feeSortOrder === "default") handleSetFeeSortOrder("asc");
+                else if (feeSortOrder === "asc") handleSetFeeSortOrder("desc");
+                else handleSetFeeSortOrder("default");
               }}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700 }}
               title="Bấm để đổi sắp xếp tên: A-Z -> Z-A -> Mặc định"
             >
               {feeSortOrder === "asc" ? (
                 <>
-                  <ArrowUpAZ size={15} /> Tên: A $\rightarrow$ Z
+                  <ArrowUpAZ size={15} /> Tên: A → Z
                 </>
               ) : feeSortOrder === "desc" ? (
                 <>
-                  <ArrowDownAZ size={15} /> Tên: Z $\rightarrow$ A
+                  <ArrowDownAZ size={15} /> Tên: Z → A
                 </>
               ) : (
                 <>
@@ -721,7 +734,7 @@ export default function AdminQuyPage() {
             {(search || filterTrangThai !== "ALL" || (isSuperAdmin && filterLop !== "ALL") || feeSortOrder !== "default") && (
               <button
                 className="btn btn-secondary btn-sm"
-                onClick={() => { setSearch(""); setFilterTrangThai("ALL"); if (isSuperAdmin) setFilterLop("ALL"); setFeeSortOrder("default"); }}
+                onClick={() => { setSearch(""); setFilterTrangThai("ALL"); if (isSuperAdmin) setFilterLop("ALL"); handleSetFeeSortOrder("default"); }}
               >
                 <X size={13} /> Bỏ lọc
               </button>
@@ -757,9 +770,9 @@ export default function AdminQuyPage() {
                       <th
                         style={{ cursor: "pointer", userSelect: "none" }}
                         onClick={() => {
-                          if (feeSortOrder === "default") setFeeSortOrder("asc");
-                          else if (feeSortOrder === "asc") setFeeSortOrder("desc");
-                          else setFeeSortOrder("default");
+                          if (feeSortOrder === "default") handleSetFeeSortOrder("asc");
+                          else if (feeSortOrder === "asc") handleSetFeeSortOrder("desc");
+                          else handleSetFeeSortOrder("default");
                         }}
                         title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
                       >

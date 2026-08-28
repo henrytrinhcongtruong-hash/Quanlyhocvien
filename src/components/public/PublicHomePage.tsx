@@ -118,7 +118,20 @@ export default function PublicHomePage() {
   const [tab, setTab] = useState<"danh-sach" | "quy" | "diem-danh">("danh-sach");
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState("");
-  const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">("default");
+  const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("public_student_sort_order") as "default" | "asc" | "desc") || "default";
+    }
+    return "default";
+  });
+
+  const handleSetSortOrder = (newOrder: "default" | "asc" | "desc") => {
+    setSortOrder(newOrder);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("public_student_sort_order", newOrder);
+    }
+  };
+
   const [filterTo, setFilterTo] = useState(0);
   const [loadingStudents, setLoadingStudents] = useState(true);
 
@@ -404,20 +417,20 @@ export default function PublicHomePage() {
               type="button"
               className={`btn btn-sm ${sortOrder !== "default" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => {
-                if (sortOrder === "default") setSortOrder("asc");
-                else if (sortOrder === "asc") setSortOrder("desc");
-                else setSortOrder("default");
+                if (sortOrder === "default") handleSetSortOrder("asc");
+                else if (sortOrder === "asc") handleSetSortOrder("desc");
+                else handleSetSortOrder("default");
               }}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700 }}
               title="Bấm để đổi sắp xếp tên: A-Z -> Z-A -> Mặc định"
             >
               {sortOrder === "asc" ? (
                 <>
-                  <ArrowUpAZ size={15} /> Tên: A $\rightarrow$ Z
+                  <ArrowUpAZ size={15} /> Tên: A → Z
                 </>
               ) : sortOrder === "desc" ? (
                 <>
-                  <ArrowDownAZ size={15} /> Tên: Z $\rightarrow$ A
+                  <ArrowDownAZ size={15} /> Tên: Z → A
                 </>
               ) : (
                 <>
@@ -429,7 +442,7 @@ export default function PublicHomePage() {
             {(search || filterTo > 0 || sortOrder !== "default") && (
               <button
                 className="btn btn-secondary btn-sm"
-                onClick={() => { setSearch(""); setFilterTo(0); setSortOrder("default"); }}
+                onClick={() => { setSearch(""); setFilterTo(0); handleSetSortOrder("default"); }}
               >
                 <X size={13} /> Bỏ lọc
               </button>
@@ -476,9 +489,9 @@ export default function PublicHomePage() {
                             <th
                               style={{ cursor: "pointer", userSelect: "none" }}
                               onClick={() => {
-                                if (sortOrder === "default") setSortOrder("asc");
-                                else if (sortOrder === "asc") setSortOrder("desc");
-                                else setSortOrder("default");
+                                if (sortOrder === "default") handleSetSortOrder("asc");
+                                else if (sortOrder === "asc") handleSetSortOrder("desc");
+                                else handleSetSortOrder("default");
                               }}
                               title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
                             >

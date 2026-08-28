@@ -97,7 +97,19 @@ export default function AdminBaoCaoPage() {
   // Violation Table Local Filters
   const [violationSearch, setViolationSearch] = useState("");
   const [violationLoai, setViolationLoai] = useState("ALL");
-  const [violationSort, setViolationSort] = useState<"date_desc" | "date_asc" | "name_asc" | "name_desc">("date_desc");
+  const [violationSort, setViolationSort] = useState<"date_desc" | "date_asc" | "name_asc" | "name_desc">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("admin_violation_sort") as "date_desc" | "date_asc" | "name_asc" | "name_desc") || "date_desc";
+    }
+    return "date_desc";
+  });
+
+  const handleSetViolationSort = (newSort: "date_desc" | "date_asc" | "name_asc" | "name_desc") => {
+    setViolationSort(newSort);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("admin_violation_sort", newSort);
+    }
+  };
 
   // Sync with URL query parameter or assignedLop
   useEffect(() => {
@@ -754,12 +766,12 @@ export default function AdminBaoCaoPage() {
                 className="select"
                 style={{ width: 160, minHeight: 36, fontWeight: 600 }}
                 value={violationSort}
-                onChange={(e) => setViolationSort(e.target.value as "date_desc" | "date_asc" | "name_asc" | "name_desc")}
+                onChange={(e) => handleSetViolationSort(e.target.value as "date_desc" | "date_asc" | "name_asc" | "name_desc")}
               >
                 <option value="date_desc">📅 Ngày mới nhất</option>
                 <option value="date_asc">📅 Ngày cũ nhất</option>
-                <option value="name_asc">🔤 Tên A $\rightarrow$ Z</option>
-                <option value="name_desc">🔤 Tên Z $\rightarrow$ A</option>
+                <option value="name_asc">🔤 Tên A → Z</option>
+                <option value="name_desc">🔤 Tên Z → A</option>
               </select>
 
               {(violationSearch || violationLoai !== "ALL" || violationSort !== "date_desc") && (
@@ -768,7 +780,7 @@ export default function AdminBaoCaoPage() {
                   onClick={() => {
                     setViolationSearch("");
                     setViolationLoai("ALL");
-                    setViolationSort("date_desc");
+                    handleSetViolationSort("date_desc");
                   }}
                   style={{ minHeight: 36 }}
                 >
