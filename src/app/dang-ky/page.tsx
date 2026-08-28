@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -17,7 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-export default function DangKyHocVienPage() {
+function DangKyHocVienForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultLop = searchParams.get("lop") || "12T2";
@@ -103,7 +103,7 @@ export default function DangKyHocVienPage() {
         return;
       }
 
-      setSuccess(`Chúc mừng ${data.user.hoTen}! Đang tự động đăng nhập vào Cổng Lớp ${data.user.lop}...`);
+      setSuccess(`Chúc mừng ${data.user.hoTen}! Đang tự động đăng nhập vào Lớp ${data.user.lop}...`);
 
       // Auto sign-in immediately
       const loginRes = await signIn("credentials", {
@@ -115,11 +115,11 @@ export default function DangKyHocVienPage() {
       if (loginRes?.ok) {
         setTimeout(() => {
           window.location.href = `/?lop=${data.user.lop}`;
-        }, 1200);
+        }, 1000);
       } else {
         setTimeout(() => {
-          router.push(`/admin/login?registered=1&username=${encodeURIComponent(username.trim())}`);
-        }, 1500);
+          router.push(`/login?registered=1&username=${encodeURIComponent(username.trim())}`);
+        }, 1200);
       }
     } catch {
       setError("Lỗi kết nối máy chủ. Vui lòng thử lại sau.");
@@ -177,6 +177,7 @@ export default function DangKyHocVienPage() {
           position: "relative",
           zIndex: 1,
           border: "1px solid rgba(255,255,255,0.8)",
+          animation: "slideUp 0.25s ease-out",
         }}
       >
         {/* Brand Header */}
@@ -255,7 +256,7 @@ export default function DangKyHocVienPage() {
               display: "flex",
               alignItems: "center",
               gap: 8,
-              color: "#15803d",
+              color: "#16a34a",
               fontSize: "0.82rem",
               fontWeight: 700,
               marginBottom: 16,
@@ -266,38 +267,26 @@ export default function DangKyHocVienPage() {
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* 1. Họ và tên */}
+          {/* 1. Lớp Học */}
           <div>
-            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#1e293b", marginBottom: 6 }}>
-              Họ và tên học sinh <span style={{ color: "#dc2626" }}>*</span>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#334155", marginBottom: 6 }}>
+              Lớp học của bạn *
             </label>
             <div style={{ position: "relative" }}>
-              <User size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
-              <input
-                type="text"
-                className="input"
-                style={{ paddingLeft: 42, height: 44, borderRadius: 12, border: "1.5px solid #cbd5e1", fontSize: "0.9rem" }}
-                placeholder="Nhập đúng họ tên trên danh sách lớp..."
-                value={hoTen}
-                onChange={(e) => setHoTen(e.target.value)}
-                disabled={loading}
-                required
-              />
-            </div>
-          </div>
-
-          {/* 2. Lớp */}
-          <div>
-            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#1e293b", marginBottom: 6 }}>
-              Lớp học của bạn <span style={{ color: "#dc2626" }}>*</span>
-            </label>
-            <div style={{ position: "relative" }}>
-              <School size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+              <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b" }}>
+                <School size={17} />
+              </div>
               <select
                 className="select"
-                style={{ paddingLeft: 42, height: 44, borderRadius: 12, border: "1.5px solid #cbd5e1", fontSize: "0.9rem", fontWeight: 700, color: "#0f172a" }}
+                style={{
+                  paddingLeft: 38,
+                  height: 44,
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  borderRadius: 12,
+                  borderColor: "#cbd5e1",
+                }}
                 value={lop}
                 onChange={(e) => setLop(e.target.value)}
                 disabled={loading}
@@ -311,91 +300,161 @@ export default function DangKyHocVienPage() {
             </div>
           </div>
 
-          {/* 3. Tên đăng nhập */}
+          {/* 2. Họ và tên học sinh */}
           <div>
-            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#1e293b", marginBottom: 6 }}>
-              Tên đăng nhập muốn tạo <span style={{ color: "#dc2626" }}>*</span>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#334155", marginBottom: 6 }}>
+              Họ và tên của bạn (Đúng danh sách lớp) *
             </label>
             <div style={{ position: "relative" }}>
-              <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontWeight: 800 }}>@</span>
+              <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b" }}>
+                <User size={17} />
+              </div>
               <input
-                type="text"
                 className="input"
-                style={{ paddingLeft: 38, height: 44, borderRadius: 12, border: "1.5px solid #cbd5e1", fontSize: "0.9rem" }}
-                placeholder="Ví dụ: van_a hoặc an12t2 (viết liền không dấu)"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                style={{
+                  paddingLeft: 38,
+                  height: 44,
+                  fontSize: "0.9rem",
+                  borderRadius: 12,
+                  borderColor: "#cbd5e1",
+                }}
+                placeholder="VD: Nguyễn Văn An"
+                value={hoTen}
+                onChange={(e) => setHoTen(e.target.value)}
                 disabled={loading}
-                required
+                autoFocus
               />
             </div>
           </div>
 
-          {/* 4. Mật khẩu */}
+          {/* 3. Tên đăng nhập */}
           <div>
-            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#1e293b", marginBottom: 6 }}>
-              Mật khẩu <span style={{ color: "#dc2626" }}>*</span>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#334155", marginBottom: 6 }}>
+              Tên đăng nhập mong muốn *
             </label>
             <div style={{ position: "relative" }}>
-              <Lock size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+              <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b" }}>
+                <Sparkles size={17} />
+              </div>
+              <input
+                className="input"
+                style={{
+                  paddingLeft: 38,
+                  height: 44,
+                  fontSize: "0.9rem",
+                  borderRadius: 12,
+                  borderColor: "#cbd5e1",
+                }}
+                placeholder="VD: vanan12t2 (viết liền không dấu)"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <p style={{ fontSize: "0.72rem", color: "#64748b", margin: "4px 0 0", lineHeight: 1.3 }}>
+              Dùng để đăng nhập vào trang cá nhân của bạn sau này.
+            </p>
+          </div>
+
+          {/* 4. Mật khẩu */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#334155", marginBottom: 6 }}>
+              Mật khẩu *
+            </label>
+            <div style={{ position: "relative" }}>
+              <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b" }}>
+                <Lock size={17} />
+              </div>
               <input
                 type={showPass ? "text" : "password"}
                 className="input"
-                style={{ paddingLeft: 42, paddingRight: 40, height: 44, borderRadius: 12, border: "1.5px solid #cbd5e1", fontSize: "0.9rem" }}
-                placeholder="Tối thiểu 4 ký tự..."
+                style={{
+                  paddingLeft: 38,
+                  paddingRight: 38,
+                  height: 44,
+                  fontSize: "0.9rem",
+                  borderRadius: 12,
+                  borderColor: "#cbd5e1",
+                }}
+                placeholder="Tối thiểu 4 ký tự"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-                required
               />
               <button
                 type="button"
                 onClick={() => setShowPass(!showPass)}
-                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#64748b",
+                  padding: 2,
+                }}
               >
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          {/* 5. Xác nhận Mật khẩu */}
+          {/* 5. Xác nhận mật khẩu */}
           <div>
-            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#1e293b", marginBottom: 6 }}>
-              Xác nhận lại mật khẩu <span style={{ color: "#dc2626" }}>*</span>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#334155", marginBottom: 6 }}>
+              Xác nhận lại mật khẩu *
             </label>
             <div style={{ position: "relative" }}>
-              <Lock size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+              <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b" }}>
+                <Lock size={17} />
+              </div>
               <input
                 type={showConfirmPass ? "text" : "password"}
                 className="input"
-                style={{ paddingLeft: 42, paddingRight: 40, height: 44, borderRadius: 12, border: "1.5px solid #cbd5e1", fontSize: "0.9rem" }}
-                placeholder="Nhập lại đúng mật khẩu phía trên..."
+                style={{
+                  paddingLeft: 38,
+                  paddingRight: 38,
+                  height: 44,
+                  fontSize: "0.9rem",
+                  borderRadius: 12,
+                  borderColor: "#cbd5e1",
+                }}
+                placeholder="Nhập lại chính xác mật khẩu trên"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
-                required
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPass(!showConfirmPass)}
-                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#64748b",
+                  padding: 2,
+                }}
               >
                 {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          {/* Submit button */}
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
+            className="btn btn-primary"
             style={{
-              marginTop: 8,
-              height: 48,
-              borderRadius: 14,
-              border: "none",
-              background: "linear-gradient(135deg, #0284c7 0%, #2563eb 100%)",
-              color: "white",
+              marginTop: 10,
+              height: 46,
+              borderRadius: 12,
               fontWeight: 800,
               fontSize: "0.95rem",
               display: "flex",
@@ -419,7 +478,7 @@ export default function DangKyHocVienPage() {
         <div style={{ marginTop: 22, textAlign: "center", borderTop: "1.5px solid #f1f5f9", paddingTop: 16 }}>
           <span style={{ fontSize: "0.85rem", color: "#64748b" }}>Đã có tài khoản học viên? </span>
           <Link
-            href="/admin/login"
+            href="/login"
             style={{ fontSize: "0.85rem", fontWeight: 800, color: "#0284c7", textDecoration: "none" }}
           >
             Đăng nhập ngay →
@@ -427,5 +486,19 @@ export default function DangKyHocVienPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DangKyHocVienPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0284c7", color: "white", fontWeight: 700 }}>
+          Đang tải trang đăng ký...
+        </div>
+      }
+    >
+      <DangKyHocVienForm />
+    </Suspense>
   );
 }

@@ -267,28 +267,30 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                   </span>
                 </div>
 
-                <Link
-                  href={`/admin?lop=${activeClass}`}
-                  prefetch={true}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 5,
-                    padding: "7px 12px",
-                    borderRadius: 10,
-                    fontSize: "0.8rem",
-                    fontWeight: 800,
-                    textDecoration: "none",
-                    background: "#0284c7",
-                    color: "white",
-                  }}
-                >
-                  Quản trị
-                </Link>
+                {userRole !== "Học viên" && (
+                  <Link
+                    href={`/admin?lop=${activeClass}`}
+                    prefetch={true}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      padding: "7px 12px",
+                      borderRadius: 10,
+                      fontSize: "0.8rem",
+                      fontWeight: 800,
+                      textDecoration: "none",
+                      background: "#0284c7",
+                      color: "white",
+                    }}
+                  >
+                    Quản trị
+                  </Link>
+                )}
 
                 <button
                   type="button"
-                  onClick={() => signOut({ callbackUrl: `/?lop=${activeClass}` })}
+                  onClick={() => signOut({ callbackUrl: "/login" })}
                   title="Đăng xuất khỏi hệ thống"
                   style={{
                     border: "1px solid #e2e8f0",
@@ -313,7 +315,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 5,
-                    padding: "6px 12px",
+                    padding: "7px 12px",
                     borderRadius: 10,
                     fontSize: "0.8rem",
                     fontWeight: 800,
@@ -321,27 +323,32 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                     background: "#e0f2fe",
                     color: "#0369a1",
                     border: "1px solid #bae6fd",
+                    flexShrink: 0,
                   }}
                 >
-                  <Sparkles size={13} /> Đăng ký
+                  <Sparkles size={13} />
+                  <span>Đăng ký</span>
                 </Link>
                 <Link
-                  href={`/admin/login?lop=${activeClass}`}
+                  href={`/login`}
                   prefetch={true}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 5,
-                    padding: "6px 12px",
+                    padding: "7px 12px",
                     borderRadius: 10,
                     fontSize: "0.8rem",
                     fontWeight: 800,
                     textDecoration: "none",
                     background: "#0284c7",
                     color: "white",
+                    boxShadow: "0 2px 6px rgba(2, 132, 199, 0.3)",
+                    flexShrink: 0,
                   }}
                 >
-                  <LogIn size={13} /> Đăng nhập
+                  <LogIn size={13} />
+                  <span>Đăng nhập</span>
                 </Link>
               </div>
             )}
@@ -452,7 +459,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                   <Sparkles size={16} /> Đăng ký học viên
                 </Link>
                 <Link
-                  href={`/admin/login?lop=${activeClass}`}
+                  href={`/login`}
                   prefetch={true}
                   onClick={() => setMenuOpen(false)}
                   style={{
@@ -474,28 +481,56 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                 </Link>
               </div>
             ) : (
-              <Link
-                href={`/admin?lop=${activeClass}`}
-                prefetch={true}
-                onClick={() => setMenuOpen(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  padding: "11px 16px",
-                  borderRadius: 10,
-                  fontSize: "0.9rem",
-                  fontWeight: 800,
-                  textDecoration: "none",
-                  background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
-                  color: "white",
-                  boxShadow: "0 2px 8px rgba(2,132,199,0.3)",
-                }}
-              >
-                <span>Trang Quản trị Lớp {activeClass}</span>
-                <ChevronRight size={16} />
-              </Link>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {userRole !== "Học viên" && (
+                  <Link
+                    href={`/admin?lop=${activeClass}`}
+                    prefetch={true}
+                    onClick={() => setMenuOpen(false)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      padding: "11px 16px",
+                      borderRadius: 10,
+                      fontSize: "0.9rem",
+                      fontWeight: 800,
+                      textDecoration: "none",
+                      background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
+                      color: "white",
+                      boxShadow: "0 2px 8px rgba(2,132,199,0.3)",
+                    }}
+                  >
+                    <span>Trang Quản trị Lớp {activeClass}</span>
+                    <ChevronRight size={16} />
+                  </Link>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    signOut({ callbackUrl: "/login" });
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    padding: "10px 16px",
+                    borderRadius: 10,
+                    fontSize: "0.88rem",
+                    fontWeight: 700,
+                    background: "#fef2f2",
+                    color: "#dc2626",
+                    border: "1px solid #fecaca",
+                    cursor: "pointer",
+                  }}
+                >
+                  <LogOut size={16} /> Đăng xuất ({userName})
+                </button>
+              </div>
             )}
           </div>
         )}
