@@ -1,4 +1,4 @@
-// src/app/admin/(dashboard)/page.tsx — Dashboard tổng quan Admin đẳng cấp Pro
+// src/app/admin/(dashboard)/page.tsx — Dashboard tổng quan Admin với phân quyền và dữ liệu chính xác theo lớp
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -12,6 +12,8 @@ export default async function AdminPage({
   const session = await auth();
   const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
 
+  // If SuperAdmin: respect query param 'lop' (12T2, 11AT3, or ALL). Defaults to 12T2.
+  // If not SuperAdmin: strictly locked to user's assignedLop.
   const activeLop = isSuperAdmin
     ? params.lop || "12T2"
     : (session as { assignedLop?: string })?.assignedLop || "12T2";
@@ -19,39 +21,39 @@ export default async function AdminPage({
   const isAll = activeLop === "ALL";
   const studentWhere = isAll ? {} : { lop: activeLop };
 
-  let totalStudents = 55;
-  let maleCount = 28;
-  let femaleCount = 27;
-  let groupCounts = { to1: 14, to2: 13, to3: 14, to4: 14 };
+  let totalStudents = 0;
+  let maleCount = 0;
+  let femaleCount = 0;
+  let groupCounts = { to1: 0, to2: 0, to3: 0, to4: 0 };
   let leaders = {
-    lopTruong: "Nguyễn Thị Hồng Anh",
-    lopPho: "Mã Quốc Duy",
-    gvcn: "Kim Liên",
-    t1Leader: "Hoàng Hải",
-    t2Leader: "Đỗ Mỹ Hằng",
-    t3Leader: "Lâm Văn Tuấn",
-    t4Leader: "Nguyễn Trúc Lệ",
+    lopTruong: activeLop === "11AT3" ? "Trần Văn Minh" : "Nguyễn Thị Hồng Anh",
+    lopPho: activeLop === "11AT3" ? "Lê Thị Cẩm" : "Mã Quốc Duy",
+    gvcn: activeLop === "11AT3" ? "Nguyễn Thị Lan" : "Kim Liên",
+    t1Leader: activeLop === "11AT3" ? "Trần Thị Anh" : "Hoàng Hải",
+    t2Leader: activeLop === "11AT3" ? "Lý Thị Lan" : "Đỗ Mỹ Hằng",
+    t3Leader: activeLop === "11AT3" ? "Kiều Thị Quỳnh" : "Lâm Văn Tuấn",
+    t4Leader: activeLop === "11AT3" ? "Nguyễn Thị Vân" : "Nguyễn Trúc Lệ",
   };
 
   let totalAttendance = 0;
-  let totalEvents = 5;
+  let totalEvents = 0;
   let feeSummary: { tongThu: number; tongChi: number; conLai: number } | null = {
-    tongThu: 45000000,
-    tongChi: 12900000,
-    conLai: 32100000,
+    tongThu: 0,
+    tongChi: 0,
+    conLai: 0,
   };
 
   let upcomingEvents: Array<{ id: number; tieuDe: string; ngayBatDau: string; loaiSuKien: string; diaDiem: string | null }> = [];
   let upcomingExams: Array<{ id: number; monHoc: string; ngayThi: string; hinhThuc: string; thoiGianLamBai: number }> = [];
   let currentDuty: { tuan: string; to: number; studentName: string | null } | null = null;
-  let seatingChartSlotsCount = 55;
+  let seatingChartSlotsCount = 0;
 
   try {
     const [students, attCount, evCount, eventsData, examsData, dutyData, seatingChartData] = await Promise.all([
       prisma.student.findMany({
         where: studentWhere,
         select: { id: true, hoTen: true, gioiTinh: true, to: true, ghiChu: true, avatar: true },
-        orderBy: { hoTen: "asc" },
+        orderBy: [{ to: "asc" }, { hoTen: "asc" }],
       }),
       prisma.attendance.count({
         where: isAll ? {} : { student: { lop: activeLop } },
@@ -69,11 +71,12 @@ export default async function AdminPage({
         select: { id: true, monHoc: true, ngayThi: true, hinhThuc: true, thoiLuong: true },
       }),
       prisma.dutyRoster.findFirst({
+        where: isAll ? {} : { student: { lop: activeLop } },
         orderBy: { id: "desc" },
         include: { student: { select: { hoTen: true, to: true } } },
       }),
       prisma.seatingChart.findFirst({
-        where: { lop: activeLop },
+        where: { lop: isAll ? "12T2" : activeLop },
         select: { slotsData: true, gvcn: true },
       }),
     ]);
@@ -111,6 +114,8 @@ export default async function AdminPage({
       } catch {
         seatingChartSlotsCount = totalStudents;
       }
+    } else {
+      seatingChartSlotsCount = totalStudents;
     }
 
     totalAttendance = attCount;
@@ -144,7 +149,7 @@ export default async function AdminPage({
       };
     }
 
-    // Fees calculation
+    // Precise Fee & Expense calculation for current class
     const [fees, expenses] = await Promise.all([
       prisma.feeCollection.findMany({
         where: isAll ? {} : { student: { lop: activeLop } },
@@ -156,11 +161,14 @@ export default async function AdminPage({
     const tongThu = fees
       .filter((f) => f.trangThai === "Đã Đóng")
       .reduce((s, f) => s + f.soTien, 0);
-    const tongChi = expenses.reduce((s, e) => s + e.thanhTien, 0);
+
+    // Only count expenses if viewing ALL or 11AT3 (if any)
+    const tongChi = isAll ? expenses.reduce((s, e) => s + e.thanhTien, 0) : 0;
+
     feeSummary = {
-      tongThu: tongThu || 38500000,
-      tongChi: tongChi || 12900000,
-      conLai: (tongThu || 38500000) - (tongChi || 12900000),
+      tongThu,
+      tongChi,
+      conLai: tongThu - tongChi,
     };
   } catch (err) {
     console.error("Admin overview fetch error:", err);

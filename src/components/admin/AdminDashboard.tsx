@@ -72,7 +72,9 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     setCurrentDateStr(`${dayName}, Ngày ${d}/${m}/${y}`);
   }, []);
 
-  const lopName = stats.assignedLop && stats.assignedLop !== "ALL" ? stats.assignedLop : "12T2";
+  const isAllClass = stats.assignedLop === "ALL";
+  const lopTitle = isAllClass ? "Toàn Trường" : `Lớp ${stats.assignedLop || "12T2"}`;
+  const lopName = isAllClass ? "12T2" : stats.assignedLop || "12T2";
 
   // 8 Core Functional Modules
   const coreModules = [
@@ -89,8 +91,8 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     },
     {
       title: "Danh sách học sinh",
-      desc: "55 học sinh • 4 Tổ • Phân quyền cán sự",
-      href: `/admin/hoc-sinh?lop=${lopName}`,
+      desc: `${stats.totalStudents} học sinh • 4 Tổ • Phân quyền cán sự`,
+      href: isAllClass ? "/admin/hoc-sinh" : `/admin/hoc-sinh?lop=${lopName}`,
       icon: <Users size={22} />,
       badge: `${stats.totalStudents} Bạn`,
       badgeColor: "#16a34a",
@@ -101,9 +103,9 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     {
       title: "Sổ thu chi Quỹ lớp",
       desc: "Thu quỹ, chi tiêu hóa đơn & đối soát",
-      href: "/admin/quy",
+      href: isAllClass ? "/admin/quy" : `/admin/quy?lop=${lopName}`,
       icon: <Wallet size={22} />,
-      badge: stats.feeSummary ? formatVND(stats.feeSummary.conLai) : "Hoạt động",
+      badge: stats.feeSummary ? formatVND(stats.feeSummary.conLai) : "0 ₫",
       badgeColor: "#8b5cf6",
       color: "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)",
       bgLight: "#f5f3ff",
@@ -134,7 +136,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     {
       title: "Lịch thi & Kiểm tra",
       desc: "Kế hoạch thi giữa kỳ, học kỳ & kết quả",
-      href: "/admin/lich-thi",
+      href: isAllClass ? "/admin/lich-thi" : `/admin/lich-thi?lop=${lopName}`,
       icon: <GraduationCap size={22} />,
       badge: "Học kỳ 1",
       badgeColor: "#ec4899",
@@ -145,7 +147,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     {
       title: "Lịch trực nhật tuần",
       desc: "Phân công 4 Tổ luân phiên trực nhật",
-      href: "/admin/lich-truc",
+      href: isAllClass ? "/admin/lich-truc" : `/admin/lich-truc?lop=${lopName}`,
       icon: <Layers size={22} />,
       badge: `Tổ ${stats.currentDuty?.to || 1} Trực`,
       badgeColor: "#10b981",
@@ -156,7 +158,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     {
       title: "Báo cáo & Xuất Excel",
       desc: "Tổng hợp số liệu, xuất file & in ấn",
-      href: "/admin/bao-cao",
+      href: isAllClass ? "/admin/bao-cao" : `/admin/bao-cao?lop=${lopName}`,
       icon: <BarChart3 size={22} />,
       badge: "Báo cáo Pro",
       badgeColor: "#6366f1",
@@ -190,7 +192,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
       color: "#0284c7",
       bg: "#e0f2fe",
       border: "#38bdf8",
-      members: "14 Học sinh (G: 6, K: 1, XS: 2)",
+      members: `${stats.groupCounts.to1} Học sinh`,
     },
     {
       id: 2,
@@ -200,7 +202,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
       color: "#16a34a",
       bg: "#dcfce7",
       border: "#4ade80",
-      members: "13 Học sinh • Có Lớp phó",
+      members: `${stats.groupCounts.to2} Học sinh`,
     },
     {
       id: 3,
@@ -210,7 +212,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
       color: "#d97706",
       bg: "#fef3c7",
       border: "#fcd34d",
-      members: "14 Học sinh • Có Lớp trưởng",
+      members: `${stats.groupCounts.to3} Học sinh`,
     },
     {
       id: 4,
@@ -220,7 +222,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
       color: "#9333ea",
       bg: "#f3e8ff",
       border: "#c084fc",
-      members: "14 Học sinh (G: 5, XS: 2)",
+      members: `${stats.groupCounts.to4} Học sinh`,
     },
   ];
 
@@ -330,7 +332,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
                   letterSpacing: "-0.5px",
                 }}
               >
-                Hệ Thống Quản Lý — Lớp {lopName}
+                Hệ Thống Quản Lý — {lopTitle}
               </h1>
 
               <p
@@ -375,7 +377,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
                   }}
                 >
                   <Layers size={16} color="#4ade80" />
-                  <span>Cơ cấu: <strong style={{ color: "white" }}>4 Tổ học tập</strong> đều 13–14 bạn</span>
+                  <span>Cơ cấu: <strong style={{ color: "white" }}>4 Tổ học tập</strong></span>
                 </div>
               </div>
             </div>
@@ -406,7 +408,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
                 </button>
               </Link>
 
-              <Link href={`/admin/hoc-sinh?lop=${lopName}`} style={{ textDecoration: "none" }}>
+              <Link href={isAllClass ? "/admin/hoc-sinh" : `/admin/hoc-sinh?lop=${lopName}`} style={{ textDecoration: "none" }}>
                 <button
                   className="btn"
                   style={{
@@ -424,7 +426,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
                   }}
                 >
                   <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Users size={16} /> Quản Lý 55 Học Sinh
+                    <Users size={16} /> Quản Lý {stats.totalStudents} Học Sinh
                   </span>
                   <ChevronRight size={16} />
                 </button>
