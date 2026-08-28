@@ -27,7 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             email: "admin",
             isSuperAdmin: true,
             roleLabel: "Admin Tổng",
-            assignedLop: "11AT3",
+            assignedLop: "12T2",
           };
         }
 
@@ -120,7 +120,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.userId = Number(user.id);
         token.isSuperAdmin = (user as { isSuperAdmin?: boolean }).isSuperAdmin ?? false;
         token.roleLabel = (user as { roleLabel?: string }).roleLabel ?? "";
-        token.assignedLop = (user as { assignedLop?: string }).assignedLop ?? "11AT3";
+        token.assignedLop = (user as { assignedLop?: string }).assignedLop ?? "12T2";
       }
       return token;
     },
@@ -129,7 +129,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = String(token.userId);
         (session as { isSuperAdmin?: boolean }).isSuperAdmin = token.isSuperAdmin as boolean;
         (session as { roleLabel?: string }).roleLabel = token.roleLabel as string;
-        (session as { assignedLop?: string }).assignedLop = (token.assignedLop as string) || "11AT3";
+        (session as { assignedLop?: string }).assignedLop = (token.assignedLop as string) || "12T2";
       }
       return session;
     },

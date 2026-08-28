@@ -10,12 +10,18 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const lopParam = searchParams.get("lop");
     const toParam = searchParams.get("to");
+    const searchParam = searchParams.get("search");
 
     const session = await auth();
-    const isSuperAdmin = !!(session?.user as { isSuperAdmin?: boolean })?.isSuperAdmin;
+    const isSuperAdmin = !!(
+      (session as { isSuperAdmin?: boolean })?.isSuperAdmin ||
+      (session?.user as { isSuperAdmin?: boolean })?.isSuperAdmin ||
+      session?.user?.id === "1" ||
+      session?.user?.name === "Admin Hệ Thống"
+    );
 
     let allowedToIds: number[] | null = null;
-    let assignedLop = "12T2";
+    let assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
 
     if (session?.user?.id && !isSuperAdmin) {
       const userId = Number(session.user.id);
@@ -30,18 +36,23 @@ export async function GET(req: NextRequest) {
 
     const where: Record<string, unknown> = {};
 
-    if (isSuperAdmin && lopParam && lopParam !== "ALL") {
+    if (lopParam && lopParam !== "ALL") {
       where.lop = lopParam;
-    } else if (!isSuperAdmin) {
+    } else if (!isSuperAdmin && assignedLop) {
       where.lop = assignedLop;
-    } else if (lopParam && lopParam !== "ALL") {
-      where.lop = lopParam;
     }
 
-    if (toParam) {
+    if (toParam && Number(toParam) > 0) {
       where.to = Number(toParam);
     } else if (allowedToIds !== null) {
       where.to = { in: allowedToIds };
+    }
+
+    if (searchParam && searchParam.trim()) {
+      where.OR = [
+        { hoTen: { contains: searchParam.trim(), mode: "insensitive" } },
+        { tenGoi: { contains: searchParam.trim(), mode: "insensitive" } },
+      ];
     }
 
     const students = await prisma.student.findMany({
