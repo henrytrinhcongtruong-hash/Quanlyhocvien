@@ -26,7 +26,7 @@ import {
   Filter,
   Download,
 } from "lucide-react";
-import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
+import { SeatSlotData, generateEmptySlots, getSlotTo } from "@/lib/seatingTypes";
 import { compressImage } from "@/lib/imageUtils";
 
 interface StudentOption {
@@ -38,11 +38,11 @@ interface StudentOption {
   to: number;
 }
 
-const TO_COLORS: Record<number, { bg: string; text: string; border: string; glow: string }> = {
-  1: { bg: "#e0f2fe", text: "#0369a1", border: "#38bdf8", glow: "rgba(2, 132, 199, 0.4)" },
-  2: { bg: "#dcfce7", text: "#15803d", border: "#4ade80", glow: "rgba(22, 163, 74, 0.4)" },
-  3: { bg: "#fef3c7", text: "#b45309", border: "#fcd34d", glow: "rgba(217, 119, 6, 0.4)" },
-  4: { bg: "#f3e8ff", text: "#7e22ce", border: "#c084fc", glow: "rgba(147, 51, 234, 0.4)" },
+const TO_COLORS: Record<number, { label: string; bg: string; text: string; border: string; glow: string; badgeBg: string }> = {
+  1: { label: "Tổ 1", bg: "#e0f2fe", text: "#0369a1", border: "#38bdf8", glow: "rgba(2, 132, 199, 0.35)", badgeBg: "#0284c7" },
+  2: { label: "Tổ 2", bg: "#dcfce7", text: "#15803d", border: "#4ade80", glow: "rgba(22, 163, 74, 0.35)", badgeBg: "#16a34a" },
+  3: { label: "Tổ 3", bg: "#fef3c7", text: "#b45309", border: "#fcd34d", glow: "rgba(217, 119, 6, 0.35)", badgeBg: "#d97706" },
+  4: { label: "Tổ 4", bg: "#f3e8ff", text: "#7e22ce", border: "#c084fc", glow: "rgba(147, 51, 234, 0.35)", badgeBg: "#9333ea" },
 };
 
 export default function AdminSoDoLopPage() {
@@ -328,7 +328,9 @@ export default function AdminSoDoLopPage() {
       const tempPhoto = newSlots[srcIdx].studentPhoto;
       const tempId = newSlots[srcIdx].studentId;
       const tempGender = newSlots[srcIdx].gender;
-      const tempTo = newSlots[srcIdx].to;
+
+      const newSrcTo = getSlotTo(newSlots[srcIdx].col);
+      const newTgtTo = getSlotTo(newSlots[tgtIdx].col);
 
       newSlots[srcIdx] = {
         ...newSlots[srcIdx],
@@ -336,7 +338,7 @@ export default function AdminSoDoLopPage() {
         studentPhoto: newSlots[tgtIdx].studentPhoto,
         studentId: newSlots[tgtIdx].studentId,
         gender: newSlots[tgtIdx].gender,
-        to: newSlots[tgtIdx].to,
+        to: newSrcTo,
       };
 
       newSlots[tgtIdx] = {
@@ -345,14 +347,26 @@ export default function AdminSoDoLopPage() {
         studentPhoto: tempPhoto,
         studentId: tempId,
         gender: tempGender,
-        to: tempTo,
+        to: newTgtTo,
       };
+
+      // Update local students list state so student.to reflects the change immediately
+      if (newSlots[srcIdx].studentId) {
+        setStudents((prevSt) =>
+          prevSt.map((st) => (st.id === newSlots[srcIdx].studentId ? { ...st, to: newSrcTo } : st))
+        );
+      }
+      if (newSlots[tgtIdx].studentId) {
+        setStudents((prevSt) =>
+          prevSt.map((st) => (st.id === newSlots[tgtIdx].studentId ? { ...st, to: newTgtTo } : st))
+        );
+      }
 
       handleSaveChart(newSlots);
       return newSlots;
     });
 
-    showToast("Đã đổi chỗ 2 vị trí");
+    showToast("Đã đổi chỗ và cập nhật Tổ mới thành công");
     setSelectedSlotForSwap(null);
     setDraggedSlotId(null);
     setDragOverSlotId(null);
@@ -398,19 +412,22 @@ export default function AdminSoDoLopPage() {
 
   // Edit Slot Modal
   function openEditSlotModal(slot: SeatSlotData) {
+    const slotTo = getSlotTo(slot.col);
     setEditSlotModal(slot);
-    setModalFilterTo(slot.to || 0);
+    setModalFilterTo(slotTo);
     setSlotForm({
       studentId: slot.studentId || null,
       studentName: slot.studentName || "",
       studentPhoto: slot.studentPhoto || null,
-      to: slot.to || null,
+      to: slotTo,
     });
   }
 
   function handleStudentSelect(stId: number) {
+    if (!editSlotModal) return;
+    const computedTo = getSlotTo(editSlotModal.col);
     if (stId === 0) {
-      setSlotForm({ studentId: null, studentName: "", studentPhoto: null, to: null });
+      setSlotForm({ studentId: null, studentName: "", studentPhoto: null, to: computedTo });
       return;
     }
     const st = students.find((s) => s.id === stId);
@@ -419,7 +436,7 @@ export default function AdminSoDoLopPage() {
         studentId: st.id,
         studentName: st.hoTen.toUpperCase(),
         studentPhoto: st.avatar || null,
-        to: st.to,
+        to: computedTo,
       });
     }
   }
@@ -444,22 +461,28 @@ export default function AdminSoDoLopPage() {
 
   async function handleSaveSlot() {
     if (!editSlotModal) return;
+    const computedTo = getSlotTo(editSlotModal.col);
 
-    // 1. If student has studentId, persist photo directly to Student.avatar
+    // 1. If student has studentId, persist photo and new Tổ directly to Student table
     if (slotForm.studentId) {
       try {
         await fetch(`/api/students/${slotForm.studentId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ avatar: slotForm.studentPhoto }),
+          body: JSON.stringify({
+            to: computedTo,
+            avatar: slotForm.studentPhoto,
+          }),
         });
       } catch (err) {
-        console.error("Student avatar save error:", err);
+        console.error("Student avatar/to save error:", err);
       }
 
       // Update local student list
       setStudents((prev) =>
-        prev.map((st) => (st.id === slotForm.studentId ? { ...st, avatar: slotForm.studentPhoto } : st))
+        prev.map((st) =>
+          st.id === slotForm.studentId ? { ...st, to: computedTo, avatar: slotForm.studentPhoto } : st
+        )
       );
     }
 
@@ -471,7 +494,7 @@ export default function AdminSoDoLopPage() {
           studentName: slotForm.studentName.trim() ? slotForm.studentName.trim().toUpperCase() : null,
           studentPhoto: slotForm.studentPhoto,
           studentId: slotForm.studentId,
-          to: slotForm.to,
+          to: computedTo,
         };
       }
       return s;
@@ -480,15 +503,16 @@ export default function AdminSoDoLopPage() {
     setSlots(updated);
     handleSaveChart(updated);
     setEditSlotModal(null);
-    showToast("Đã lưu vị trí và ảnh học sinh");
+    showToast(`Đã lưu vị trí và cập nhật học sinh vào Tổ ${computedTo}`);
   }
 
   function handleClearSlot() {
     if (!editSlotModal) return;
+    const computedTo = getSlotTo(editSlotModal.col);
     setSlots((prev) => {
       const updated = prev.map((s) => {
         if (s.id === editSlotModal.id) {
-          return { ...s, studentName: null, studentPhoto: null, studentId: null, to: null };
+          return { ...s, studentName: null, studentPhoto: null, studentId: null, to: computedTo };
         }
         return s;
       });
@@ -506,6 +530,7 @@ export default function AdminSoDoLopPage() {
     setSlots((prev) => {
       const newSlots = [...prev];
       for (let c = 1; c <= 8; c++) {
+        const colTo = getSlotTo(c);
         const colSeats = [1, 2, 3, 4, 5, 6, 7].map((r) => newSlots.find((s) => s.row === r && s.col === c)!);
         const lastSeat = { ...colSeats[6] };
         for (let r = 6; r >= 1; r--) {
@@ -513,12 +538,12 @@ export default function AdminSoDoLopPage() {
           colSeats[r].studentName = prevSeat.studentName;
           colSeats[r].studentPhoto = prevSeat.studentPhoto;
           colSeats[r].studentId = prevSeat.studentId;
-          colSeats[r].to = prevSeat.to;
+          colSeats[r].to = colTo;
         }
         colSeats[0].studentName = lastSeat.studentName;
         colSeats[0].studentPhoto = lastSeat.studentPhoto;
         colSeats[0].studentId = lastSeat.studentId;
-        colSeats[0].to = lastSeat.to;
+        colSeats[0].to = colTo;
       }
 
       handleSaveChart(newSlots);
@@ -529,7 +554,7 @@ export default function AdminSoDoLopPage() {
   }
 
   function handleSwapBlocks() {
-    if (!confirm("Bạn có muốn đổi chỗ giữa Dãy Trái và Dãy Phải không?")) return;
+    if (!confirm("Bạn có muốn đổi chỗ giữa Dãy Trái và Dãy Phải không? (Tổ của học sinh sẽ tự động cập nhật theo dãy mới)")) return;
 
     setSlots((prev) => {
       const newSlots = [...prev];
@@ -542,17 +567,30 @@ export default function AdminSoDoLopPage() {
             const tempName = leftSeat.studentName;
             const tempPhoto = leftSeat.studentPhoto;
             const tempId = leftSeat.studentId;
-            const tempTo = leftSeat.to;
 
             leftSeat.studentName = rightSeat.studentName;
             leftSeat.studentPhoto = rightSeat.studentPhoto;
             leftSeat.studentId = rightSeat.studentId;
-            leftSeat.to = rightSeat.to;
+            leftSeat.to = getSlotTo(leftSeat.col);
 
             rightSeat.studentName = tempName;
             rightSeat.studentPhoto = tempPhoto;
             rightSeat.studentId = tempId;
-            rightSeat.to = tempTo;
+            rightSeat.to = getSlotTo(rightSeat.col);
+
+            // Update local students list state
+            if (leftSeat.studentId) {
+              const newLeftTo = getSlotTo(leftSeat.col);
+              setStudents((prevSt) =>
+                prevSt.map((st) => (st.id === leftSeat.studentId ? { ...st, to: newLeftTo } : st))
+              );
+            }
+            if (rightSeat.studentId) {
+              const newRightTo = getSlotTo(rightSeat.col);
+              setStudents((prevSt) =>
+                prevSt.map((st) => (st.id === rightSeat.studentId ? { ...st, to: newRightTo } : st))
+              );
+            }
           }
         }
       }
@@ -560,7 +598,7 @@ export default function AdminSoDoLopPage() {
       return newSlots;
     });
 
-    showToast("Đã hoán đổi vị trí 2 dãy bàn!");
+    showToast("Đã hoán đổi vị trí 2 dãy bàn và cập nhật Tổ mới!");
   }
 
   // Create New Month
@@ -624,10 +662,13 @@ export default function AdminSoDoLopPage() {
     const isDragOver = dragOverSlotId === slot.id;
     const hasStudent = !!slot.studentName;
 
+    // Derived Tổ based on position / slot.to
+    const slotTo = slot.to || getSlotTo(slot.col);
+    const toConfig = TO_COLORS[slotTo] || TO_COLORS[1];
+
     // Filter by Tổ on Main Page
-    const isMatchingTo = filterTo === 0 || (slot.to !== null && slot.to !== undefined && slot.to === filterTo);
-    const isDimmed = filterTo !== 0 && (!slot.to || slot.to !== filterTo);
-    const toConfig = slot.to ? TO_COLORS[slot.to] : null;
+    const isMatchingTo = filterTo === 0 || slotTo === filterTo;
+    const isDimmed = filterTo !== 0 && slotTo !== filterTo;
 
     return (
       <div
@@ -645,7 +686,7 @@ export default function AdminSoDoLopPage() {
           userSelect: "none",
           transition: "all 0.15s ease",
           position: "relative",
-          opacity: isDimmed ? 0.3 : 1,
+          opacity: isDimmed ? 0.25 : 1,
           transform: isDragOver ? "scale(1.05)" : isSelected ? "scale(1.03)" : isMatchingTo && filterTo !== 0 ? "scale(1.02)" : "none",
           zIndex: isDragOver || isSelected ? 10 : 1,
           width: "100%",
@@ -657,24 +698,24 @@ export default function AdminSoDoLopPage() {
             width: 98,
             height: 104,
             borderRadius: 14,
-            background: hasStudent ? (toConfig ? toConfig.bg : "#f1f5f9") : "#ffffff",
+            background: hasStudent ? toConfig.bg : "#ffffff",
             border: isSelected
               ? "3px solid #0284c7"
               : isDragOver
               ? "3px dashed #0284c7"
               : filterTo !== 0 && isMatchingTo
-              ? `3px solid ${toConfig?.border || "#0284c7"}`
+              ? `3px solid ${toConfig.border}`
               : hasStudent
-              ? `2.5px solid ${toConfig ? toConfig.border : "#cbd5e1"}`
+              ? `2.5px solid ${toConfig.border}`
               : "2px dashed #94a3b8",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
             boxShadow: filterTo !== 0 && isMatchingTo
-              ? `0 0 12px ${toConfig?.glow || "rgba(2,132,199,0.3)"}`
+              ? `0 0 14px ${toConfig.glow}`
               : hasStudent
-              ? "0 3px 6px rgba(0,0,0,0.06)"
+              ? `0 3px 8px ${toConfig.glow}`
               : "none",
             marginBottom: 5,
             position: "relative",
@@ -696,16 +737,16 @@ export default function AdminSoDoLopPage() {
                 style={{
                   width: "100%",
                   height: "100%",
-                  background: toConfig ? toConfig.bg : "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)",
+                  background: toConfig.bg,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 900,
                   fontSize: "1.45rem",
-                  color: toConfig ? toConfig.text : "#0369a1",
+                  color: toConfig.text,
                 }}
               >
-                {slot.studentName?.substring(0, 2) || <User size={32} color="#0284c7" />}
+                {slot.studentName?.substring(0, 2) || <User size={32} color={toConfig.text} />}
               </div>
             )
           ) : (
@@ -715,22 +756,23 @@ export default function AdminSoDoLopPage() {
           )}
 
           {/* Tổ Badge on Avatar corner */}
-          {hasStudent && slot.to && (
+          {hasStudent && (
             <div
-              title={`Tổ ${slot.to}`}
+              title={`Tổ ${slotTo}`}
               style={{
                 position: "absolute",
                 top: 0,
                 left: 0,
-                background: toConfig?.border || "#0284c7",
+                background: toConfig.badgeBg,
                 color: "white",
-                fontSize: "0.65rem",
+                fontSize: "0.68rem",
                 fontWeight: 900,
-                padding: "2px 6px",
-                borderRadius: "11px 0 8px 0",
+                padding: "2px 7px",
+                borderRadius: "11px 0 9px 0",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
               }}
             >
-              T{slot.to}
+              T{slotTo}
             </div>
           )}
 
@@ -768,24 +810,28 @@ export default function AdminSoDoLopPage() {
             border: isSelected
               ? "2px solid #0284c7"
               : filterTo !== 0 && isMatchingTo
-              ? `2px solid ${toConfig?.border || "#000000"}`
+              ? `2px solid ${toConfig.border}`
               : hasStudent
-              ? "2px solid #000000"
+              ? `2px solid ${toConfig.border}`
               : "1px dashed #cbd5e1",
-            background: isSelected ? "#e0f2fe" : filterTo !== 0 && isMatchingTo && toConfig ? toConfig.bg : hasStudent ? "#ffffff" : "#f8fafc",
+            background: isSelected
+              ? "#e0f2fe"
+              : hasStudent
+              ? toConfig.bg
+              : "#f8fafc",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             padding: "4px 6px",
             textAlign: "center",
-            boxShadow: hasStudent ? "0 2px 4px rgba(0,0,0,0.04)" : "none",
+            boxShadow: hasStudent ? `0 2px 5px ${toConfig.glow}` : "none",
           }}
         >
           <span
             style={{
               fontSize: "0.72rem",
               fontWeight: 900,
-              color: filterTo !== 0 && isMatchingTo && toConfig ? toConfig.text : hasStudent ? "#000000" : "#94a3b8",
+              color: hasStudent ? toConfig.text : "#94a3b8",
               lineHeight: 1.22,
               textTransform: "uppercase",
               wordBreak: "break-word",
@@ -1126,6 +1172,110 @@ export default function AdminSoDoLopPage() {
             margin: "0 auto",
           }}
         >
+        {/* Tổ Column Header Banners */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 34px 1fr",
+            gap: 12,
+            marginBottom: 10,
+            alignItems: "center",
+          }}
+        >
+          {/* Dãy Trái: Cột 1-2 (Tổ 1) & Cột 3-4 (Tổ 2) */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div
+              style={{
+                background: "#e0f2fe",
+                border: "2px solid #38bdf8",
+                borderRadius: 10,
+                padding: "6px 8px",
+                textAlign: "center",
+                fontWeight: 900,
+                fontSize: "0.82rem",
+                color: "#0369a1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                boxShadow: "0 2px 5px rgba(2, 132, 199, 0.15)",
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0284c7" }}></span>
+              🔵 TỔ 1 (BÀN 1 - 2)
+            </div>
+            <div
+              style={{
+                background: "#dcfce7",
+                border: "2px solid #4ade80",
+                borderRadius: 10,
+                padding: "6px 8px",
+                textAlign: "center",
+                fontWeight: 900,
+                fontSize: "0.82rem",
+                color: "#15803d",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                boxShadow: "0 2px 5px rgba(22, 163, 74, 0.15)",
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a" }}></span>
+              🟢 TỔ 2 (BÀN 3 - 4)
+            </div>
+          </div>
+
+          {/* Lối Đi */}
+          <div style={{ textAlign: "center", fontSize: "0.68rem", fontWeight: 900, color: "#94a3b8", letterSpacing: "0.5px" }}>
+            LỐI ĐI
+          </div>
+
+          {/* Dãy Phải: Cột 5-6 (Tổ 3) & Cột 7-8 (Tổ 4) */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div
+              style={{
+                background: "#fef3c7",
+                border: "2px solid #fcd34d",
+                borderRadius: 10,
+                padding: "6px 8px",
+                textAlign: "center",
+                fontWeight: 900,
+                fontSize: "0.82rem",
+                color: "#b45309",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                boxShadow: "0 2px 5px rgba(217, 119, 6, 0.15)",
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#d97706" }}></span>
+              🟡 TỔ 3 (BÀN 5 - 6)
+            </div>
+            <div
+              style={{
+                background: "#f3e8ff",
+                border: "2px solid #c084fc",
+                borderRadius: 10,
+                padding: "6px 8px",
+                textAlign: "center",
+                fontWeight: 900,
+                fontSize: "0.82rem",
+                color: "#7e22ce",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                boxShadow: "0 2px 5px rgba(147, 51, 234, 0.15)",
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#9333ea" }}></span>
+              🟣 TỔ 4 (BÀN 7 - 8)
+            </div>
+          </div>
+        </div>
+
         {/* Main 7 Rows Grid Layout */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {

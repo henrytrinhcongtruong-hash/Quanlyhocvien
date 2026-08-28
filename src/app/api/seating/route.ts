@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
+import { SeatSlotData, generateEmptySlots, getSlotTo } from "@/lib/seatingTypes";
 
 export async function GET(req: NextRequest) {
   try {
@@ -42,20 +42,24 @@ export async function GET(req: NextRequest) {
       parsedSlots = generateEmptySlots();
     }
 
-    // Merge student info into slots
+    // Merge student info into slots and ensure Tổ aligns with seat column
     parsedSlots = parsedSlots.map((s) => {
+      const computedTo = getSlotTo(s.col);
       if (s.studentId) {
         const found = students.find((st) => st.id === s.studentId);
         if (found) {
           return {
             ...s,
             studentPhoto: s.studentPhoto || found.avatar || null,
-            to: s.to || found.to,
+            to: computedTo,
             studentName: s.studentName || found.hoTen.toUpperCase(),
           };
         }
       }
-      return s;
+      return {
+        ...s,
+        to: computedTo,
+      };
     });
 
     return NextResponse.json({
@@ -85,7 +89,17 @@ export async function POST(req: NextRequest) {
     const currentLop = lop?.trim() || "12T2";
     const currentMonth = month?.trim() || "Tháng 09/2025";
     const parsedSlots: SeatSlotData[] = Array.isArray(slots) ? slots : JSON.parse(slots || "[]");
-    const slotsString = JSON.stringify(parsedSlots);
+
+    // Automatically synchronize student's Tổ with the seat column (Col 1,2 = Tổ 1; Col 3,4 = Tổ 2; Col 5,6 = Tổ 3; Col 7,8 = Tổ 4)
+    const normalizedSlots = parsedSlots.map((s) => {
+      const computedTo = getSlotTo(s.col);
+      return {
+        ...s,
+        to: computedTo,
+      };
+    });
+
+    const slotsString = JSON.stringify(normalizedSlots);
 
     let updated;
     if (id) {
@@ -128,17 +142,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Save avatar updates directly to Student table using Promise.allSettled
-    if (Array.isArray(parsedSlots)) {
-      const photoSlots = parsedSlots.filter((s) => s.studentId && s.studentPhoto);
-      if (photoSlots.length > 0) {
+    // Sync Tổ (to) and avatar directly to Student table in database
+    if (Array.isArray(normalizedSlots)) {
+      const seatedStudents = normalizedSlots.filter((s) => s.studentId);
+      if (seatedStudents.length > 0) {
         await Promise.allSettled(
-          photoSlots.map((s) =>
-            prisma.student.update({
+          seatedStudents.map((s) => {
+            const updateData: { to: number; avatar?: string } = {
+              to: getSlotTo(s.col),
+            };
+            if (s.studentPhoto) {
+              updateData.avatar = s.studentPhoto;
+            }
+            return prisma.student.update({
               where: { id: Number(s.studentId) },
-              data: { avatar: s.studentPhoto },
-            })
-          )
+              data: updateData,
+            });
+          })
         );
       }
     }
