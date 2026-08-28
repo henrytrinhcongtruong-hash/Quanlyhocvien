@@ -21,6 +21,7 @@ interface Student {
   to: number;
   lop: string;
   ghiChu: string | null;
+  avatar?: string | null;
 }
 
 interface FormData {
@@ -472,7 +473,35 @@ export default function HocSinhPage() {
                     <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
                       {(page - 1) * PER_PAGE + idx + 1}
                     </td>
-                    <td style={{ fontWeight: 600 }}>{s.hoTen}</td>
+                    <td style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
+                            background: s.avatar ? "transparent" : (s.gioiTinh === "Nữ" ? "#fce7f3" : "#e0f2fe"),
+                            color: s.gioiTinh === "Nữ" ? "#db2777" : "#0284c7",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontWeight: 800,
+                            fontSize: "0.75rem",
+                            overflow: "hidden",
+                            flexShrink: 0,
+                            border: "1px solid var(--border)",
+                          }}
+                        >
+                          {s.avatar ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={s.avatar} alt={s.hoTen} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            s.hoTen.substring(0, 1)
+                          )}
+                        </div>
+                        <span>{s.hoTen}</span>
+                      </div>
+                    </td>
                     <td style={{ color: "var(--text-secondary)" }}>{s.tenGoi || "—"}</td>
                     <td>
                       <span className="badge badge-info" style={{ fontSize: "0.75rem", fontWeight: 700 }}>
