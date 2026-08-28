@@ -393,8 +393,45 @@ img, svg, canvas {
 
 /* Responsive utilities */
 @media (max-width: 768px) {
-  h1 { font-size: 1.6rem; }
-  h2 { font-size: 1.3rem; }
-  h3 { font-size: 1.1rem; }
+  h1 { font-size: 1.45rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.05rem; }
   .kpi-number { font-size: 1.6rem; }
 }
+
+/* Seating chart mobile scroll wrapper & touch helpers */
+.seating-scroll-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  padding-bottom: 12px;
+}
+
+.seating-scroll-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+.seating-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(2, 132, 199, 0.25);
+  border-radius: 999px;
+}
+.seating-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(2, 132, 199, 0.5);
+}
+
+/* Mobile chips bar (Tổ filter, class selectors) */
+.mobile-chips-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
+  padding: 4px 2px;
+  max-width: 100%;
+}
+.mobile-chips-bar::-webkit-scrollbar {
+  display: none;
+}
+

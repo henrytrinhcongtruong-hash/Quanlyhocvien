@@ -882,63 +882,70 @@ export default function AdminSoDoLopPage() {
         className="no-print"
         style={{
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: 16,
+          marginBottom: 14,
           flexWrap: "wrap",
-          gap: 12,
+          gap: 10,
         }}
       >
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <div
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 10,
-                background: "linear-gradient(135deg, #0284c7 0%, #0891b2 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-              }}
-            >
-              <LayoutGrid size={22} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: "1.35rem", fontWeight: 800, margin: 0 }}>
-                Sơ Đồ Lớp Học — Lớp {selectedLop}
-              </h1>
-            </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: "linear-gradient(135deg, #0284c7 0%, #0891b2 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              flexShrink: 0,
+            }}
+          >
+            <LayoutGrid size={22} />
+          </div>
+          <div>
+            <h1 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>
+              Sơ Đồ Lớp Học — Lớp {selectedLop}
+            </h1>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.78rem", margin: "2px 0 0" }}>
+              56 chỗ • Kéo thả / Chạm để đổi vị trí
+            </p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <button
             className="btn btn-secondary btn-sm"
-            onClick={handleClearAllSlots}
-            disabled={clearing}
-            title="Làm trống toàn bộ 56 vị trí để xếp mới từ đầu"
+            style={{ fontSize: "0.78rem", padding: "5px 10px" }}
+            onClick={openSettings}
           >
-            <RotateCcw size={14} /> {clearing ? "Đang làm trống..." : "Làm trống sơ đồ"}
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={openSettings}>
-            <Settings size={14} /> Chỉnh sửa thông tin
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={() => setNewMonthModalOpen(true)}>
-            <Calendar size={14} /> Đổi tháng / Tạo mới
+            <Settings size={13} /> Cấu hình
           </button>
           <button
             className="btn btn-secondary btn-sm"
+            style={{ fontSize: "0.78rem", padding: "5px 10px" }}
+            onClick={() => setNewMonthModalOpen(true)}
+          >
+            <Calendar size={13} /> Đổi tháng
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            style={{ fontSize: "0.78rem", padding: "5px 10px" }}
             onClick={handleDownloadPdf}
             disabled={exportingPdf}
-            title="Tải trực tiếp file PDF khổ A4 tràn đầy trang"
+            title="Tải file PDF A4"
           >
-            <Download size={14} /> {exportingPdf ? "Đang tạo PDF..." : "Tải file PDF A4"}
+            <Download size={13} /> {exportingPdf ? "Đang tạo..." : "Tải PDF"}
           </button>
-          <button className="btn btn-primary btn-sm" onClick={() => window.print()}>
-            <Printer size={14} /> In Sơ Đồ A4
+          <button
+            className="btn btn-primary btn-sm"
+            style={{ fontSize: "0.78rem", padding: "5px 12px" }}
+            onClick={() => window.print()}
+          >
+            <Printer size={13} /> In A4
           </button>
         </div>
       </div>
@@ -948,25 +955,25 @@ export default function AdminSoDoLopPage() {
         className="no-print"
         style={{
           display: "flex",
-          gap: 12,
-          marginBottom: 16,
+          gap: 10,
+          marginBottom: 12,
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
           background: "white",
-          padding: "12px 18px",
+          padding: "10px 14px",
           borderRadius: 14,
           border: "1px solid var(--border)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)" }}>
               Lớp:
             </span>
             <select
               className="select"
-              style={{ fontWeight: 800, color: "var(--primary)", minWidth: 110 }}
+              style={{ fontWeight: 800, color: "var(--primary)", minWidth: 90, fontSize: "0.85rem", padding: "4px 8px" }}
               value={selectedLop}
               onChange={(e) => setSelectedLop(e.target.value)}
             >
@@ -978,13 +985,13 @@ export default function AdminSoDoLopPage() {
             </select>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
-              Tháng áp dụng:
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+              Tháng:
             </span>
             <select
               className="select"
-              style={{ fontWeight: 700, minWidth: 140 }}
+              style={{ fontWeight: 700, minWidth: 120, fontSize: "0.85rem", padding: "4px 8px" }}
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
             >
@@ -997,8 +1004,8 @@ export default function AdminSoDoLopPage() {
           </div>
 
           {/* Filter By Tổ (Tổ 1 - Tổ 4) */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", padding: "4px 8px", borderRadius: 10, border: "1px solid var(--border)" }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>
+          <div className="mobile-chips-bar" style={{ background: "#f8fafc", padding: "3px 6px", borderRadius: 10, border: "1px solid var(--border)" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4, paddingLeft: 2 }}>
               <Filter size={12} /> Tổ:
             </span>
             {[
@@ -1019,11 +1026,12 @@ export default function AdminSoDoLopPage() {
                     background: isActive ? t.bg : "transparent",
                     color: isActive ? t.color : "#64748b",
                     fontWeight: isActive ? 800 : 600,
-                    fontSize: "0.78rem",
-                    padding: "3px 9px",
-                    borderRadius: 8,
+                    fontSize: "0.75rem",
+                    padding: "2px 8px",
+                    borderRadius: 7,
                     cursor: "pointer",
                     transition: "all 0.15s ease",
+                    flexShrink: 0,
                   }}
                 >
                   {t.label}
@@ -1034,78 +1042,90 @@ export default function AdminSoDoLopPage() {
         </div>
 
         {/* Quick Rotation Buttons */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <button
             className="btn btn-secondary btn-sm"
+            style={{ fontSize: "0.78rem", padding: "4px 8px" }}
             onClick={handleRotateRows}
             title="Dời tiến 7 hàng ghế 1 bậc"
           >
-            <RotateCw size={13} /> Xoay vòng hàng ghế
+            <RotateCw size={12} /> Xoay hàng
           </button>
           <button
             className="btn btn-secondary btn-sm"
+            style={{ fontSize: "0.78rem", padding: "4px 8px" }}
             onClick={handleSwapBlocks}
             title="Hoán đổi toàn bộ 2 Dãy Trái và Dãy Phải"
           >
-            <ArrowLeftRight size={13} /> Đổi chéo 2 dãy
+            <ArrowLeftRight size={12} /> Đổi 2 dãy
           </button>
           <button
             className="btn btn-secondary btn-sm"
+            style={{ fontSize: "0.78rem", padding: "4px 8px", color: "#dc2626" }}
+            onClick={handleClearAllSlots}
+            disabled={clearing}
+            title="Làm trống toàn bộ sơ đồ"
+          >
+            <RotateCcw size={12} /> {clearing ? "..." : "Xóa trắng"}
+          </button>
+          <button
+            className="btn btn-primary btn-sm"
+            style={{ fontSize: "0.78rem", padding: "4px 10px" }}
             onClick={() => handleSaveChart()}
             disabled={saving}
           >
-            <Save size={13} /> {saving ? "Đang lưu..." : "Lưu sơ đồ"}
+            <Save size={12} /> {saving ? "Đang lưu..." : "Lưu"}
           </button>
         </div>
       </div>
 
-      {/* Drag & Drop Hint Banner */}
+      {/* Mobile Swipe Hint Notice */}
       <div
         className="no-print"
         style={{
           background: "#f0f9ff",
           border: "1px solid #bae6fd",
           borderRadius: 10,
-          padding: "8px 14px",
-          marginBottom: 16,
+          padding: "7px 12px",
+          marginBottom: 12,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          fontSize: "0.8rem",
+          fontSize: "0.78rem",
           color: "#0369a1",
           fontWeight: 600,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Move size={14} />
-          <span>💡 <strong>Hướng dẫn:</strong> Bấm vào ô để sửa ảnh/tên. Khung ảnh đã được phóng to 92px, tên học sinh không bị che khuất và sơ đồ sẽ vừa vặn tràn đầy 1 trang A4!</span>
+          <span>📱 <strong>Mẹo điện thoại:</strong> Vuốt sang ngang ↔️ để xem 2 dãy bàn. Chạm 1 ô để sửa, hoặc chạm 2 ô liên tiếp để hoán đổi chỗ ngồi!</span>
         </div>
         {selectedSlotForSwap && (
-          <span style={{ color: "#0284c7", fontWeight: 800 }}>
-            Đang chọn 1 vị trí • Bấm vị trí thứ 2 để hoán đổi!
+          <span style={{ color: "#0284c7", fontWeight: 800, whiteSpace: "nowrap", marginLeft: 8 }}>
+            Đang chọn 1 ô • Chạm ô thứ 2 để đổi!
           </span>
         )}
       </div>
 
-      {/* ========================================================================= */}
-      {/* SEATING CHART POSTER / PRINT CONTAINER (EXPANDED TO FILL FULL A4 PAGE)   */}
-      {/* ========================================================================= */}
-      <div
-        id="seating-chart-print-area"
-        className="card"
-        style={{
-          background: "#ffffff",
-          backgroundImage: "radial-gradient(#e2e8f0 1.2px, transparent 1.2px)",
-          backgroundSize: "22px 22px",
-          borderRadius: 22,
-          border: "2.5px solid #000000",
-          padding: "26px 28px 22px",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-          position: "relative",
-          maxWidth: 980,
-          margin: "0 auto",
-        }}
-      >
+      {/* Main Seating Chart Poster wrapped in responsive horizontal scroller */}
+      <div className="seating-scroll-wrapper">
+        <div
+          id="seating-chart-print-area"
+          className="card"
+          style={{
+            background: "#ffffff",
+            backgroundImage: "radial-gradient(#e2e8f0 1.2px, transparent 1.2px)",
+            backgroundSize: "22px 22px",
+            borderRadius: 22,
+            border: "2.5px solid #000000",
+            padding: "24px 22px 20px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+            position: "relative",
+            minWidth: 880,
+            maxWidth: 960,
+            margin: "0 auto",
+          }}
+        >
         {/* Main 7 Rows Grid Layout */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
@@ -1313,6 +1333,7 @@ export default function AdminSoDoLopPage() {
           </div>
         </div>
       </div>
+      </div>
 
       {/* ========================================================= */}
       {/* EDIT SLOT MODAL WITH TO FILTER                            */}
@@ -1332,9 +1353,11 @@ export default function AdminSoDoLopPage() {
               background: "white",
               borderRadius: 20,
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              padding: "26px 28px",
-              width: "92%",
+              padding: "22px 20px",
+              width: "94%",
               maxWidth: 490,
+              maxHeight: "90vh",
+              overflowY: "auto",
               animation: "fadeIn 0.15s ease",
             }}
           >
@@ -1528,9 +1551,11 @@ export default function AdminSoDoLopPage() {
               background: "white",
               borderRadius: 20,
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              padding: "26px 28px",
-              width: "92%",
+              padding: "22px 20px",
+              width: "94%",
               maxWidth: 460,
+              maxHeight: "90vh",
+              overflowY: "auto",
               animation: "fadeIn 0.15s ease",
             }}
           >
@@ -1609,9 +1634,11 @@ export default function AdminSoDoLopPage() {
               background: "white",
               borderRadius: 20,
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              padding: "26px 28px",
-              width: "92%",
+              padding: "22px 20px",
+              width: "94%",
               maxWidth: 420,
+              maxHeight: "90vh",
+              overflowY: "auto",
               animation: "fadeIn 0.15s ease",
             }}
           >

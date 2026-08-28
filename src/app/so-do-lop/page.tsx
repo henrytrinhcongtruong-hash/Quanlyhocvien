@@ -370,8 +370,8 @@ function PublicSoDoLopContent() {
         style={{
           background: "linear-gradient(135deg, #0284c7 0%, #0369a1 40%, #0f172a 100%)",
           borderRadius: "var(--radius-xl)",
-          padding: "30px 26px",
-          marginBottom: 22,
+          padding: "20px 18px",
+          marginBottom: 18,
           color: "white",
           position: "relative",
           overflow: "hidden",
@@ -380,40 +380,44 @@ function PublicSoDoLopContent() {
       >
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div
                 style={{
-                  width: 46,
-                  height: 46,
+                  width: 42,
+                  height: 42,
                   background: "rgba(255,255,255,0.15)",
-                  borderRadius: 14,
+                  borderRadius: 12,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   backdropFilter: "blur(6px)",
+                  flexShrink: 0,
                 }}
               >
-                <LayoutGrid size={26} color="#38bdf8" />
+                <LayoutGrid size={24} color="#38bdf8" />
               </div>
               <div>
-                <h1 style={{ color: "white", fontSize: "1.45rem", margin: 0 }}>
-                  Sơ Đồ Chỗ Ngồi Lớp Học — Lớp {activeLop}
+                <h1 style={{ color: "white", fontSize: "1.25rem", margin: 0, fontWeight: 900 }}>
+                  Sơ Đồ Chỗ Ngồi Lớp {activeLop}
                 </h1>
+                <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", margin: "2px 0 0" }}>
+                  56 chỗ • 4 Tổ • Phân bố trực quan
+                </p>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
                 className="btn btn-secondary btn-sm"
-                style={{ background: "rgba(255,255,255,0.2)", color: "white", borderColor: "rgba(255,255,255,0.4)" }}
+                style={{ background: "rgba(255,255,255,0.2)", color: "white", borderColor: "rgba(255,255,255,0.4)", fontSize: "0.8rem", padding: "6px 12px" }}
                 onClick={handleDownloadPdf}
                 disabled={exportingPdf}
               >
-                <Download size={14} /> {exportingPdf ? "Đang tạo PDF..." : "Tải PDF A4"}
+                <Download size={14} /> {exportingPdf ? "Đang tạo..." : "Tải PDF A4"}
               </button>
               <button
                 className="btn btn-secondary btn-sm"
-                style={{ background: "rgba(255,255,255,0.2)", color: "white", borderColor: "rgba(255,255,255,0.4)" }}
+                style={{ background: "rgba(255,255,255,0.2)", color: "white", borderColor: "rgba(255,255,255,0.4)", fontSize: "0.8rem", padding: "6px 12px" }}
                 onClick={() => window.print()}
               >
                 <Printer size={14} /> In Sơ Đồ A4
@@ -430,21 +434,21 @@ function PublicSoDoLopContent() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 18,
+          marginBottom: 14,
           flexWrap: "wrap",
-          gap: 12,
+          gap: 10,
           background: "white",
-          padding: "12px 18px",
+          padding: "12px 14px",
           borderRadius: 14,
           border: "1px solid var(--border)",
         }}
       >
         {/* Search Bar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 220, maxWidth: 340 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 180 }}>
           <Search size={16} color="var(--text-muted)" />
           <input
             className="input"
-            style={{ width: "100%", padding: "6px 12px", fontSize: "0.875rem" }}
+            style={{ width: "100%", padding: "6px 10px", fontSize: "0.85rem" }}
             placeholder="🔍 Tìm tên học sinh..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -452,8 +456,8 @@ function PublicSoDoLopContent() {
         </div>
 
         {/* Filter By Tổ (Tổ 1 - Tổ 4) */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", padding: "4px 8px", borderRadius: 10, border: "1px solid var(--border)" }}>
-          <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>
+        <div className="mobile-chips-bar" style={{ background: "#f8fafc", padding: "4px 6px", borderRadius: 10, border: "1px solid var(--border)" }}>
+          <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4, paddingLeft: 4 }}>
             <Filter size={12} /> Tổ:
           </span>
           {[
@@ -474,11 +478,12 @@ function PublicSoDoLopContent() {
                   background: isActive ? t.bg : "transparent",
                   color: isActive ? t.color : "#64748b",
                   fontWeight: isActive ? 800 : 600,
-                  fontSize: "0.78rem",
-                  padding: "3px 9px",
-                  borderRadius: 8,
+                  fontSize: "0.76rem",
+                  padding: "3px 8px",
+                  borderRadius: 7,
                   cursor: "pointer",
                   transition: "all 0.15s ease",
+                  flexShrink: 0,
                 }}
               >
                 {t.label}
@@ -488,13 +493,13 @@ function PublicSoDoLopContent() {
         </div>
 
         {/* Month Selector */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
-            Chọn tháng:
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+            Tháng:
           </span>
           <select
             className="select"
-            style={{ fontWeight: 700 }}
+            style={{ fontWeight: 700, fontSize: "0.85rem", padding: "4px 8px" }}
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
           >
@@ -507,137 +512,159 @@ function PublicSoDoLopContent() {
         </div>
       </div>
 
-      {/* Main Seating Chart Poster */}
+      {/* Mobile Swipe Hint Notice */}
+      <div
+        className="no-print"
+        style={{
+          background: "#f0f9ff",
+          border: "1px solid #bae6fd",
+          borderRadius: 10,
+          padding: "7px 12px",
+          marginBottom: 14,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          fontSize: "0.78rem",
+          color: "#0369a1",
+          fontWeight: 600,
+        }}
+      >
+        <span>📱 <strong>Mẹo xem điện thoại:</strong> Vuốt sang ngang ↔️ để xem trọn vẹn 2 dãy bàn (Dãy Trái & Dãy Phải) hoặc chọn lọc theo từng Tổ phía trên!</span>
+      </div>
+
+      {/* Main Seating Chart Poster wrapped in responsive horizontal scroller */}
       {loading ? (
         <div className="skeleton" style={{ height: 600, borderRadius: 20 }} />
       ) : (
-        <div
-          id="seating-chart-print-area"
-          className="card"
-          style={{
-            background: "#ffffff",
-            backgroundImage: "radial-gradient(#e2e8f0 1.2px, transparent 1.2px)",
-            backgroundSize: "22px 22px",
-            borderRadius: 22,
-            border: "2.5px solid #000000",
-            padding: "26px 28px 22px",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-            maxWidth: 980,
-            margin: "0 auto",
-          }}
-        >
-          {/* 7 Rows Grid */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
-              const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
-              const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
-
-              return (
-                <div
-                  key={`row-${rowNum}`}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 34px 1fr",
-                    alignItems: "center",
-                    gap: 12,
-                  }}
-                >
-                  {/* Dãy Trái (4 cột) */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(4, 1fr)",
-                      gap: 10,
-                    }}
-                  >
-                    {leftSlots.map((s) => renderSeatCard(s))}
-                  </div>
-
-                  {/* Lối đi */}
-                  <div
-                    style={{
-                      textAlign: "center",
-                      fontSize: "0.72rem",
-                      fontWeight: 900,
-                      color: "#94a3b8",
-                      letterSpacing: "1px",
-                    }}
-                  >
-                    H{rowNum}
-                  </div>
-
-                  {/* Dãy Phải (4 cột) */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(4, 1fr)",
-                      gap: 10,
-                    }}
-                  >
-                    {rightSlots.map((s) => renderSeatCard(s))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Teacher's Desk */}
+        <div className="seating-scroll-wrapper">
           <div
+            id="seating-chart-print-area"
+            className="card"
             style={{
-              marginTop: 18,
-              display: "flex",
-              justifyContent: "flex-end",
-              paddingRight: 16,
+              background: "#ffffff",
+              backgroundImage: "radial-gradient(#e2e8f0 1.2px, transparent 1.2px)",
+              backgroundSize: "22px 22px",
+              borderRadius: 22,
+              border: "2.5px solid #000000",
+              padding: "24px 22px 20px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+              minWidth: 880,
+              maxWidth: 960,
+              margin: "0 auto",
             }}
           >
+            {/* 7 Rows Grid */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
+                const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
+                const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
+
+                return (
+                  <div
+                    key={`row-${rowNum}`}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 34px 1fr",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    {/* Dãy Trái (4 cột) */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(4, 1fr)",
+                        gap: 10,
+                      }}
+                    >
+                      {leftSlots.map((s) => renderSeatCard(s))}
+                    </div>
+
+                    {/* Lối đi */}
+                    <div
+                      style={{
+                        textAlign: "center",
+                        fontSize: "0.72rem",
+                        fontWeight: 900,
+                        color: "#94a3b8",
+                        letterSpacing: "1px",
+                      }}
+                    >
+                      H{rowNum}
+                    </div>
+
+                    {/* Dãy Phải (4 cột) */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(4, 1fr)",
+                        gap: 10,
+                      }}
+                    >
+                      {rightSlots.map((s) => renderSeatCard(s))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Teacher's Desk */}
             <div
               style={{
-                width: 320,
-                background: "#ffffff",
-                border: "3px solid #1e293b",
-                borderRadius: 18,
-                padding: "12px 20px",
-                textAlign: "center",
+                marginTop: 18,
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 10px rgba(0,0,0,0.06)",
+                justifyContent: "flex-end",
+                paddingRight: 16,
               }}
             >
               <div
                 style={{
-                  fontSize: "1.2rem",
-                  fontWeight: 900,
-                  color: "#1e293b",
-                  letterSpacing: "2px",
+                  width: 320,
+                  background: "#ffffff",
+                  border: "3px solid #1e293b",
+                  borderRadius: 18,
+                  padding: "12px 20px",
+                  textAlign: "center",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.06)",
                 }}
               >
-                TEACHER'S DESK
+                <div
+                  style={{
+                    fontSize: "1.2rem",
+                    fontWeight: 900,
+                    color: "#1e293b",
+                    letterSpacing: "2px",
+                  }}
+                >
+                  TEACHER'S DESK
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Footer Section */}
-          <div
-            style={{
-              marginTop: 20,
-              paddingTop: 16,
-              borderTop: "2.5px solid #000000",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              flexWrap: "wrap",
-              gap: 14,
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 280 }}>
-              <div
-                style={{
-                  fontSize: "1.6rem",
-                  fontWeight: 900,
-                  color: "#000000",
-                  letterSpacing: "-0.5px",
-                  lineHeight: 1.1,
+            {/* Footer Section */}
+            <div
+              style={{
+                marginTop: 20,
+                paddingTop: 16,
+                borderTop: "2.5px solid #000000",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-end",
+                flexWrap: "wrap",
+                gap: 14,
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 280 }}>
+                <div
+                  style={{
+                    fontSize: "1.6rem",
+                    fontWeight: 900,
+                    color: "#000000",
+                    letterSpacing: "-0.5px",
+                    lineHeight: 1.1,
                 }}
               >
                 {title}
@@ -724,6 +751,7 @@ function PublicSoDoLopContent() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       )}
     </div>
