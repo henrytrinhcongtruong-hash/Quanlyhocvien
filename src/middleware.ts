@@ -7,13 +7,7 @@ export function middleware(req: NextRequest) {
   const { nextUrl, cookies } = req;
   const pathname = nextUrl.pathname;
 
-  const hasSession =
-    cookies.has("authjs.session-token") ||
-    cookies.has("__Secure-authjs.session-token") ||
-    cookies.has("next-auth.session-token") ||
-    cookies.has("__Secure-next-auth.session-token");
-
-  // Các đường dẫn công khai không cần đăng nhập:
+  // 1. Cho phép tự do truy cập các trang auth, api công khai, static assets
   const isAuthPage =
     pathname === "/login" ||
     pathname === "/dang-ky" ||
@@ -28,18 +22,24 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/favicon.ico") ||
     pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|css|js|woff|woff2|ttf)$/);
 
-  // 1. Nếu CHƯA đăng nhập mà truy cập bất kỳ trang nào (ngoại trừ login, dang-ky, api công khai)
-  // => Chuyển hướng ngay về trang /login
-  if (!hasSession && !isAuthPage && !isPublicApi && !isStaticAsset) {
+  if (isAuthPage || isPublicApi || isStaticAsset) {
+    return NextResponse.next();
+  }
+
+  // 2. Kiểm tra token đăng nhập (hỗ trợ cả HTTPS production Vercel và HTTP localhost)
+  const sessionToken =
+    cookies.get("authjs.session-token")?.value ||
+    cookies.get("__Secure-authjs.session-token")?.value ||
+    cookies.get("next-auth.session-token")?.value ||
+    cookies.get("__Secure-next-auth.session-token")?.value;
+
+  const hasSession = !!sessionToken && sessionToken.trim().length > 10;
+
+  // 3. Nếu CHƯA đăng nhập mà vào bất kỳ trang nào khác -> Chuyển về /login
+  if (!hasSession) {
     const loginUrl = new URL("/login", nextUrl);
     loginUrl.searchParams.set("callbackUrl", nextUrl.pathname + nextUrl.search);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // 2. Nếu ĐÃ đăng nhập mà truy cập /login, /dang-ky, /admin/login
-  // => Chuyển hướng vào trang chủ hoặc dashboard
-  if (hasSession && isAuthPage) {
-    return NextResponse.redirect(new URL("/", nextUrl));
   }
 
   return NextResponse.next();
