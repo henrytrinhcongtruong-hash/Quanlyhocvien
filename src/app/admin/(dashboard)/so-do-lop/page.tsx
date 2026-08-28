@@ -908,11 +908,8 @@ export default function AdminSoDoLopPage() {
             </div>
             <div>
               <h1 style={{ fontSize: "1.35rem", fontWeight: 800, margin: 0 }}>
-                Sơ Đồ Lớp Học (Tràn Đầy Khổ A4 • Không Bị Che Tên) — Lớp {selectedLop}
+                Sơ Đồ Lớp Học — Lớp {selectedLop}
               </h1>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: 0 }}>
-                Khung ảnh lớn 92px • Tên học sinh hiển thị trọn vẹn 100% • Khít kín khổ giấy A4
-              </p>
             </div>
           </div>
         </div>

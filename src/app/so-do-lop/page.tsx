@@ -401,9 +401,6 @@ function PublicSoDoLopContent() {
                 <h1 style={{ color: "white", fontSize: "1.45rem", margin: 0 }}>
                   Sơ Đồ Chỗ Ngồi Lớp Học — Lớp {activeLop}
                 </h1>
-                <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.85rem", margin: 0 }}>
-                  Khung ảnh 92px • Tràn đầy khổ giấy A4 • Áp dụng: <strong>{selectedMonth}</strong> • GVCN: {gvcn}
-                </p>
               </div>
             </div>
 
