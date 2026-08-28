@@ -64,7 +64,7 @@ export default function AdminQuyPage() {
   const { data: session } = useSession();
 
   const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
-  const assignedLop = (session as { assignedLop?: string })?.assignedLop || "11AT3";
+  const assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
 
   const [activeTab, setActiveTab] = useState<"thu" | "chi">("thu");
   const [summary, setSummary] = useState<FeeSummary | null>(null);
@@ -72,7 +72,7 @@ export default function AdminQuyPage() {
   const [fees, setFees] = useState<FeeRecord[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [classList, setClassList] = useState<string[]>(["11AT3", "12T2"]);
+  const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
 
   // Quick Amount Setup Input
   const [quickAmount, setQuickAmount] = useState("");
@@ -99,7 +99,7 @@ export default function AdminQuyPage() {
   // Batch Fee Setup Modal
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [batchForm, setBatchForm] = useState({
-    lop: isSuperAdmin ? (urlLop || "11AT3") : assignedLop,
+    lop: isSuperAdmin ? (urlLop || "12T2") : assignedLop,
     kyThu: "HK1",
     soTien: "50000",
     ghiChu: "Thu quỹ học kỳ 1",

@@ -105,9 +105,9 @@ export default function PublicHomePage() {
 
   const [activeLop, setActiveLop] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return urlLop || localStorage.getItem("admin_selected_class") || "11AT3";
+      return urlLop || localStorage.getItem("admin_selected_class") || "12T2";
     }
-    return urlLop || "11AT3";
+    return urlLop || "12T2";
   });
 
   const [tab, setTab] = useState<"danh-sach" | "quy" | "diem-danh">("danh-sach");

@@ -38,7 +38,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
   const userAssignedLop = (session as { assignedLop?: string })?.assignedLop;
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [classList, setClassList] = useState<string[]>(["11AT3", "12T2"]);
+  const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
 
   // Determine active class with strict priority for logged in GVCN/class users
   const [activeClass, setActiveClass] = useState<string>(() => {
@@ -53,7 +53,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
         if (saved && saved !== "ALL") return saved;
       }
     }
-    return searchParams.get("lop") || userAssignedLop || "11AT3";
+    return searchParams.get("lop") || userAssignedLop || "12T2";
   });
 
   // Fetch available classes
