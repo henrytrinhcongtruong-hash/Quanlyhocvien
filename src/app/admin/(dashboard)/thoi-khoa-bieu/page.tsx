@@ -193,7 +193,34 @@ export default function AdminThoiKhoaBieuPage() {
   }
 
   async function handleSavePeriod() {
-    setSaving(true);
+    // Optimistic local update (Instant 0ms UI update!)
+    const updatedFormItem: TimetableItem = {
+      id: form.id || Date.now(),
+      thu: form.thu,
+      tiet: form.tiet,
+      buoi: "Tối",
+      thoiGian: EVENING_TIMES[form.tiet]?.time || null,
+      monHoc: form.monHoc,
+      giaoVien: form.giaoVien.trim() || null,
+      lop: selectedLop,
+      hocKy: selectedHocKy,
+      ghiChu: form.ghiChu.trim() || null,
+    };
+
+    setTimetable((prev) => {
+      const idx = prev.findIndex((t) => t.thu === form.thu && t.tiet === form.tiet);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...updatedFormItem };
+        return next;
+      }
+      return [...prev, updatedFormItem];
+    });
+
+    setModalOpen(false);
+    showToast("Đã lưu thời khóa biểu");
+
+    // Sync in background
     try {
       const res = await fetch("/api/timetable", {
         method: "POST",
@@ -209,17 +236,12 @@ export default function AdminThoiKhoaBieuPage() {
         }),
       });
 
-      if (res.ok) {
-        showToast("Đã lưu thời khóa biểu");
-        setModalOpen(false);
+      if (!res.ok) {
+        showToast("Lỗi khi đồng bộ lên máy chủ", "error");
         loadTimetable();
-      } else {
-        showToast("Lỗi khi lưu", "error");
       }
     } catch {
       showToast("Lỗi kết nối máy chủ", "error");
-    } finally {
-      setSaving(false);
     }
   }
 

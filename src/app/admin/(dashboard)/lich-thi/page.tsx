@@ -295,35 +295,55 @@ export default function LichThiAdminPage() {
     const url = editing ? `/api/exams/${editing.id}` : "/api/exams";
     const method = editing ? "PUT" : "POST";
 
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    if (res.ok) {
-      showToast(editing ? "Đã cập nhật lịch thi." : "Đã thêm lịch thi mới.");
-      setModalOpen(false);
-      fetchExams();
-    } else {
-      const err = await res.json();
-      setFormError(err.error || "Có lỗi xảy ra.");
+      if (res.ok) {
+        const savedExam: ExamSchedule = await res.json();
+        if (editing) {
+          setExams((prev) => prev.map((item) => (item.id === editing.id ? savedExam : item)));
+          showToast("Đã cập nhật lịch thi.");
+        } else {
+          setExams((prev) => [savedExam, ...prev]);
+          showToast("Đã thêm lịch thi mới.");
+        }
+        setModalOpen(false);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setFormError(err.error || "Có lỗi xảy ra.");
+      }
+    } catch {
+      setFormError("Lỗi kết nối máy chủ.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   async function handleDelete() {
     if (!deleteId) return;
+    const targetId = deleteId;
     setDeleting(true);
-    const res = await fetch(`/api/exams/${deleteId}`, { method: "DELETE" });
-    if (res.ok) {
-      showToast("Đã xóa lịch thi.");
-      fetchExams();
-    } else {
-      showToast("Có lỗi khi xóa lịch thi.", "error");
-    }
-    setDeleting(false);
+
+    // Optimistic UI: Remove from list in 0ms!
+    setExams((prev) => prev.filter((item) => item.id !== targetId));
     setDeleteId(null);
+    setDeleting(false);
+    showToast("Đã xóa lịch thi.");
+
+    // Sync in background
+    try {
+      const res = await fetch(`/api/exams/${targetId}`, { method: "DELETE" });
+      if (!res.ok) {
+        showToast("Có lỗi khi xóa trên máy chủ.", "error");
+        fetchExams();
+      }
+    } catch {
+      showToast("Lỗi kết nối máy chủ.", "error");
+    }
   }
 
   // Filtered by search

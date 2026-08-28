@@ -221,35 +221,55 @@ export default function HocSinhPage() {
     const url = editing ? `/api/students/${editing.id}` : "/api/students";
     const method = editing ? "PUT" : "POST";
 
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    if (res.ok) {
-      showToast(editing ? "Đã cập nhật học sinh." : "Đã thêm học sinh mới.");
-      setModalOpen(false);
-      fetchStudents();
-    } else {
-      const err = await res.json();
-      setFormError(err.error || "Có lỗi xảy ra.");
+      if (res.ok) {
+        const savedStudent: Student = await res.json();
+        if (editing) {
+          setStudents((prev) => prev.map((s) => (s.id === editing.id ? savedStudent : s)));
+          showToast("Đã cập nhật học sinh.");
+        } else {
+          setStudents((prev) => [savedStudent, ...prev]);
+          showToast("Đã thêm học sinh mới.");
+        }
+        setModalOpen(false);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setFormError(err.error || "Có lỗi xảy ra.");
+      }
+    } catch {
+      setFormError("Lỗi kết nối máy chủ.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   async function handleDelete() {
     if (!deleteId) return;
+    const targetId = deleteId;
     setDeleting(true);
-    const res = await fetch(`/api/students/${deleteId}`, { method: "DELETE" });
-    if (res.ok) {
-      showToast("Đã xóa học sinh.");
-      fetchStudents();
-    } else {
-      showToast("Có lỗi khi xóa.", "error");
-    }
-    setDeleting(false);
+
+    // Optimistic UI: Remove from list in 0ms!
+    setStudents((prev) => prev.filter((s) => s.id !== targetId));
     setDeleteId(null);
+    setDeleting(false);
+    showToast("Đã xóa học sinh.");
+
+    // Sync in background
+    try {
+      const res = await fetch(`/api/students/${targetId}`, { method: "DELETE" });
+      if (!res.ok) {
+        showToast("Có lỗi khi xóa trên máy chủ.", "error");
+        fetchStudents();
+      }
+    } catch {
+      showToast("Lỗi kết nối máy chủ.", "error");
+    }
   }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {

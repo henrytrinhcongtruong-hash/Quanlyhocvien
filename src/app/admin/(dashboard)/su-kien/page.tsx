@@ -155,34 +155,55 @@ export default function AdminSuKienPage() {
     const url = editing ? `/api/events/${editing.id}` : "/api/events";
     const method = editing ? "PUT" : "POST";
 
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    if (res.ok) {
-      showToast(editing ? "Đã cập nhật sự kiện thành công" : "Đã tạo sự kiện mới thành công");
-      setModalOpen(false);
-      loadData();
-    } else {
-      showToast("Lỗi khi lưu sự kiện", "error");
+      if (res.ok) {
+        const savedItem = await res.json();
+        if (editing) {
+          setEvents((prev) => prev.map((e) => (e.id === editing.id ? savedItem : e)));
+          showToast("Đã cập nhật sự kiện thành công");
+        } else {
+          setEvents((prev) => [savedItem, ...prev]);
+          showToast("Đã tạo sự kiện mới thành công");
+        }
+        setModalOpen(false);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error || "Lỗi khi lưu sự kiện", "error");
+      }
+    } catch {
+      showToast("Lỗi kết nối máy chủ", "error");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   async function handleDelete() {
     if (!deleteId) return;
+    const targetId = deleteId;
     setDeleting(true);
-    const res = await fetch(`/api/events/${deleteId}`, { method: "DELETE" });
-    if (res.ok) {
-      showToast("Đã xóa sự kiện thành công");
-      loadData();
-    } else {
-      showToast("Có lỗi khi xóa sự kiện", "error");
-    }
-    setDeleting(false);
+
+    // Optimistic UI: Remove instantly (0ms)
+    setEvents((prev) => prev.filter((e) => e.id !== targetId));
     setDeleteId(null);
+    setDeleting(false);
+    showToast("Đã xóa sự kiện thành công");
+
+    // Sync in background
+    try {
+      const res = await fetch(`/api/events/${targetId}`, { method: "DELETE" });
+      if (!res.ok) {
+        showToast("Lỗi đồng bộ xóa trên máy chủ", "error");
+        loadData();
+      }
+    } catch {
+      showToast("Lỗi kết nối máy chủ", "error");
+    }
   }
 
   const filteredEvents = events.filter((e) => {

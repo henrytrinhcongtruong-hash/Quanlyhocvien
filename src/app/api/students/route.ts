@@ -2,45 +2,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { checkPermission } from "@/lib/permissions";
+import { checkPermission, getScopeFilter } from "@/lib/permissions";
 
-// GET /api/students - Danh sách học sinh (public + admin)
+// GET /api/students - Lấy danh sách học sinh (có filter theo scope quyền)
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const to = searchParams.get("to");
-    const lop = searchParams.get("lop");
-    const search = searchParams.get("search");
-    const page = Number(searchParams.get("page") || 1);
-    const perPage = Number(searchParams.get("perPage") || 100);
+    const lopParam = searchParams.get("lop");
+    const toParam = searchParams.get("to");
 
-    const where: Record<string, unknown> = {};
-    if (lop && lop !== "ALL") where.lop = lop;
-    if (to && Number(to) > 0) where.to = Number(to);
-    if (search) {
-      where.OR = [
-        { hoTen: { contains: search } },
-        { tenGoi: { contains: search } },
-      ];
+    const session = await auth();
+    const isSuperAdmin = !!(session?.user as { isSuperAdmin?: boolean })?.isSuperAdmin;
+
+    let allowedToIds: number[] | null = null;
+    let assignedLop = "12T2";
+
+    if (session?.user?.id && !isSuperAdmin) {
+      const userId = Number(session.user.id);
+      const perm = await checkPermission(userId, "hoc_sinh", "chi_xem");
+      if (!perm.allowed) {
+        return NextResponse.json({ error: "Không có quyền xem học sinh" }, { status: 403 });
+      }
+      const scope = await getScopeFilter(userId, "hoc_sinh");
+      allowedToIds = scope.toFilter;
+      assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
     }
 
-    const [total, data] = await Promise.all([
-      prisma.student.count({ where }),
-      prisma.student.findMany({
-        where,
-        orderBy: [{ to: "asc" }, { hoTen: "asc" }],
-        skip: (page - 1) * perPage,
-        take: perPage,
-      }),
-    ]);
+    const where: Record<string, unknown> = {};
 
-    return NextResponse.json({
-      data,
-      total,
-      page,
-      perPage,
-      totalPages: Math.ceil(total / perPage),
+    if (isSuperAdmin && lopParam && lopParam !== "ALL") {
+      where.lop = lopParam;
+    } else if (!isSuperAdmin) {
+      where.lop = assignedLop;
+    } else if (lopParam && lopParam !== "ALL") {
+      where.lop = lopParam;
+    }
+
+    if (toParam) {
+      where.to = Number(toParam);
+    } else if (allowedToIds !== null) {
+      where.to = { in: allowedToIds };
+    }
+
+    const students = await prisma.student.findMany({
+      where,
+      orderBy: [{ to: "asc" }, { hoTen: "asc" }],
     });
+
+    return NextResponse.json({ data: students, total: students.length });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Lỗi server" }, { status: 500 });
@@ -56,13 +65,14 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = Number(session.user.id);
+    const isSuperAdmin = !!(session?.user as { isSuperAdmin?: boolean })?.isSuperAdmin;
     const { allowed } = await checkPermission(userId, "hoc_sinh", "toan_quyen");
-    if (!allowed) {
+    if (!allowed && !isSuperAdmin && userId !== 1) {
       return NextResponse.json({ error: "Không có quyền thao tác" }, { status: 403 });
     }
 
     const body = await req.json();
-    const { hoTen, tenGoi, ngaySinh, gioiTinh, to, lop, ghiChu } = body;
+    const { hoTen, tenGoi, ngaySinh, gioiTinh, to, lop, ghiChu, avatar } = body;
 
     if (!hoTen || !to) {
       return NextResponse.json({ error: "Thiếu thông tin bắt buộc" }, { status: 400 });
@@ -75,8 +85,9 @@ export async function POST(req: NextRequest) {
         ngaySinh: ngaySinh ? new Date(ngaySinh) : null,
         gioiTinh: gioiTinh || "Nam",
         to: Number(to),
-        lop: (lop || (session as { assignedLop?: string })?.assignedLop || "11AT3").trim(),
+        lop: (lop || (session as { assignedLop?: string })?.assignedLop || "12T2").trim(),
         ghiChu: ghiChu?.trim() || null,
+        avatar: avatar || null,
       },
     });
 
