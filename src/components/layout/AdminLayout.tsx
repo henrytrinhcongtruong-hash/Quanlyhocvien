@@ -26,6 +26,7 @@ import {
   Eye,
   EyeOff,
   CheckCircle2,
+  ShieldAlert,
 } from "lucide-react";
 
 // Nav items với icon và label
@@ -140,7 +141,11 @@ export default function AdminLayout({
   };
 
   const navItems = canManageUsers
-    ? [...NAV_BASE, { href: "/admin/nguoi-dung", icon: UserCog, label: "Người dùng", module: "nguoi_dung" }]
+    ? [
+        ...NAV_BASE,
+        { href: "/admin/nguoi-dung", icon: UserCog, label: "Người dùng", module: "nguoi_dung" },
+        { href: "/admin/quan-ly-link", icon: ShieldAlert, label: "Quản lý Link & Khóa", module: "quan_ly_link" },
+      ]
     : NAV_BASE;
 
   // Sync selectedClass from URL or localStorage for SuperAdmin

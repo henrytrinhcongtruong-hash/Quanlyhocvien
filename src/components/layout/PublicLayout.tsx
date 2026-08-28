@@ -3,6 +3,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import MaintenanceScreen from "@/components/common/MaintenanceScreen";
 import {
   Users,
   BookOpen,
@@ -21,6 +22,7 @@ import {
   UserCheck,
   User,
   Sparkles,
+  ShieldAlert,
 } from "lucide-react";
 
 const NAV_BASE = [
@@ -46,6 +48,24 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
+  const [pageLockInfo, setPageLockInfo] = useState<{
+    isLocked: boolean;
+    lockReason?: string;
+    lockUntil?: string | null;
+    title?: string;
+  } | null>(null);
+
+  // Fetch Page Lock Status for current page
+  useEffect(() => {
+    fetch(`/api/system/page-locks?path=${encodeURIComponent(pathname)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.data) {
+          setPageLockInfo(d.data);
+        }
+      })
+      .catch(() => {});
+  }, [pathname]);
 
   // Determine active class with strict priority for logged in students/users
   const [activeClass, setActiveClass] = useState<string>(() => {
@@ -536,8 +556,47 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
         )}
       </nav>
 
-      {/* Main Content */}
-      <main style={{ flex: 1, padding: "20px 24px" }}>{children}</main>
+      {/* Admin Notice if this page is locked for students */}
+      {pageLockInfo?.isLocked && (isSuperAdmin || userRole.toLowerCase().includes("gvcn") || userRole.toLowerCase().includes("admin")) && (
+        <div
+          style={{
+            background: "#fef2f2",
+            borderBottom: "1.5px solid #fecaca",
+            padding: "8px 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontSize: "0.82rem",
+            color: "#991b1b",
+            fontWeight: 700,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ShieldAlert size={16} color="#dc2626" />
+            <span>⚠️ <strong>Chế độ Quản trị:</strong> Trang này đang được KHÓA BẢO TRÌ đối với học viên. Chỉ Admin mới xem được dữ liệu này.</span>
+          </div>
+          <Link
+            href="/admin/quan-ly-link"
+            style={{ color: "#0284c7", fontWeight: 800, textDecoration: "underline", fontSize: "0.78rem" }}
+          >
+            Quản lý khóa trang →
+          </Link>
+        </div>
+      )}
+
+      {/* Main Content or Maintenance Screen */}
+      <main style={{ flex: 1, padding: "20px 24px" }}>
+        {pageLockInfo?.isLocked && !isSuperAdmin && !userRole.toLowerCase().includes("gvcn") && !userRole.toLowerCase().includes("admin") ? (
+          <MaintenanceScreen
+            pageTitle={pageLockInfo.title || "Trang này"}
+            lockReason={pageLockInfo.lockReason}
+            lockUntil={pageLockInfo.lockUntil}
+            pagePath={pathname}
+          />
+        ) : (
+          children
+        )}
+      </main>
 
       {/* Footer */}
       <footer

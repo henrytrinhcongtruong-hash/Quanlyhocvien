@@ -255,3 +255,22 @@ model UserPermission {
   @@unique([userId, module])
   @@index([userId])
 }
+
+// =========================================
+// QUẢN LÝ LINK & KHÓA BẢO TRÌ TRANG
+// =========================================
+model PageLock {
+  id          Int       @id @default(autoincrement())
+  path        String    @unique // "/", "/so-do-lop", "/thoi-khoa-bieu", "/quy-lop", "/lich-thi", "/lich-truc", "/su-kien", "/diem-danh-cua-toi", "/dang-ky"
+  title       String    // "Trang chủ", "Sơ đồ lớp", ...
+  description String?   // Mô tả trang
+  isLocked    Boolean   @default(false)
+  lockReason  String?   @default("Hệ thống đang được nâng cấp tính năng mới. Vui lòng quay lại sau ít phút!")
+  lockUntil   DateTime? // Thời gian dự kiến mở khóa
+  lockedBy    String?   // Username của admin thực hiện khóa
+  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+
+  @@index([path])
+  @@index([isLocked])
+}
