@@ -174,6 +174,13 @@ export default function AdminNguoiDungPage() {
   // Permission Matrix State
   const [permMatrix, setPermMatrix] = useState<Record<string, { level: string; scope: string; scopeToIds: number[] }>>({});
 
+  // Quick Password Reset for Managed Users
+  const [resetPassUser, setResetPassUser] = useState<UserItem | null>(null);
+  const [quickNewPassword, setQuickNewPassword] = useState("");
+  const [quickShowPassword, setQuickShowPassword] = useState(false);
+  const [quickSaving, setQuickSaving] = useState(false);
+  const [quickError, setQuickError] = useState("");
+
   // Delete State
   const [deleteUser, setDeleteUser] = useState<UserItem | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -656,14 +663,35 @@ export default function AdminNguoiDungPage() {
                       {!u.isSuperAdmin && (
                         <div style={{ display: "inline-flex", gap: 6, justifyContent: "flex-end" }}>
                           <button
-                            onClick={() => openEdit(u)}
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: "4px 8px" }}
-                            title="Chỉnh sửa phân quyền"
+                            type="button"
+                            onClick={() => {
+                              setResetPassUser(u);
+                              setQuickNewPassword("");
+                              setQuickError("");
+                              setQuickShowPassword(false);
+                            }}
+                            className="btn btn-sm"
+                            style={{
+                              background: "#eff6ff",
+                              color: "#2563eb",
+                              border: "1px solid #bfdbfe",
+                              padding: "4px 8px",
+                            }}
+                            title="Đổi mật khẩu cho người dùng này"
                           >
                             <Key size={13} />
                           </button>
                           <button
+                            type="button"
+                            onClick={() => openEdit(u)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: "4px 8px" }}
+                            title="Chỉnh sửa thông tin & phân quyền"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => setDeleteUser(u)}
                             className="btn btn-sm"
                             style={{
@@ -1228,6 +1256,216 @@ export default function AdminNguoiDungPage() {
                   {deleting ? "Đang xóa..." : "Xác nhận xóa"}
                 </button>
               </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* ====== QUICK RESET PASSWORD MODAL ====== */}
+      {mounted &&
+        resetPassUser &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0, 0, 0, 0.45)",
+              backdropFilter: "blur(4px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              padding: 16,
+            }}
+            onClick={() => setResetPassUser(null)}
+          >
+            <div
+              className="card"
+              style={{
+                width: "100%",
+                maxWidth: 440,
+                padding: "24px 26px",
+                borderRadius: 16,
+                boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+                background: "#ffffff",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      background: "#eff6ff",
+                      color: "#2563eb",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Key size={18} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800 }}>Đổi mật khẩu tài khoản</h3>
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>
+                      {resetPassUser.hoTen} (@{resetPassUser.username})
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setResetPassUser(null)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {quickError && (
+                <div
+                  style={{
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    color: "#dc2626",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    fontSize: "0.82rem",
+                    marginBottom: 14,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <AlertCircle size={14} />
+                  <span>{quickError}</span>
+                </div>
+              )}
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!quickNewPassword.trim()) {
+                    setQuickError("Vui lòng nhập mật khẩu mới");
+                    return;
+                  }
+                  if (quickNewPassword.trim().length < 6) {
+                    setQuickError("Mật khẩu mới phải có ít nhất 6 ký tự");
+                    return;
+                  }
+                  setQuickSaving(true);
+                  setQuickError("");
+                  try {
+                    const res = await fetch(`/api/users/${resetPassUser.id}`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ password: quickNewPassword.trim() }),
+                    });
+                    const d = await res.json();
+                    if (!res.ok) {
+                      setQuickError(d.error || "Đổi mật khẩu thất bại");
+                    } else {
+                      showToast(`Đã đổi mật khẩu cho ${resetPassUser.hoTen} thành công!`, "success");
+                      setUsers((prev) =>
+                        prev.map((u) =>
+                          u.id === resetPassUser.id
+                            ? { ...u, plainPassword: quickNewPassword.trim() }
+                            : u
+                        )
+                      );
+                      setResetPassUser(null);
+                    }
+                  } catch {
+                    setQuickError("Lỗi kết nối máy chủ");
+                  } finally {
+                    setQuickSaving(false);
+                  }
+                }}
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
+                <div>
+                  <label className="label" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
+                    Mật khẩu mới (tối thiểu 6 ký tự) *
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={quickShowPassword ? "text" : "password"}
+                      className="input"
+                      placeholder="Nhập mật khẩu mới..."
+                      value={quickNewPassword}
+                      onChange={(e) => setQuickNewPassword(e.target.value)}
+                      style={{ paddingRight: 38 }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setQuickShowPassword(!quickShowPassword)}
+                      style={{
+                        position: "absolute",
+                        right: 10,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--text-muted)",
+                        padding: 2,
+                      }}
+                    >
+                      {quickShowPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Gợi ý mật khẩu 1-chạm */}
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>
+                    Gợi ý mật khẩu nhanh:
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {["123456", `${resetPassUser.username}123`, "gvcn123", "loptruong123", "totruong123"].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setQuickNewPassword(p)}
+                        style={{
+                          padding: "4px 8px",
+                          background: "#f1f5f9",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 6,
+                          fontSize: "0.75rem",
+                          fontFamily: "monospace",
+                          fontWeight: 700,
+                          color: "var(--text-secondary)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setResetPassUser(null)}
+                    disabled={quickSaving}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-sm"
+                    disabled={quickSaving}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                  >
+                    {quickSaving ? "Đang lưu..." : "Lưu mật khẩu mới"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>,
           document.body

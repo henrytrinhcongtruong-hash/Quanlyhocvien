@@ -1,33 +1,60 @@
-// src/app/api/users/route.ts — Quản lý users (chỉ isSuperAdmin)
+// src/app/api/users/route.ts — Quản lý users (SuperAdmin toàn quyền, GVCN quản lý lớp)
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { requireSuperAdmin } from "@/lib/permissions";
 import bcrypt from "bcryptjs";
 
-async function checkSA(req: NextRequest) {
+async function checkUserManagementAccess(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) return null;
+
     const isSuperAdminSession = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
-    const username = session.user.name || (session.user as { username?: string }).username;
+    const username = (session.user.name || (session.user as { username?: string }).username || "").toLowerCase();
+    const assignedLop = (session as { assignedLop?: string })?.assignedLop;
+    const roleLabel = ((session as { roleLabel?: string })?.roleLabel || "").toLowerCase();
+
     if (isSuperAdminSession || session.user.id === "1" || username === "admin") {
-      return session;
+      return { session, isSuperAdmin: true, assignedLop, isGVCN: true };
     }
+
     const isSA = await requireSuperAdmin(Number(session.user.id));
-    return isSA ? session : null;
+    if (isSA) {
+      return { session, isSuperAdmin: true, assignedLop, isGVCN: true };
+    }
+
+    // Check if user is GVCN
+    const isGVCN = roleLabel.includes("gvcn") || roleLabel.includes("chủ nhiệm") || roleLabel.includes("giáo viên");
+    if (isGVCN && assignedLop) {
+      return { session, isSuperAdmin: false, assignedLop, isGVCN: true };
+    }
+
+    return null;
   } catch (err) {
-    console.error("checkSA error:", err);
+    console.error("checkUserManagementAccess error:", err);
     return null;
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await checkSA(req);
-    if (!session) return NextResponse.json({ error: "Chỉ Admin Tổng mới được truy cập" }, { status: 403 });
+    const access = await checkUserManagementAccess(req);
+    if (!access) {
+      return NextResponse.json({ error: "Bạn không có quyền truy cập quản lý người dùng" }, { status: 403 });
+    }
+
+    const { isSuperAdmin, assignedLop } = access;
+    const where: Record<string, unknown> = {};
+
+    // GVCN only sees users of their assigned class, not SuperAdmin
+    if (!isSuperAdmin) {
+      where.assignedLop = assignedLop;
+      where.isSuperAdmin = false;
+    }
 
     const users = await prisma.user.findMany({
+      where,
       select: {
         id: true,
         username: true,
@@ -69,8 +96,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await checkSA(req);
-    if (!session) return NextResponse.json({ error: "Chỉ Admin Tổng mới được truy cập" }, { status: 403 });
+    const access = await checkUserManagementAccess(req);
+    if (!access) return NextResponse.json({ error: "Không có quyền thực hiện thao tác này" }, { status: 403 });
 
     const body = await req.json();
     const { username, password, hoTen, roleLabel, assignedLop, permissions } = body;

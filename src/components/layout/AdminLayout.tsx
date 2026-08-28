@@ -21,6 +21,11 @@ import {
   GraduationCap,
   CalendarDays,
   LayoutGrid,
+  Key,
+  Lock,
+  Eye,
+  EyeOff,
+  CheckCircle2,
 } from "lucide-react";
 
 // Nav items với icon và label
@@ -54,6 +59,9 @@ export default function AdminLayout({
   const assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
   const roleLabel = (session as { roleLabel?: string })?.roleLabel || (realIsSuperAdmin ? "Admin Tổng" : "Giáo Viên Chủ Nhiệm");
 
+  const isGVCN = roleLabel.toLowerCase().includes("gvcn") || roleLabel.toLowerCase().includes("chủ nhiệm") || roleLabel.toLowerCase().includes("giáo viên");
+  const canManageUsers = realIsSuperAdmin || isGVCN;
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
@@ -65,7 +73,73 @@ export default function AdminLayout({
     return searchParams.get("lop") || "12T2";
   });
 
-  const navItems = realIsSuperAdmin
+  // Self Change Password Modal State
+  const [changePassOpen, setChangePassOpen] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [changePassLoading, setChangePassLoading] = useState(false);
+  const [changePassError, setChangePassError] = useState("");
+  const [changePassSuccess, setChangePassSuccess] = useState("");
+
+  const handleOpenChangePass = () => {
+    setUserMenuOpen(false);
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setChangePassError("");
+    setChangePassSuccess("");
+    setShowOldPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+    setChangePassOpen(true);
+  };
+
+  const handleSubmitChangePass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangePassError("");
+    setChangePassSuccess("");
+
+    if (!oldPassword.trim() || !newPassword.trim()) {
+      setChangePassError("Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setChangePassError("Mật khẩu mới phải có ít nhất 6 ký tự");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setChangePassError("Xác nhận mật khẩu mới không khớp");
+      return;
+    }
+
+    setChangePassLoading(true);
+    try {
+      const res = await fetch("/api/users/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ oldPassword, newPassword, confirmPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setChangePassError(data.error || "Đổi mật khẩu thất bại");
+      } else {
+        setChangePassSuccess("Đổi mật khẩu thành công!");
+        setTimeout(() => {
+          setChangePassOpen(false);
+        }, 1200);
+      }
+    } catch {
+      setChangePassError("Lỗi kết nối máy chủ");
+    } finally {
+      setChangePassLoading(false);
+    }
+  };
+
+  const navItems = canManageUsers
     ? [...NAV_BASE, { href: "/admin/nguoi-dung", icon: UserCog, label: "Người dùng", module: "nguoi_dung" }]
     : NAV_BASE;
 
@@ -424,6 +498,29 @@ export default function AdminLayout({
                   </div>
                 </div>
                 <button
+                  type="button"
+                  onClick={handleOpenChangePass}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "none",
+                    background: "none",
+                    cursor: "pointer",
+                    borderRadius: 6,
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    color: "var(--primary)",
+                    textAlign: "left",
+                    marginBottom: 2,
+                  }}
+                >
+                  <Key size={14} />
+                  Đổi mật khẩu cá nhân
+                </button>
+                <button
                   onClick={handleSignOut}
                   style={{
                     display: "flex",
@@ -454,6 +551,233 @@ export default function AdminLayout({
           {children}
         </main>
       </div>
+
+      {/* ====== MODAL: TỰ ĐỔI MẬT KHẨU CÁ NHÂN ====== */}
+      {changePassOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 16,
+          }}
+          onClick={() => setChangePassOpen(false)}
+        >
+          <div
+            className="card"
+            style={{
+              width: "100%",
+              maxWidth: 440,
+              padding: "24px 26px",
+              borderRadius: 16,
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              background: "#ffffff",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: "var(--primary-light)",
+                    color: "var(--primary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Key size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800 }}>Đổi mật khẩu tài khoản</h3>
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>
+                    {session?.user?.name || "Người dùng"}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setChangePassOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {changePassError && (
+              <div
+                style={{
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  color: "#dc2626",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  fontSize: "0.82rem",
+                  marginBottom: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <Lock size={14} />
+                <span>{changePassError}</span>
+              </div>
+            )}
+
+            {changePassSuccess && (
+              <div
+                style={{
+                  background: "#ecfdf5",
+                  border: "1px solid #a7f3d0",
+                  color: "#059669",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  fontSize: "0.82rem",
+                  marginBottom: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <CheckCircle2 size={15} />
+                <span>{changePassSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitChangePass} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label className="label" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
+                  Mật khẩu hiện tại *
+                </label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showOldPassword ? "text" : "password"}
+                    className="input"
+                    placeholder="Nhập mật khẩu hiện tại..."
+                    value={oldPassword}
+                    onChange={(e) => setOldPassword(e.target.value)}
+                    style={{ paddingRight: 38 }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOldPassword(!showOldPassword)}
+                    style={{
+                      position: "absolute",
+                      right: 10,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--text-muted)",
+                      padding: 2,
+                    }}
+                  >
+                    {showOldPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="label" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
+                  Mật khẩu mới (tối thiểu 6 ký tự) *
+                </label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    className="input"
+                    placeholder="Nhập mật khẩu mới..."
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    style={{ paddingRight: 38 }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    style={{
+                      position: "absolute",
+                      right: 10,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--text-muted)",
+                      padding: 2,
+                    }}
+                  >
+                    {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="label" style={{ fontSize: "0.82rem", fontWeight: 700 }}>
+                  Xác nhận mật khẩu mới *
+                </label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    className="input"
+                    placeholder="Nhập lại mật khẩu mới..."
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    style={{ paddingRight: 38 }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{
+                      position: "absolute",
+                      right: 10,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--text-muted)",
+                      padding: 2,
+                    }}
+                  >
+                    {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setChangePassOpen(false)}
+                  disabled={changePassLoading}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={changePassLoading}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                >
+                  {changePassLoading ? "Đang lưu..." : "Xác nhận đổi mật khẩu"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @media (max-width: 768px) {
