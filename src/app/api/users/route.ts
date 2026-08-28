@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         username: true,
+        plainPassword: true,
         hoTen: true,
         roleLabel: true,
         assignedLop: true,
@@ -42,7 +43,24 @@ export async function GET(req: NextRequest) {
       orderBy: [{ isSuperAdmin: "desc" }, { hoTen: "asc" }],
     });
 
-    return NextResponse.json({ data: users });
+    // Known default accounts map for fallback display
+    const DEFAULT_PASSWORDS: Record<string, string> = {
+      admin: "admin123",
+      kimlien: "123456",
+      gvcn: "gvcn123",
+      loptruong: "loptruong123",
+      totruong2: "totruong123",
+    };
+
+    const enrichedUsers = users.map((u) => {
+      const fallbackPass = DEFAULT_PASSWORDS[u.username.toLowerCase()];
+      return {
+        ...u,
+        plainPassword: u.plainPassword || fallbackPass || "(Chưa lưu mật khẩu gốc)",
+      };
+    });
+
+    return NextResponse.json({ data: enrichedUsers });
   } catch (e) {
     console.error("GET users error:", e);
     return NextResponse.json({ error: "Lỗi server khi tải người dùng" }, { status: 500 });
@@ -73,6 +91,7 @@ export async function POST(req: NextRequest) {
       data: {
         username: username.trim().toLowerCase(),
         passwordHash,
+        plainPassword: String(password).trim(),
         hoTen: hoTen.trim(),
         roleLabel: roleLabel?.trim() || "",
         assignedLop: assignedLop?.trim() || "11AT3",
@@ -97,7 +116,6 @@ export async function POST(req: NextRequest) {
       include: { permissions: true },
     });
 
-    // Don't return passwordHash
     const { passwordHash: _, ...safeUser } = user;
     return NextResponse.json(safeUser, { status: 201 });
   } catch (e) {

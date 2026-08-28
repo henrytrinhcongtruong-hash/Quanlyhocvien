@@ -35,6 +35,7 @@ export async function GET(
     select: {
       id: true,
       username: true,
+      plainPassword: true,
       hoTen: true,
       roleLabel: true,
       assignedLop: true,
@@ -65,7 +66,10 @@ export async function PUT(
     if (roleLabel !== undefined) updateData.roleLabel = roleLabel.trim();
     if (assignedLop !== undefined) updateData.assignedLop = assignedLop.trim();
     if (isActive !== undefined) updateData.isActive = isActive;
-    if (password) updateData.passwordHash = await bcrypt.hash(password, 12);
+    if (password && String(password).trim()) {
+      updateData.passwordHash = await bcrypt.hash(String(password).trim(), 12);
+      updateData.plainPassword = String(password).trim();
+    }
 
     const user = await prisma.user.update({
       where: { id: Number(id) },
@@ -73,6 +77,7 @@ export async function PUT(
       select: {
         id: true,
         username: true,
+        plainPassword: true,
         hoTen: true,
         roleLabel: true,
         assignedLop: true,

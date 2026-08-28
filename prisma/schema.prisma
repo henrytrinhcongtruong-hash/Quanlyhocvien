@@ -221,16 +221,17 @@ model SeatingChart {
 // USER & PHÂN QUYỀN
 // =========================================
 model User {
-  id           Int      @id @default(autoincrement())
-  username     String   @unique
-  passwordHash String
-  hoTen        String
-  roleLabel    String   @default("")
-  assignedLop  String   @default("11AT3")
-  isSuperAdmin Boolean  @default(false)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  passwordHash  String
+  plainPassword String?  // Mật khẩu hiển thị cho Admin quản lý
+  hoTen         String
+  roleLabel     String   @default("")
+  assignedLop   String   @default("11AT3")
+  isSuperAdmin  Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   permissions UserPermission[]
 

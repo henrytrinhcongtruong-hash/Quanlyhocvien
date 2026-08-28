@@ -19,11 +19,16 @@ import {
   User,
   Layers,
   Settings,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
 } from "lucide-react";
 
 interface UserItem {
   id: number;
   username: string;
+  plainPassword?: string;
   hoTen: string;
   roleLabel: string | null;
   assignedLop: string | null;
@@ -152,6 +157,11 @@ export default function AdminNguoiDungPage() {
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Password visibility & copy states for Admin
+  const [showPasswordIds, setShowPasswordIds] = useState<Record<number, boolean>>({});
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [showModalPass, setShowModalPass] = useState(false);
+
   // Form State
   const [form, setForm] = useState({
     username: "",
@@ -251,6 +261,7 @@ export default function AdminNguoiDungPage() {
 
   function openCreate() {
     setEditingUser(null);
+    setShowModalPass(false);
     setForm({
       username: "",
       password: "",
@@ -265,6 +276,7 @@ export default function AdminNguoiDungPage() {
 
   function openEdit(user: UserItem) {
     setEditingUser(user);
+    setShowModalPass(false);
     setForm({
       username: user.username,
       password: "",
@@ -518,6 +530,7 @@ export default function AdminNguoiDungPage() {
               <thead>
                 <tr>
                   <th>Tên đăng nhập</th>
+                  <th>Mật khẩu</th>
                   <th>Họ và tên</th>
                   <th>Lớp phụ trách</th>
                   <th>Chức danh</th>
@@ -536,6 +549,80 @@ export default function AdminNguoiDungPage() {
                           </span>
                         ) : null}
                         <span style={{ fontWeight: 700, color: "var(--primary)" }}>{u.username}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          background: "#f8fafc",
+                          padding: "4px 8px",
+                          borderRadius: 8,
+                          border: "1px solid var(--border)",
+                        }}
+                      >
+                        <Key size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+                        <span
+                          style={{
+                            fontFamily: "monospace",
+                            fontSize: "0.85rem",
+                            fontWeight: 700,
+                            letterSpacing: showPasswordIds[u.id] ? "0px" : "2px",
+                            color: showPasswordIds[u.id] ? "var(--primary)" : "var(--text-secondary)",
+                          }}
+                        >
+                          {showPasswordIds[u.id]
+                            ? u.plainPassword || (u.username === "admin" ? "admin123" : "123456")
+                            : "••••••••"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowPasswordIds((prev) => ({
+                              ...prev,
+                              [u.id]: !prev[u.id],
+                            }))
+                          }
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "2px 4px",
+                            display: "flex",
+                            alignItems: "center",
+                            color: "var(--text-muted)",
+                            borderRadius: 4,
+                          }}
+                          title={showPasswordIds[u.id] ? "Ẩn mật khẩu" : "Xem mật khẩu"}
+                        >
+                          {showPasswordIds[u.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const pass =
+                              u.plainPassword ||
+                              (u.username === "admin" ? "admin123" : "123456");
+                            navigator.clipboard.writeText(pass);
+                            setCopiedId(u.id);
+                            setTimeout(() => setCopiedId(null), 2000);
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "2px 4px",
+                            display: "flex",
+                            alignItems: "center",
+                            color: copiedId === u.id ? "#10b981" : "var(--text-muted)",
+                            borderRadius: 4,
+                          }}
+                          title="Sao chép mật khẩu"
+                        >
+                          {copiedId === u.id ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
+                        </button>
                       </div>
                     </td>
                     <td style={{ fontWeight: 600 }}>{u.hoTen}</td>
@@ -729,16 +816,46 @@ export default function AdminNguoiDungPage() {
                       />
                     </div>
                     <div>
-                      <label className="label">
-                        Mật khẩu {editingUser ? "(Bỏ trống nếu giữ nguyên)" : "*"}
-                      </label>
-                      <input
-                        type="password"
-                        className="input"
-                        value={form.password}
-                        onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                        placeholder={editingUser ? "••••••••" : "Nhập mật khẩu..."}
-                      />
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <label className="label" style={{ margin: 0 }}>
+                          Mật khẩu {editingUser ? "(Bỏ trống nếu giữ nguyên)" : "*"}
+                        </label>
+                        {editingUser?.plainPassword && (
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                            Mật khẩu hiện tại: <strong style={{ color: "var(--primary)" }}>{editingUser.plainPassword}</strong>
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ position: "relative" }}>
+                        <input
+                          type={showModalPass ? "text" : "password"}
+                          className="input"
+                          style={{ paddingRight: 40 }}
+                          value={form.password}
+                          onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                          placeholder={editingUser ? `Giữ nguyên (${editingUser.plainPassword || "••••••••"})` : "Nhập mật khẩu..."}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowModalPass((s) => !s)}
+                          style={{
+                            position: "absolute",
+                            right: 10,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "var(--text-muted)",
+                            padding: 4,
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                          title={showModalPass ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                        >
+                          {showModalPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <label className="label">Họ và tên *</label>
