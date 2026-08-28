@@ -48,7 +48,7 @@ export default function HocSinhPage() {
   const { data: session } = useSession();
 
   const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
-  const assignedLop = (session as { assignedLop?: string })?.assignedLop || "11AT3";
+  const assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
 
   const [students, setStudents] = useState<Student[]>([]);
   const [total, setTotal] = useState(0);
@@ -58,9 +58,9 @@ export default function HocSinhPage() {
   const [filterTo, setFilterTo] = useState(0);
   const [filterLop, setFilterLop] = useState(() => {
     if (!isSuperAdmin && assignedLop) return assignedLop;
-    return urlLop || "ALL";
+    return urlLop || "12T2";
   });
-  const [classList, setClassList] = useState<string[]>(["11AT3", "12T2"]);
+  const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);

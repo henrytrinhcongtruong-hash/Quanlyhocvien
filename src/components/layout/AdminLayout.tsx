@@ -56,13 +56,13 @@ export default function AdminLayout({
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [classList, setClassList] = useState<string[]>(["11AT3", "12T2"]);
+  const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
   const [selectedClass, setSelectedClass] = useState<string>(() => {
     if (!realIsSuperAdmin) return assignedLop;
     if (typeof window !== "undefined") {
-      return searchParams.get("lop") || localStorage.getItem("admin_selected_class") || "ALL";
+      return searchParams.get("lop") || localStorage.getItem("admin_selected_class") || "12T2";
     }
-    return searchParams.get("lop") || "ALL";
+    return searchParams.get("lop") || "12T2";
   });
 
   const navItems = realIsSuperAdmin
@@ -81,9 +81,12 @@ export default function AdminLayout({
       localStorage.setItem("admin_selected_class", urlLop);
     } else {
       const saved = localStorage.getItem("admin_selected_class");
-      if (saved && saved !== "ALL") {
+      if (saved) {
         setSelectedClass(saved);
         router.replace(`${pathname}?lop=${saved}`);
+      } else {
+        setSelectedClass("12T2");
+        router.replace(`${pathname}?lop=12T2`);
       }
     }
   }, [searchParams, realIsSuperAdmin, assignedLop, pathname, router]);
