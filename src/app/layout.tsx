@@ -18,8 +18,16 @@ export const metadata: Metadata = {
   },
 };
 
+import { Be_Vietnam_Pro } from "next/font/google";
 import SessionProviderWrapper from "@/components/layout/SessionProviderWrapper";
 import { auth } from "@/lib/auth";
+
+const beVietnamPro = Be_Vietnam_Pro({
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  subsets: ["latin", "vietnamese"],
+  display: "swap",
+  variable: "--font-be-vietnam-pro",
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -35,8 +43,8 @@ export default async function RootLayout({
   const session = await auth();
 
   return (
-    <html lang="vi">
-      <body>
+    <html lang="vi" className={beVietnamPro.className}>
+      <body style={{ minHeight: "100dvh" }}>
         <SessionProviderWrapper session={session}>
           {children}
         </SessionProviderWrapper>

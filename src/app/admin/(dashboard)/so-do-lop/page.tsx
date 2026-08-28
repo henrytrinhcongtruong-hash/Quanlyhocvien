@@ -690,6 +690,8 @@ export default function AdminSoDoLopPage() {
               <img
                 src={slot.studentPhoto}
                 alt={slot.studentName || "Avatar"}
+                loading="lazy"
+                decoding="async"
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             ) : (
