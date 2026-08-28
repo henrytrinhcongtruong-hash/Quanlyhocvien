@@ -1236,8 +1236,43 @@ export default function AdminSoDoLopPage() {
                 "{slogan}"
               </div>
             )}
-            <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 3, fontWeight: 600 }}>
-              Áp dụng: {selectedMonth} • Hệ thống Quanlyhocvien
+            {/* Chú thích màu sắc 4 Tổ */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#000000", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Chú thích:
+              </span>
+              {[
+                { to: 1, name: "Tổ 1", bg: "#e0f2fe", text: "#0369a1", border: "#38bdf8" },
+                { to: 2, name: "Tổ 2", bg: "#dcfce7", text: "#15803d", border: "#4ade80" },
+                { to: 3, name: "Tổ 3", bg: "#fef3c7", text: "#b45309", border: "#fcd34d" },
+                { to: 4, name: "Tổ 4", bg: "#f3e8ff", text: "#7e22ce", border: "#c084fc" },
+              ].map((t) => (
+                <div
+                  key={t.to}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "3px 10px",
+                    borderRadius: 8,
+                    background: t.bg,
+                    border: `1.5px solid ${t.border}`,
+                    color: t.text,
+                    fontSize: "0.78rem",
+                    fontWeight: 800,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: t.text,
+                    }}
+                  />
+                  {t.name}
+                </div>
+              ))}
             </div>
           </div>
 
