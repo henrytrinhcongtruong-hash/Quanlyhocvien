@@ -1,0 +1,431 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import {
+  GraduationCap,
+  User,
+  School,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+
+export default function DangKyHocVienPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const defaultLop = searchParams.get("lop") || "12T2";
+
+  const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
+  const [hoTen, setHoTen] = useState("");
+  const [lop, setLop] = useState(defaultLop);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  // Load active class list
+  useEffect(() => {
+    fetch("/api/classes")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.data && d.data.length > 0) {
+          setClassList(d.data);
+          if (!d.data.includes(lop)) {
+            setLop(d.data[0]);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [lop]);
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!hoTen.trim()) {
+      setError("Vui lòng nhập họ và tên của bạn.");
+      return;
+    }
+    if (!lop) {
+      setError("Vui lòng chọn lớp học.");
+      return;
+    }
+    if (!username.trim()) {
+      setError("Vui lòng nhập tên đăng nhập mong muốn.");
+      return;
+    }
+    if (!password) {
+      setError("Vui lòng nhập mật khẩu.");
+      return;
+    }
+    if (password.length < 4) {
+      setError("Mật khẩu phải có ít nhất 4 ký tự.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Mật khẩu và xác nhận mật khẩu không khớp nhau.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/register-student", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hoTen: hoTen.trim(),
+          lop,
+          username: username.trim(),
+          password,
+          confirmPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.");
+        setLoading(false);
+        return;
+      }
+
+      setSuccess(`Chúc mừng ${data.user.hoTen}! Đang tự động đăng nhập vào Cổng Lớp ${data.user.lop}...`);
+
+      // Auto sign-in immediately
+      const loginRes = await signIn("credentials", {
+        username: username.trim(),
+        password,
+        redirect: false,
+      });
+
+      if (loginRes?.ok) {
+        setTimeout(() => {
+          window.location.href = `/?lop=${data.user.lop}`;
+        }, 1200);
+      } else {
+        setTimeout(() => {
+          router.push(`/admin/login?registered=1&username=${encodeURIComponent(username.trim())}`);
+        }, 1500);
+      }
+    } catch {
+      setError("Lỗi kết nối máy chủ. Vui lòng thử lại sau.");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: "100dvh",
+        background: "linear-gradient(135deg, #0284c7 0%, #1e40af 50%, #4f46e5 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px 16px",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Decorative glows */}
+      <div
+        style={{
+          position: "absolute",
+          top: -100,
+          right: -100,
+          width: 320,
+          height: 320,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: -100,
+          left: -100,
+          width: 320,
+          height: 320,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(56,189,248,0.25) 0%, rgba(56,189,248,0) 70%)",
+          pointerEvents: "none",
+        }}
+      />
+
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 480,
+          background: "#ffffff",
+          borderRadius: 24,
+          boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
+          padding: "32px 30px",
+          position: "relative",
+          zIndex: 1,
+          border: "1px solid rgba(255,255,255,0.8)",
+        }}
+      >
+        {/* Brand Header */}
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: 18,
+              background: "linear-gradient(135deg, #0284c7 0%, #4f46e5 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 12px",
+              boxShadow: "0 8px 20px rgba(2,132,199,0.35)",
+            }}
+          >
+            <GraduationCap size={32} color="white" />
+          </div>
+          <h1 style={{ fontSize: "1.45rem", fontWeight: 900, color: "#0f172a", margin: "0 0 6px" }}>
+            Đăng Ký Tài Khoản Học Viên
+          </h1>
+          <p style={{ color: "#64748b", fontSize: "0.85rem", margin: 0, lineHeight: 1.4 }}>
+            Xác thực danh tính học sinh để xem dữ liệu lớp học riêng tư
+          </p>
+        </div>
+
+        {/* Security Note Banner */}
+        <div
+          style={{
+            background: "#f0f9ff",
+            border: "1.5px solid #bae6fd",
+            borderRadius: 14,
+            padding: "10px 14px",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 20,
+          }}
+        >
+          <ShieldCheck size={18} color="#0284c7" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: "0.78rem", color: "#0369a1", fontWeight: 600, lineHeight: 1.35 }}>
+            Chỉ học sinh có tên trong danh sách lớp mới có thể đăng ký tài khoản.
+          </div>
+        </div>
+
+        {/* Alerts */}
+        {error && (
+          <div
+            style={{
+              background: "#fef2f2",
+              border: "1.5px solid #fecaca",
+              borderRadius: 12,
+              padding: "10px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              color: "#dc2626",
+              fontSize: "0.82rem",
+              fontWeight: 600,
+              marginBottom: 16,
+            }}
+          >
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div
+            style={{
+              background: "#f0fdf4",
+              border: "1.5px solid #bbf7d0",
+              borderRadius: 12,
+              padding: "10px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              color: "#15803d",
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              marginBottom: 16,
+            }}
+          >
+            <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+            <span>{success}</span>
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* 1. Họ và tên */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#1e293b", marginBottom: 6 }}>
+              Họ và tên học sinh <span style={{ color: "#dc2626" }}>*</span>
+            </label>
+            <div style={{ position: "relative" }}>
+              <User size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+              <input
+                type="text"
+                className="input"
+                style={{ paddingLeft: 42, height: 44, borderRadius: 12, border: "1.5px solid #cbd5e1", fontSize: "0.9rem" }}
+                placeholder="Nhập đúng họ tên trên danh sách lớp..."
+                value={hoTen}
+                onChange={(e) => setHoTen(e.target.value)}
+                disabled={loading}
+                required
+              />
+            </div>
+          </div>
+
+          {/* 2. Lớp */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#1e293b", marginBottom: 6 }}>
+              Lớp học của bạn <span style={{ color: "#dc2626" }}>*</span>
+            </label>
+            <div style={{ position: "relative" }}>
+              <School size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+              <select
+                className="select"
+                style={{ paddingLeft: 42, height: 44, borderRadius: 12, border: "1.5px solid #cbd5e1", fontSize: "0.9rem", fontWeight: 700, color: "#0f172a" }}
+                value={lop}
+                onChange={(e) => setLop(e.target.value)}
+                disabled={loading}
+              >
+                {classList.map((c) => (
+                  <option key={c} value={c}>
+                    Lớp {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* 3. Tên đăng nhập */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#1e293b", marginBottom: 6 }}>
+              Tên đăng nhập muốn tạo <span style={{ color: "#dc2626" }}>*</span>
+            </label>
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontWeight: 800 }}>@</span>
+              <input
+                type="text"
+                className="input"
+                style={{ paddingLeft: 38, height: 44, borderRadius: 12, border: "1.5px solid #cbd5e1", fontSize: "0.9rem" }}
+                placeholder="Ví dụ: van_a hoặc an12t2 (viết liền không dấu)"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+                required
+              />
+            </div>
+          </div>
+
+          {/* 4. Mật khẩu */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#1e293b", marginBottom: 6 }}>
+              Mật khẩu <span style={{ color: "#dc2626" }}>*</span>
+            </label>
+            <div style={{ position: "relative" }}>
+              <Lock size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+              <input
+                type={showPass ? "text" : "password"}
+                className="input"
+                style={{ paddingLeft: 42, paddingRight: 40, height: 44, borderRadius: 12, border: "1.5px solid #cbd5e1", fontSize: "0.9rem" }}
+                placeholder="Tối thiểu 4 ký tự..."
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(!showPass)}
+                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
+              >
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* 5. Xác nhận Mật khẩu */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#1e293b", marginBottom: 6 }}>
+              Xác nhận lại mật khẩu <span style={{ color: "#dc2626" }}>*</span>
+            </label>
+            <div style={{ position: "relative" }}>
+              <Lock size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+              <input
+                type={showConfirmPass ? "text" : "password"}
+                className="input"
+                style={{ paddingLeft: 42, paddingRight: 40, height: 44, borderRadius: 12, border: "1.5px solid #cbd5e1", fontSize: "0.9rem" }}
+                placeholder="Nhập lại đúng mật khẩu phía trên..."
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPass(!showConfirmPass)}
+                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
+              >
+                {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit button */}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              marginTop: 8,
+              height: 48,
+              borderRadius: 14,
+              border: "none",
+              background: "linear-gradient(135deg, #0284c7 0%, #2563eb 100%)",
+              color: "white",
+              fontWeight: 800,
+              fontSize: "0.95rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              cursor: loading ? "not-allowed" : "pointer",
+              boxShadow: "0 6px 20px rgba(2, 132, 199, 0.35)",
+              transition: "all 0.15s ease",
+            }}
+          >
+            {loading ? "Đang xác thực & tạo tài khoản..." : (
+              <>
+                Đăng Ký Tài Khoản Học Viên <ArrowRight size={17} />
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Footer switch to Login */}
+        <div style={{ marginTop: 22, textAlign: "center", borderTop: "1.5px solid #f1f5f9", paddingTop: 16 }}>
+          <span style={{ fontSize: "0.85rem", color: "#64748b" }}>Đã có tài khoản học viên? </span>
+          <Link
+            href="/admin/login"
+            style={{ fontSize: "0.85rem", fontWeight: 800, color: "#0284c7", textDecoration: "none" }}
+          >
+            Đăng nhập ngay →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}

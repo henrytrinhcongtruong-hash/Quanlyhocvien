@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Lock, User, Eye, EyeOff, AlertCircle, BookOpen } from "lucide-react";
 
 export default function LoginPage() {
@@ -264,7 +265,7 @@ export default function LoginPage() {
           <button
             type="submit"
             className="btn btn-primary"
-            style={{ width: "100%", marginTop: 4, fontSize: "0.95rem", height: 42 }}
+            style={{ width: "100%", marginTop: 4, fontSize: "0.95rem", height: 44, borderRadius: 12, fontWeight: 800 }}
             disabled={loading}
           >
             {loading ? (
@@ -283,10 +284,34 @@ export default function LoginPage() {
                 Đang đăng nhập...
               </>
             ) : (
-              "Đăng nhập"
+              "Đăng nhập hệ thống"
             )}
           </button>
         </form>
+
+        {/* Student Register Banner */}
+        <div style={{ marginTop: 24, textAlign: "center", borderTop: "1.5px solid #f1f5f9", paddingTop: 16 }}>
+          <div style={{ fontSize: "0.82rem", color: "#64748b", marginBottom: 6 }}>
+            Bạn là học sinh và chưa có tài khoản?
+          </div>
+          <Link
+            href="/dang-ky"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: "0.85rem",
+              fontWeight: 800,
+              color: "#0284c7",
+              textDecoration: "none",
+              background: "#e0f2fe",
+              padding: "6px 14px",
+              borderRadius: 10,
+            }}
+          >
+            ✨ Đăng Ký Tài Khoản Học Viên Ngay
+          </Link>
+        </div>
 
         <style>{`
           @keyframes spin { to { transform: rotate(360deg); } }

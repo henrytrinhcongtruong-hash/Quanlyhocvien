@@ -2,7 +2,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import {
   Users,
   BookOpen,
@@ -16,6 +16,11 @@ import {
   GraduationCap,
   CalendarDays,
   LayoutGrid,
+  LogIn,
+  LogOut,
+  UserCheck,
+  User,
+  Sparkles,
 } from "lucide-react";
 
 const NAV_BASE = [
@@ -36,11 +41,13 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
   const userAssignedLop = (session as { assignedLop?: string })?.assignedLop;
+  const userRole = (session as { roleLabel?: string })?.roleLabel || "Học viên";
+  const userName = session?.user?.name || (session as { hoTen?: string })?.hoTen || session?.user?.email;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
 
-  // Determine active class with strict priority for logged in GVCN/class users
+  // Determine active class with strict priority for logged in students/users
   const [activeClass, setActiveClass] = useState<string>(() => {
     if (session?.user && !isSuperAdmin && userAssignedLop && userAssignedLop !== "ALL") {
       return userAssignedLop;
@@ -100,7 +107,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
           position: "sticky",
           top: 0,
           zIndex: 50,
-          background: "rgba(255, 255, 255, 0.90)",
+          background: "rgba(255, 255, 255, 0.92)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
           borderBottom: "1px solid rgba(226, 232, 240, 0.9)",
@@ -109,18 +116,18 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
       >
         <div
           style={{
-            maxWidth: 1380,
+            maxWidth: 1400,
             margin: "0 auto",
-            padding: "0 20px",
+            padding: "0 18px",
             height: 64,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            gap: 16,
+            gap: 12,
           }}
         >
           {/* Left: Brand Logo & Class Info */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
             <Link href={`/?lop=${activeClass}`} style={{ textDecoration: "none" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div
@@ -139,7 +146,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                   <GraduationCap size={22} color="white" />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 900, fontSize: "1.08rem", lineHeight: 1.15, color: "#0f172a", letterSpacing: "-0.4px" }}>
+                  <div style={{ fontWeight: 900, fontSize: "1.05rem", lineHeight: 1.15, color: "#0f172a", letterSpacing: "-0.4px" }}>
                     Quanlyhocvien
                   </div>
                   <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>
@@ -211,10 +218,10 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
-                    padding: "6px 12px",
+                    padding: "7px 11px",
                     borderRadius: 9,
-                    fontSize: "0.84rem",
-                    fontWeight: active ? 800 : 650,
+                    fontSize: "0.82rem",
+                    fontWeight: active ? 800 : 600,
                     whiteSpace: "nowrap",
                     textDecoration: "none",
                     color: active ? "#0369a1" : "#475569",
@@ -233,32 +240,111 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
               );
             })}
 
-            <div style={{ width: 1, height: 22, background: "var(--border)", margin: "0 6px", flexShrink: 0 }} />
+            <div style={{ width: 1, height: 22, background: "var(--border)", margin: "0 4px", flexShrink: 0 }} />
 
-            {/* Quản Trị Button */}
-            <Link
-              href={`/admin?lop=${activeClass}`}
-              prefetch={true}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "7px 16px",
-                borderRadius: 10,
-                fontSize: "0.84rem",
-                fontWeight: 800,
-                whiteSpace: "nowrap",
-                textDecoration: "none",
-                background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
-                color: "white",
-                boxShadow: "0 2px 8px rgba(2,132,199,0.3)",
-                transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
-                flexShrink: 0,
-              }}
-            >
-              <span>Quản trị</span>
-              <ChevronRight size={14} />
-            </Link>
+            {/* User Session status & Actions */}
+            {session?.user ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    padding: "4px 10px",
+                    borderRadius: 12,
+                  }}
+                >
+                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#0284c7", color: "white", fontSize: "0.72rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {userName ? userName.substring(0, 1).toUpperCase() : "U"}
+                  </div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#0f172a", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {userName}
+                  </div>
+                  <span style={{ fontSize: "0.68rem", background: "#e0f2fe", color: "#0369a1", padding: "1px 6px", borderRadius: 6, fontWeight: 700 }}>
+                    {userRole}
+                  </span>
+                </div>
+
+                <Link
+                  href={`/admin?lop=${activeClass}`}
+                  prefetch={true}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "7px 12px",
+                    borderRadius: 10,
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    textDecoration: "none",
+                    background: "#0284c7",
+                    color: "white",
+                  }}
+                >
+                  Quản trị
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: `/?lop=${activeClass}` })}
+                  title="Đăng xuất khỏi hệ thống"
+                  style={{
+                    border: "1px solid #e2e8f0",
+                    background: "#ffffff",
+                    color: "#dc2626",
+                    padding: "6px 8px",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <LogOut size={14} />
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Link
+                  href={`/dang-ky?lop=${activeClass}`}
+                  prefetch={true}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "6px 12px",
+                    borderRadius: 10,
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    textDecoration: "none",
+                    background: "#e0f2fe",
+                    color: "#0369a1",
+                    border: "1px solid #bae6fd",
+                  }}
+                >
+                  <Sparkles size={13} /> Đăng ký
+                </Link>
+                <Link
+                  href={`/admin/login?lop=${activeClass}`}
+                  prefetch={true}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "6px 12px",
+                    borderRadius: 10,
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    textDecoration: "none",
+                    background: "#0284c7",
+                    color: "white",
+                  }}
+                >
+                  <LogIn size={13} /> Đăng nhập
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile hamburger button */}
@@ -295,6 +381,22 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
               gap: 6,
             }}
           >
+            {session?.user && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "#f8fafc", borderRadius: 10, marginBottom: 6 }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "#0f172a" }}>{userName}</div>
+                  <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{userRole} • Lớp {activeClass}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: `/?lop=${activeClass}` })}
+                  style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: 6, fontSize: "0.75rem", fontWeight: 700 }}
+                >
+                  Đăng xuất
+                </button>
+              </div>
+            )}
+
             {navItems.map((item) => {
               const active = item.exact
                 ? pathname === item.href
@@ -326,28 +428,75 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
 
             <div style={{ height: 1, background: "var(--border)", margin: "6px 0" }} />
 
-            <Link
-              href={`/admin?lop=${activeClass}`}
-              prefetch={true}
-              onClick={() => setMenuOpen(false)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                padding: "11px 16px",
-                borderRadius: 10,
-                fontSize: "0.9rem",
-                fontWeight: 800,
-                textDecoration: "none",
-                background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
-                color: "white",
-                boxShadow: "0 2px 8px rgba(2,132,199,0.3)",
-              }}
-            >
-              <span>Trang Quản trị Lớp {activeClass}</span>
-              <ChevronRight size={16} />
-            </Link>
+            {!session?.user ? (
+              <div style={{ display: "flex", gap: 8 }}>
+                <Link
+                  href={`/dang-ky?lop=${activeClass}`}
+                  prefetch={true}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    padding: "10px",
+                    borderRadius: 10,
+                    fontSize: "0.88rem",
+                    fontWeight: 800,
+                    textDecoration: "none",
+                    background: "#e0f2fe",
+                    color: "#0369a1",
+                  }}
+                >
+                  <Sparkles size={16} /> Đăng ký học viên
+                </Link>
+                <Link
+                  href={`/admin/login?lop=${activeClass}`}
+                  prefetch={true}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    padding: "10px",
+                    borderRadius: 10,
+                    fontSize: "0.88rem",
+                    fontWeight: 800,
+                    textDecoration: "none",
+                    background: "#0284c7",
+                    color: "white",
+                  }}
+                >
+                  <LogIn size={16} /> Đăng nhập
+                </Link>
+              </div>
+            ) : (
+              <Link
+                href={`/admin?lop=${activeClass}`}
+                prefetch={true}
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  padding: "11px 16px",
+                  borderRadius: 10,
+                  fontSize: "0.9rem",
+                  fontWeight: 800,
+                  textDecoration: "none",
+                  background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
+                  color: "white",
+                  boxShadow: "0 2px 8px rgba(2,132,199,0.3)",
+                }}
+              >
+                <span>Trang Quản trị Lớp {activeClass}</span>
+                <ChevronRight size={16} />
+              </Link>
+            )}
           </div>
         )}
       </nav>
