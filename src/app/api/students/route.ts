@@ -25,13 +25,48 @@ export async function GET(req: NextRequest) {
 
     if (session?.user?.id && !isSuperAdmin) {
       const userId = Number(session.user.id);
-      const perm = await checkPermission(userId, "hoc_sinh", "chi_xem");
-      if (!perm.allowed) {
+      assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
+
+      // Allow viewing students if user has permission on hoc_sinh or any related classroom module
+      const [
+        hocSinhPerm,
+        diemDanhPerm,
+        soDoPerm,
+        tkbPerm,
+        thiPerm,
+        trucPerm,
+        suKienPerm,
+        baoCaoPerm,
+      ] = await Promise.all([
+        checkPermission(userId, "hoc_sinh", "chi_xem"),
+        checkPermission(userId, "diem_danh", "chi_xem"),
+        checkPermission(userId, "so_do_lop", "chi_xem"),
+        checkPermission(userId, "thoi_khoa_bieu", "chi_xem"),
+        checkPermission(userId, "lich_thi", "chi_xem"),
+        checkPermission(userId, "lich_truc", "chi_xem"),
+        checkPermission(userId, "su_kien", "chi_xem"),
+        checkPermission(userId, "bao_cao", "chi_xem"),
+      ]);
+
+      const hasAccess =
+        hocSinhPerm.allowed ||
+        diemDanhPerm.allowed ||
+        soDoPerm.allowed ||
+        tkbPerm.allowed ||
+        thiPerm.allowed ||
+        trucPerm.allowed ||
+        suKienPerm.allowed ||
+        baoCaoPerm.allowed;
+
+      if (!hasAccess) {
         return NextResponse.json({ error: "Không có quyền xem học sinh" }, { status: 403 });
       }
+
+      // If specific scope applies to hoc_sinh
       const scope = await getScopeFilter(userId, "hoc_sinh");
-      allowedToIds = scope.toFilter;
-      assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
+      if (scope.toFilter && scope.toFilter.length > 0) {
+        allowedToIds = scope.toFilter;
+      }
     }
 
     const where: Record<string, unknown> = {};
@@ -44,7 +79,7 @@ export async function GET(req: NextRequest) {
 
     if (toParam && Number(toParam) > 0) {
       where.to = Number(toParam);
-    } else if (allowedToIds !== null) {
+    } else if (allowedToIds !== null && allowedToIds.length > 0) {
       where.to = { in: allowedToIds };
     }
 

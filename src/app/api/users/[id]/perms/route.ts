@@ -4,19 +4,34 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { requireSuperAdmin } from "@/lib/permissions";
 
-async function checkSA(req: NextRequest) {
+async function checkUserManagementAccess(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) return null;
+
     const isSuperAdminSession = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
-    const username = session.user.name || (session.user as { username?: string }).username;
+    const username = (session.user.name || (session.user as { username?: string }).username || "").toLowerCase();
+    const assignedLop = (session as { assignedLop?: string })?.assignedLop;
+    const roleLabel = ((session as { roleLabel?: string })?.roleLabel || "").toLowerCase();
+
     if (isSuperAdminSession || session.user.id === "1" || username === "admin") {
-      return session;
+      return { session, isSuperAdmin: true, assignedLop, isGVCN: true };
     }
+
     const isSA = await requireSuperAdmin(Number(session.user.id));
-    return isSA ? session : null;
+    if (isSA) {
+      return { session, isSuperAdmin: true, assignedLop, isGVCN: true };
+    }
+
+    // Check if user is GVCN
+    const isGVCN = roleLabel.includes("gvcn") || roleLabel.includes("chủ nhiệm") || roleLabel.includes("giáo viên");
+    if (isGVCN && assignedLop) {
+      return { session, isSuperAdmin: false, assignedLop, isGVCN: true };
+    }
+
+    return null;
   } catch (err) {
-    console.error("checkSA error:", err);
+    console.error("checkUserManagementAccess error:", err);
     return null;
   }
 }
@@ -26,8 +41,20 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const session = await checkSA(req);
-  if (!session) return NextResponse.json({ error: "Không có quyền truy cập" }, { status: 403 });
+  const access = await checkUserManagementAccess(req);
+  if (!access) return NextResponse.json({ error: "Không có quyền truy cập" }, { status: 403 });
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: Number(id) },
+    select: { assignedLop: true, isSuperAdmin: true },
+  });
+  if (!targetUser) return NextResponse.json({ error: "Không tìm thấy người dùng" }, { status: 404 });
+
+  if (!access.isSuperAdmin) {
+    if (targetUser.assignedLop !== access.assignedLop || targetUser.isSuperAdmin) {
+      return NextResponse.json({ error: "Bạn chỉ có thể xem quyền của người dùng thuộc lớp của mình" }, { status: 403 });
+    }
+  }
 
   const perms = await prisma.userPermission.findMany({
     where: { userId: Number(id) },
@@ -42,8 +69,20 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const session = await checkSA(req);
-    if (!session) return NextResponse.json({ error: "Không có quyền truy cập" }, { status: 403 });
+    const access = await checkUserManagementAccess(req);
+    if (!access) return NextResponse.json({ error: "Không có quyền truy cập" }, { status: 403 });
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: Number(id) },
+      select: { assignedLop: true, isSuperAdmin: true },
+    });
+    if (!targetUser) return NextResponse.json({ error: "Không tìm thấy người dùng" }, { status: 404 });
+
+    if (!access.isSuperAdmin) {
+      if (targetUser.assignedLop !== access.assignedLop || targetUser.isSuperAdmin) {
+        return NextResponse.json({ error: "Bạn chỉ có thể chỉnh sửa quyền của người dùng thuộc lớp của mình" }, { status: 403 });
+      }
+    }
 
     const body = await req.json();
     const { permissions } = body;
