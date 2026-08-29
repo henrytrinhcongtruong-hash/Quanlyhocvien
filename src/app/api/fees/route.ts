@@ -25,9 +25,23 @@ export async function GET(req: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
     }
-    const userId = Number(session.user.id);
-    const { allowed } = await checkPermission(userId, "quy", "chi_xem");
-    if (!allowed) return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
+    const isSuperAdmin = !!(
+      (session as { isSuperAdmin?: boolean })?.isSuperAdmin ||
+      (session?.user as { isSuperAdmin?: boolean })?.isSuperAdmin ||
+      session?.user?.id === "1"
+    );
+    const userRole = (
+      (session as { roleLabel?: string })?.roleLabel ||
+      (session?.user as { roleLabel?: string })?.roleLabel ||
+      ""
+    ).toLowerCase();
+    const isStudent = userRole.includes("học viên") || userRole.includes("student");
+
+    if (!isSuperAdmin && !isStudent) {
+      const userId = Number(session.user.id);
+      const { allowed } = await checkPermission(userId, "quy", "chi_xem");
+      if (!allowed) return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
+    }
 
     const where: Record<string, unknown> = {};
     if (kyThu) where.kyThu = kyThu;

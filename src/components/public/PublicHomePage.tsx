@@ -203,10 +203,14 @@ export default function PublicHomePage() {
     fetch(`/api/students${lopQuery}`)
       .then((r) => r.json())
       .then((d) => {
-        setStudents(d.data || d || []);
+        const list = Array.isArray(d?.data) ? d.data : Array.isArray(d) ? d : [];
+        setStudents(list);
         setLoadingStudents(false);
       })
-      .catch(() => setLoadingStudents(false));
+      .catch(() => {
+        setStudents([]);
+        setLoadingStudents(false);
+      });
   }, [activeLop]);
 
   // Fetch fee summary & all class fees
@@ -214,13 +218,15 @@ export default function PublicHomePage() {
     const lopQuery = activeLop && activeLop !== "ALL" ? `?lop=${activeLop}` : "";
     fetch(`/api/fees/summary${lopQuery}`)
       .then((r) => r.json())
-      .then(setFeeSummary)
+      .then((d) => {
+        if (d && !d.error) setFeeSummary(d);
+      })
       .catch(() => {});
 
     fetch(`/api/fees${lopQuery ? lopQuery + "&limit=500" : "?limit=500"}`)
       .then((r) => r.json())
       .then((d) => {
-        const list = d.data || [];
+        const list = Array.isArray(d?.data) ? d.data : Array.isArray(d) ? d : [];
         const map: { [stId: number]: FeeStatus[] } = {};
         list.forEach((f: { studentId: number; kyThu: string; trangThai: string; soTien: number; ngayDong: string | null; hinhThucDong: string }) => {
           if (!map[f.studentId]) map[f.studentId] = [];
@@ -235,8 +241,11 @@ export default function PublicHomePage() {
   useEffect(() => {
     fetch("/api/events?public=1")
       .then((r) => r.json())
-      .then((d) => setEvents(d.data || d || []))
-      .catch(() => {});
+      .then((d) => {
+        const list = Array.isArray(d?.data) ? d.data : Array.isArray(d) ? d : [];
+        setEvents(list);
+      })
+      .catch(() => setEvents([]));
   }, []);
 
   // Fetch duty roster
@@ -245,10 +254,10 @@ export default function PublicHomePage() {
     fetch(`/api/duty?week=current${lopQuery}`)
       .then((r) => r.json())
       .then((d) => {
-        setDuty(d.entries || []);
-        setCurrentWeek(d.week || "");
+        setDuty(Array.isArray(d?.entries) ? d.entries : []);
+        setCurrentWeek(d?.week || "");
       })
-      .catch(() => {});
+      .catch(() => setDuty([]));
   }, [activeLop]);
 
   // Close modal on Escape key

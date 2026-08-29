@@ -24,7 +24,14 @@ export async function GET(req: NextRequest) {
     let allowedToIds: number[] | null = null;
     let assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
 
-    if (session?.user?.id && !isSuperAdmin) {
+    const userRole = (
+      (session as { roleLabel?: string })?.roleLabel ||
+      (session?.user as { roleLabel?: string })?.roleLabel ||
+      ""
+    ).toLowerCase();
+    const isStudent = userRole.includes("học viên") || userRole.includes("student");
+
+    if (session?.user?.id && !isSuperAdmin && !isStudent) {
       const userId = Number(session.user.id);
       assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
 

@@ -7,22 +7,20 @@ export function middleware(req: NextRequest) {
   const { nextUrl, cookies } = req;
   const pathname = nextUrl.pathname;
 
-  // 1. Cho phép tự do truy cập các trang auth, api công khai, static assets
+  // 1. Cho phép tự do truy cập các trang auth, toàn bộ API endpoints (để API tự trả JSON thay vì bị redirect sang HTML), static assets
   const isAuthPage =
     pathname === "/login" ||
     pathname === "/dang-ky" ||
     pathname === "/admin/login";
 
-  const isPublicApi =
-    pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/classes");
+  const isApi = pathname.startsWith("/api/");
 
   const isStaticAsset =
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
     pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|css|js|woff|woff2|ttf)$/);
 
-  if (isAuthPage || isPublicApi || isStaticAsset) {
+  if (isAuthPage || isApi || isStaticAsset) {
     return NextResponse.next();
   }
 
