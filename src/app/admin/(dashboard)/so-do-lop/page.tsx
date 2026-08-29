@@ -85,6 +85,7 @@ export default function AdminSoDoLopPage() {
   // Edit Slot Modal
   const [editSlotModal, setEditSlotModal] = useState<SeatSlotData | null>(null);
   const [modalFilterTo, setModalFilterTo] = useState<number>(0);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [slotForm, setSlotForm] = useState<{
     studentId: number | null;
     studentName: string;
@@ -431,16 +432,22 @@ export default function AdminSoDoLopPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setUploadingPhoto(true);
     try {
       const compressedBase64 = await compressImage(file, 280, 320, 0.8);
       setSlotForm((f) => ({ ...f, studentPhoto: compressedBase64 }));
+      showToast("Đã tải và nén ảnh thành công!");
     } catch {
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64 = event.target?.result as string;
         setSlotForm((f) => ({ ...f, studentPhoto: base64 }));
+        showToast("Đã tải ảnh lên thành công!");
       };
       reader.readAsDataURL(file);
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
     }
   }
 
@@ -1492,9 +1499,9 @@ export default function AdminSoDoLopPage() {
                 <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
                   <div
                     style={{
-                      width: 60,
-                      height: 66,
-                      borderRadius: 10,
+                      width: 64,
+                      height: 72,
+                      borderRadius: 12,
                       border: "2px solid var(--border)",
                       background: "#f8fafc",
                       display: "flex",
@@ -1502,6 +1509,8 @@ export default function AdminSoDoLopPage() {
                       justifyContent: "center",
                       overflow: "hidden",
                       flexShrink: 0,
+                      position: "relative",
+                      boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)",
                     }}
                   >
                     {slotForm.studentPhoto ? (
@@ -1512,17 +1521,62 @@ export default function AdminSoDoLopPage() {
                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                       />
                     ) : (
-                      <User size={24} color="#94a3b8" />
+                      <User size={28} color="#94a3b8" />
+                    )}
+                    {uploadingPhoto && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background: "rgba(0,0,0,0.55)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "white",
+                          fontSize: "0.7rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        Đang nén...
+                      </div>
                     )}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoUpload}
-                      style={{ fontSize: "0.8rem" }}
-                    />
-                    <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "4px 0 0" }}>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <label
+                        className="btn btn-secondary btn-sm"
+                        style={{
+                          cursor: uploadingPhoto ? "not-allowed" : "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          margin: 0,
+                        }}
+                      >
+                        <Upload size={14} /> {uploadingPhoto ? "Đang xử lý..." : "Chọn ảnh từ máy..."}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoUpload}
+                          style={{ display: "none" }}
+                          disabled={uploadingPhoto}
+                        />
+                      </label>
+
+                      {slotForm.studentPhoto && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{ color: "var(--danger)", borderColor: "var(--danger-border)", fontSize: "0.78rem" }}
+                          onClick={() => setSlotForm((f) => ({ ...f, studentPhoto: null }))}
+                        >
+                          <Trash2 size={13} /> Xóa ảnh
+                        </button>
+                      )}
+                    </div>
+                    <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: 0 }}>
                       Hệ thống tự nén ảnh tối ưu tốc độ và độ sắc nét khi in A4.
                     </p>
                   </div>

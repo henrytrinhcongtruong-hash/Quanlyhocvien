@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { compareVietnameseNames } from "@/lib/utils";
+import { compressImage } from "@/lib/imageUtils";
 
 // ==================
 // TYPES
@@ -33,10 +34,11 @@ interface FormData {
   to: string;
   lop: string;
   ghiChu: string;
+  avatar?: string | null;
 }
 
 const EMPTY_FORM: FormData = {
-  hoTen: "", tenGoi: "", ngaySinh: "", gioiTinh: "Nam", to: "1", lop: "12T2", ghiChu: "",
+  hoTen: "", tenGoi: "", ngaySinh: "", gioiTinh: "Nam", to: "1", lop: "12T2", ghiChu: "", avatar: null,
 };
 
 const PER_PAGE = 20;
@@ -198,11 +200,35 @@ export default function HocSinhPage() {
   // ==================
   // MODAL
   // ==================
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const base64 = await compressImage(file, 280, 320, 0.8);
+      setForm((f) => ({ ...f, avatar: base64 }));
+      showToast("Đã tải và nén ảnh thành công!");
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setForm((f) => ({ ...f, avatar: ev.target?.result as string }));
+        showToast("Đã tải ảnh lên thành công!");
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = "";
+    }
+  }
+
   function openAdd() {
     setEditing(null);
     setForm({
       ...EMPTY_FORM,
       lop: filterLop !== "ALL" ? filterLop : (classList[0] || "12T2"),
+      avatar: null,
     });
     setFormError("");
     setModalOpen(true);
@@ -218,6 +244,7 @@ export default function HocSinhPage() {
       to: String(s.to),
       lop: s.lop,
       ghiChu: s.ghiChu || "",
+      avatar: s.avatar || null,
     });
     setFormError("");
     setModalOpen(true);
@@ -243,6 +270,7 @@ export default function HocSinhPage() {
       to: Number(form.to),
       lop: form.lop?.trim() || "12T2",
       ghiChu: form.ghiChu.trim() || null,
+      avatar: form.avatar || null,
     };
 
     const url = editing ? `/api/students/${editing.id}` : "/api/students";
@@ -747,6 +775,92 @@ export default function HocSinhPage() {
               <div>
                 <label className="label">Ghi chú (Lớp cũ, thông tin khác...)</label>
                 <input className="input" value={form.ghiChu} onChange={(e) => setForm(f => ({ ...f, ghiChu: e.target.value }))} placeholder="Ví dụ: Lớp cũ: 11AT3" />
+              </div>
+
+              {/* Avatar Upload */}
+              <div>
+                <label className="label">Ảnh đại diện học sinh (Chân dung):</label>
+                <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                  <div
+                    style={{
+                      width: 58,
+                      height: 66,
+                      borderRadius: 12,
+                      border: "2px solid var(--border)",
+                      background: "#f8fafc",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                      flexShrink: 0,
+                      position: "relative",
+                      boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)",
+                    }}
+                  >
+                    {form.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={form.avatar} alt="Avatar Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <User size={26} color="#94a3b8" />
+                    )}
+                    {uploadingAvatar && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background: "rgba(0,0,0,0.55)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "white",
+                          fontSize: "0.68rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        Nén...
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <label
+                        className="btn btn-secondary btn-sm"
+                        style={{
+                          cursor: uploadingAvatar ? "not-allowed" : "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          margin: 0,
+                        }}
+                      >
+                        <Upload size={14} /> {uploadingAvatar ? "Đang xử lý..." : "Chọn ảnh từ máy..."}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarUpload}
+                          style={{ display: "none" }}
+                          disabled={uploadingAvatar}
+                        />
+                      </label>
+
+                      {form.avatar && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{ color: "var(--danger)", borderColor: "var(--danger-border)", fontSize: "0.78rem" }}
+                          onClick={() => setForm((f) => ({ ...f, avatar: null }))}
+                        >
+                          <Trash2 size={13} /> Xóa ảnh
+                        </button>
+                      )}
+                    </div>
+                    <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: 0 }}>
+                      Hệ thống tự nén ảnh tối ưu tốc độ và độ sắc nét khi in A4.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
