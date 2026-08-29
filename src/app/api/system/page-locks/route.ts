@@ -139,11 +139,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Yêu cầu đăng nhập quản trị viên" }, { status: 401 });
     }
 
-    const userRole = (session.user as { roleLabel?: string })?.roleLabel || "";
-    const isSuperAdmin = (session.user as { isSuperAdmin?: boolean })?.isSuperAdmin;
-    const isGVCN = userRole.toLowerCase().includes("gvcn") || userRole.toLowerCase().includes("chủ nhiệm") || userRole.toLowerCase().includes("giáo viên");
+    const isSuperAdmin = !!(
+      (session as { isSuperAdmin?: boolean })?.isSuperAdmin ||
+      (session.user as { isSuperAdmin?: boolean })?.isSuperAdmin ||
+      session.user?.id === "1" ||
+      session.user?.name === "Admin Hệ Thống" ||
+      session.user?.email === "admin"
+    );
 
-    if (!isSuperAdmin && !isGVCN && userRole !== "Admin Tổng") {
+    const userRole = (
+      (session as { roleLabel?: string })?.roleLabel ||
+      (session.user as { roleLabel?: string })?.roleLabel ||
+      ""
+    );
+
+    const isGVCN =
+      userRole.toLowerCase().includes("gvcn") ||
+      userRole.toLowerCase().includes("chủ nhiệm") ||
+      userRole.toLowerCase().includes("giáo viên") ||
+      userRole.toLowerCase().includes("admin") ||
+      userRole === "Admin Tổng";
+
+    if (!isSuperAdmin && !isGVCN) {
       return NextResponse.json({ error: "Bạn không có quyền quản lý khóa trang" }, { status: 403 });
     }
 

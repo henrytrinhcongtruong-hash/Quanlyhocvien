@@ -125,6 +125,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token) {
         session.user.id = String(token.userId);
+        (session.user as { isSuperAdmin?: boolean }).isSuperAdmin = token.isSuperAdmin as boolean;
+        (session.user as { roleLabel?: string }).roleLabel = token.roleLabel as string;
+        (session.user as { assignedLop?: string }).assignedLop = (token.assignedLop as string) || "12T2";
         (session as { isSuperAdmin?: boolean }).isSuperAdmin = token.isSuperAdmin as boolean;
         (session as { roleLabel?: string }).roleLabel = token.roleLabel as string;
         (session as { assignedLop?: string }).assignedLop = (token.assignedLop as string) || "12T2";
