@@ -1,6 +1,6 @@
-// src/app/admin/(dashboard)/lich-su-hoat-dong/page.tsx
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
 import {
   History,
@@ -1021,7 +1021,7 @@ export default function LichSuHoatDongPage() {
       </div>
 
       {/* Modal Xem Chi Tiết Diff Thay Đổi */}
-      {diffModalItem && (
+      {diffModalItem && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
@@ -1031,7 +1031,7 @@ export default function LichSuHoatDongPage() {
             bottom: 0,
             background: "rgba(15, 23, 42, 0.65)",
             backdropFilter: "blur(6px)",
-            zIndex: 99999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1161,11 +1161,12 @@ export default function LichSuHoatDongPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal Dọn Dẹp Log Cũ */}
-      {cleanupModalOpen && (
+      {cleanupModalOpen && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
@@ -1175,7 +1176,7 @@ export default function LichSuHoatDongPage() {
             bottom: 0,
             background: "rgba(15, 23, 42, 0.65)",
             backdropFilter: "blur(6px)",
-            zIndex: 99999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1246,7 +1247,8 @@ export default function LichSuHoatDongPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

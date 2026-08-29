@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -486,12 +487,12 @@ export default function AdminLichTrucPage() {
       </div>
 
       {/* ====== MODAL THIẾT LẬP LẠI / TỰ ĐỘNG XẾP LỊCH TRỰC NHẬT ====== */}
-      {autoModalOpen && (
+      {autoModalOpen && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -615,16 +616,17 @@ export default function AdminLichTrucPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ====== ADD / EDIT SINGLE ENTRY MODAL ====== */}
-      {modalOpen && (
+      {modalOpen && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -712,7 +714,8 @@ export default function AdminLichTrucPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -688,12 +689,12 @@ export default function HocSinhPage() {
       </div>
 
       {/* ====== ADD/EDIT MODAL ====== */}
-      {modalOpen && (
+      {modalOpen && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -873,16 +874,17 @@ export default function HocSinhPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ====== DELETE CONFIRM ====== */}
-      {deleteId !== null && (
+      {deleteId !== null && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -925,16 +927,17 @@ export default function HocSinhPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ====== DELETE CLASS CONFIRM MODAL ====== */}
-      {deleteClassModalOpen && (
+      {deleteClassModalOpen && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1012,7 +1015,8 @@ export default function HocSinhPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

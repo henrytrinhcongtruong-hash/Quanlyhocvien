@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Star,
   Plus,
@@ -435,12 +436,12 @@ export default function AdminSuKienPage() {
       )}
 
       {/* ====== ADD / EDIT MODAL ====== */}
-      {modalOpen && (
+      {modalOpen && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -572,16 +573,17 @@ export default function AdminSuKienPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ====== DELETE CONFIRM MODAL ====== */}
-      {deleteId !== null && (
+      {deleteId !== null && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -637,7 +639,8 @@ export default function AdminSuKienPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

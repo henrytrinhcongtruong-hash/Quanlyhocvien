@@ -1,6 +1,6 @@
-// src/app/admin/(dashboard)/quan-ly-link/page.tsx
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import {
   Globe,
@@ -619,7 +619,7 @@ export default function QuanLyLinkPage() {
       </div>
 
       {/* Modal Khóa 1 Trang */}
-      {lockModalItem && (
+      {lockModalItem && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
@@ -629,7 +629,7 @@ export default function QuanLyLinkPage() {
             bottom: 0,
             background: "rgba(15, 23, 42, 0.65)",
             backdropFilter: "blur(6px)",
-            zIndex: 99999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -721,11 +721,12 @@ export default function QuanLyLinkPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal Khóa / Mở Khóa Toàn Bộ */}
-      {toggleAllModal && (
+      {toggleAllModal && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
@@ -735,7 +736,7 @@ export default function QuanLyLinkPage() {
             bottom: 0,
             background: "rgba(15, 23, 42, 0.65)",
             backdropFilter: "blur(6px)",
-            zIndex: 99999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -824,7 +825,8 @@ export default function QuanLyLinkPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

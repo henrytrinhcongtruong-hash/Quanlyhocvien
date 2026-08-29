@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -972,12 +973,12 @@ export default function AdminQuyPage() {
       )}
 
       {/* ====== MODAL THIẾT LẬP ĐỢT THU QUỸ THEO LỚP ====== */}
-      {batchModalOpen && (
+      {batchModalOpen && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1080,16 +1081,17 @@ export default function AdminQuyPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ====== MODAL SỬA SỐ TIỀN CÁ NHÂN ====== */}
-      {editingSingleFee && (
+      {editingSingleFee && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1153,16 +1155,17 @@ export default function AdminQuyPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ====== MODAL CHI TIÊU ====== */}
-      {expenseModalOpen && (
+      {expenseModalOpen && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 999999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1272,7 +1275,8 @@ export default function AdminQuyPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
