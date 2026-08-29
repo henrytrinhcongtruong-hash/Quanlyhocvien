@@ -106,10 +106,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Thiếu thông tin bắt buộc" }, { status: 400 });
     }
 
+    const cleanUsername = username.trim().toLowerCase();
+    const cleanHoTen = hoTen.normalize("NFC").replace(/[\u00A0\s]+/g, " ").trim();
+    const targetLop = assignedLop?.trim() || "12T2";
+
     // Check duplicate username
-    const existing = await prisma.user.findUnique({ where: { username: username.trim().toLowerCase() } });
+    const existing = await prisma.user.findUnique({ where: { username: cleanUsername } });
     if (existing) {
-      return NextResponse.json({ error: "Tên đăng nhập đã tồn tại" }, { status: 409 });
+      return NextResponse.json({ error: "Tên đăng nhập đã tồn tại trên hệ thống" }, { status: 409 });
+    }
+
+    // Check if a user with this name already exists in this class
+    const usersInClass = await prisma.user.findMany({
+      where: {
+        assignedLop: { equals: targetLop, mode: "insensitive" },
+      },
+      select: { id: true, username: true, hoTen: true },
+    });
+
+    const normInputName = cleanHoTen.toLowerCase();
+    const duplicateStudentUser = usersInClass.find(
+      (u) => u.hoTen.normalize("NFC").replace(/[\u00A0\s]+/g, " ").trim().toLowerCase() === normInputName
+    );
+
+    if (duplicateStudentUser) {
+      return NextResponse.json(
+        {
+          error: `Học sinh "${cleanHoTen}" (Lớp ${targetLop}) đã có tài khoản trên hệ thống (Tên đăng nhập: "${duplicateStudentUser.username}"). Mỗi học sinh chỉ được có 1 tài khoản duy nhất!`,
+        },
+        { status: 409 }
+      );
     }
 
     const passwordHash = await bcrypt.hash(password, 12);

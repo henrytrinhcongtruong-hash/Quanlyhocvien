@@ -17,12 +17,22 @@ import {
   Sparkles,
 } from "lucide-react";
 
+interface StudentStatus {
+  id: number;
+  hoTen: string;
+  to: number;
+  lop: string;
+  isRegistered: boolean;
+  username: string | null;
+}
+
 function DangKyHocVienForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultLop = searchParams.get("lop") || "12T2";
 
   const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
+  const [students, setStudents] = useState<StudentStatus[]>([]);
   const [hoTen, setHoTen] = useState("");
   const [lop, setLop] = useState(defaultLop);
   const [username, setUsername] = useState("");
@@ -50,17 +60,58 @@ function DangKyHocVienForm() {
       .catch(() => {});
   }, [lop]);
 
+  // Load student list and registration status for selected class
+  useEffect(() => {
+    if (!lop) return;
+    fetch(`/api/auth/register-student?lop=${encodeURIComponent(lop)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.data) {
+          setStudents(d.data);
+        }
+      })
+      .catch(() => {});
+  }, [lop]);
+
+  // Check matching student status
+  const matchedStudent = students.find(
+    (s) => s.hoTen.normalize("NFC").trim().toLowerCase() === hoTen.normalize("NFC").trim().toLowerCase()
+  );
+
+  const isAlreadyRegistered = matchedStudent?.isRegistered;
+
+  const handleSelectStudentName = (name: string) => {
+    setHoTen(name);
+    // Auto suggest clean username if empty
+    if (!username) {
+      const clean = name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "d")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+      setUsername(`${clean}${lop.toLowerCase()}`);
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
 
     if (!hoTen.trim()) {
-      setError("Vui lòng nhập họ và tên của bạn.");
+      setError("Vui lòng nhập hoặc chọn họ và tên của bạn.");
       return;
     }
     if (!lop) {
       setError("Vui lòng chọn lớp học.");
+      return;
+    }
+    if (isAlreadyRegistered) {
+      setError(
+        `Mỗi học sinh chỉ được đăng ký DUY NHẤT 1 tài khoản để chống tài khoản clone! Học sinh "${matchedStudent?.hoTen}" đã có tài khoản (Username: "${matchedStudent?.username}"). Vui lòng liên hệ Admin/GVCN để lấy lại mật khẩu.`
+      );
       return;
     }
     if (!username.trim()) {
@@ -211,16 +262,17 @@ function DangKyHocVienForm() {
             background: "#f0f9ff",
             border: "1.5px solid #bae6fd",
             borderRadius: 14,
-            padding: "10px 14px",
+            padding: "12px 14px",
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             gap: 10,
             marginBottom: 20,
           }}
         >
-          <ShieldCheck size={18} color="#0284c7" style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: "0.78rem", color: "#0369a1", fontWeight: 600, lineHeight: 1.35 }}>
-            Chỉ học sinh có tên trong danh sách lớp mới có thể đăng ký tài khoản.
+          <ShieldCheck size={20} color="#0284c7" style={{ flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: "0.78rem", color: "#0369a1", lineHeight: 1.4 }}>
+            <strong style={{ display: "block", marginBottom: 2 }}>Chính sách bảo mật & Chống tài khoản Clone:</strong>
+            Mỗi học sinh trong danh sách lớp chỉ được đăng ký <strong>1 tài khoản duy nhất</strong>. Hệ thống sẽ tự động đối soát và khóa chặn mọi hành vi tạo tài khoản ảo trùng lặp.
           </div>
         </div>
 
@@ -288,7 +340,11 @@ function DangKyHocVienForm() {
                   borderColor: "#cbd5e1",
                 }}
                 value={lop}
-                onChange={(e) => setLop(e.target.value)}
+                onChange={(e) => {
+                  setLop(e.target.value);
+                  setHoTen("");
+                  setUsername("");
+                }}
                 disabled={loading}
               >
                 {classList.map((c) => (
@@ -302,29 +358,89 @@ function DangKyHocVienForm() {
 
           {/* 2. Họ và tên học sinh */}
           <div>
-            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#334155", marginBottom: 6 }}>
-              Họ và tên của bạn (Đúng danh sách lớp) *
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <label style={{ fontSize: "0.82rem", fontWeight: 800, color: "#334155" }}>
+                Họ và tên học sinh (Đúng danh sách lớp) *
+              </label>
+            </div>
             <div style={{ position: "relative" }}>
               <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b" }}>
                 <User size={17} />
               </div>
               <input
                 className="input"
+                list="students-datalist"
                 style={{
                   paddingLeft: 38,
                   height: 44,
                   fontSize: "0.9rem",
                   borderRadius: 12,
-                  borderColor: "#cbd5e1",
+                  borderColor: isAlreadyRegistered ? "#ef4444" : matchedStudent ? "#10b981" : "#cbd5e1",
+                  background: isAlreadyRegistered ? "#fef2f2" : "white",
                 }}
-                placeholder="VD: Nguyễn Văn An"
+                placeholder="VD: Nguyễn Văn An (Nhập hoặc chọn)"
                 value={hoTen}
-                onChange={(e) => setHoTen(e.target.value)}
+                onChange={(e) => handleSelectStudentName(e.target.value)}
                 disabled={loading}
                 autoFocus
               />
+              <datalist id="students-datalist">
+                {students.map((s) => (
+                  <option key={s.id} value={s.hoTen}>
+                    {s.isRegistered ? `(Đã có tài khoản: ${s.username})` : `(Tổ ${s.to} - Chưa đăng ký)`}
+                  </option>
+                ))}
+              </datalist>
             </div>
+
+            {/* Realtime Anti-Clone Status Badges */}
+            {hoTen.trim() && (
+              <div style={{ marginTop: 6 }}>
+                {isAlreadyRegistered ? (
+                  <div
+                    style={{
+                      background: "#fee2e2",
+                      border: "1px solid #fca5a5",
+                      color: "#b91c1c",
+                      borderRadius: 8,
+                      padding: "6px 10px",
+                      fontSize: "0.76rem",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                    <span>
+                      Học sinh này đã có tài khoản (<strong>{matchedStudent?.username}</strong>). Mỗi học sinh chỉ được đăng ký 1 lần duy nhất!
+                    </span>
+                  </div>
+                ) : matchedStudent ? (
+                  <div
+                    style={{
+                      background: "#dcfce7",
+                      border: "1px solid #86efac",
+                      color: "#15803d",
+                      borderRadius: 8,
+                      padding: "6px 10px",
+                      fontSize: "0.76rem",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <CheckCircle2 size={14} style={{ flexShrink: 0 }} />
+                    <span>Hợp lệ: Học sinh {matchedStudent.hoTen} (Tổ {matchedStudent.to} • Lớp {lop}) — Sẵn sàng đăng ký!</span>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: "0.72rem", color: "#d97706", margin: 0 }}>
+                    💡 Hãy nhập đúng họ và tên như trên danh bạ lớp học để hệ thống xác thực.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 3. Tên đăng nhập */}
