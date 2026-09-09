@@ -61,7 +61,7 @@ export function useUserPermissions() {
     }
 
     try {
-      const res = await fetch("/api/users/me");
+      const res = await fetch("/api/me");
       if (res.ok) {
         const data = await res.json();
         cachedMe = data;
