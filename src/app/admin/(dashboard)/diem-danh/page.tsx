@@ -6,10 +6,23 @@ import { useSession } from "next-auth/react";
 import {
   BookOpen, Calendar as CalendarIcon, CheckCircle, XCircle, Clock,
   Upload, Download, Plus, Trash2, Filter, AlertCircle, Save,
-  Search, Users, X, School, ArrowUpDown, ArrowUpAZ, ArrowDownAZ,
+  Search, Users, X, School, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, Check,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { compareVietnameseNames } from "@/lib/utils";
+
+// Hook detect mobile screen
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    setIsMobile(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, [breakpoint]);
+  return isMobile;
+}
 
 interface Student {
   id: number;
@@ -33,6 +46,7 @@ const ATTENDANCE_TYPES = ["Vắng có phép", "Vắng không phép", "Đi trễ"
 export default function DiemDanhAdminPage() {
   const searchParams = useSearchParams();
   const urlLop = searchParams.get("lop");
+  const isMobile = useIsMobile();
   const { data: session } = useSession();
 
   const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
@@ -43,6 +57,7 @@ export default function DiemDanhAdminPage() {
   });
   const [selectedTo, setSelectedTo] = useState(0);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "CO_MAT" | "VANG_CO_PHEP" | "VANG_KHONG_PHEP" | "DI_TRE">("ALL");
   const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("admin_attendance_sort_order") as "default" | "asc" | "desc") || "default";
@@ -212,7 +227,7 @@ export default function DiemDanhAdminPage() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  const filteredStudents = React.useMemo(() => {
+  const baseStudents = React.useMemo(() => {
     let list = students.filter(s => {
       const matchTo = selectedTo === 0 || s.to === selectedTo;
       const matchLop = filterLop === "ALL" || s.lop === filterLop;
@@ -229,10 +244,50 @@ export default function DiemDanhAdminPage() {
     return list;
   }, [students, selectedTo, filterLop, search, sortOrder]);
 
-  const vangCoPhep = records.filter(r => r.loai === "Vắng có phép").length;
-  const vangKhongPhep = records.filter(r => r.loai === "Vắng không phép").length;
-  const diTre = records.filter(r => r.loai === "Đi trễ").length;
-  const coMat = Math.max(0, filteredStudents.length - (vangCoPhep + vangKhongPhep));
+  const stats = React.useMemo(() => {
+    let vangCoPhep = 0;
+    let vangKhongPhep = 0;
+    let diTre = 0;
+
+    baseStudents.forEach(s => {
+      const sRecords = records.filter(r => r.studentId === s.id);
+      if (sRecords.some(r => r.loai === "Vắng có phép")) vangCoPhep++;
+      if (sRecords.some(r => r.loai === "Vắng không phép")) vangKhongPhep++;
+      if (sRecords.some(r => r.loai === "Đi trễ")) diTre++;
+    });
+
+    const total = baseStudents.length;
+    const coMat = Math.max(0, total - (vangCoPhep + vangKhongPhep));
+
+    return { total, coMat, vangCoPhep, vangKhongPhep, diTre };
+  }, [baseStudents, records]);
+
+  const filteredStudents = React.useMemo(() => {
+    if (statusFilter === "ALL") return baseStudents;
+
+    return baseStudents.filter(s => {
+      const sRecords = records.filter(r => r.studentId === s.id);
+      const isVangCP = sRecords.some(r => r.loai === "Vắng có phép");
+      const isVangKP = sRecords.some(r => r.loai === "Vắng không phép");
+      const isDiTre = sRecords.some(r => r.loai === "Đi trễ");
+
+      if (statusFilter === "CO_MAT") {
+        return !isVangCP && !isVangKP;
+      }
+      if (statusFilter === "VANG_CO_PHEP") {
+        return isVangCP;
+      }
+      if (statusFilter === "VANG_KHONG_PHEP") {
+        return isVangKP;
+      }
+      if (statusFilter === "DI_TRE") {
+        return isDiTre;
+      }
+      return true;
+    });
+  }, [baseStudents, records, statusFilter]);
+
+  const { coMat, vangCoPhep, vangKhongPhep, diTre, total: totalStudentsCount } = stats;
 
   return (
     <div className="animate-fade-in">
@@ -254,72 +309,77 @@ export default function DiemDanhAdminPage() {
       )}
 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: isMobile ? "stretch" : "flex-start", justifyContent: "space-between", marginBottom: isMobile ? 14 : 20, flexWrap: "wrap", gap: isMobile ? 8 : 12, flexDirection: isMobile ? "column" : "row" }}>
         <div>
-          <h1 style={{ fontSize: "1.4rem", marginBottom: 4 }}>
-            Điểm danh chuyên cần {filterLop !== "ALL" ? `— Lớp ${filterLop}` : "Toàn trường"}
+          <h1 style={{ fontSize: isMobile ? "1.15rem" : "1.4rem", marginBottom: 4 }}>
+            Điểm danh {filterLop !== "ALL" ? `— ${filterLop}` : "Toàn trường"}
           </h1>
-          <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
-            Điểm danh 1-chạm: Vắng có phép, Vắng không phép, Đi trễ
-          </p>
+          {!isMobile && (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
+              Điểm danh 1-chạm: Vắng có phép, Vắng không phép, Đi trễ
+            </p>
+          )}
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: "none" }} />
-          <button className="btn btn-secondary btn-sm" onClick={() => fileRef.current?.click()} disabled={importing}>
+          <button className="btn btn-secondary btn-sm" onClick={() => fileRef.current?.click()} disabled={importing} style={isMobile ? { flex: 1, fontSize: "0.75rem", padding: "6px 8px" } : undefined}>
             <Upload size={14} />
-            {importing ? "Đang import..." : "Import Excel"}
+            {importing ? "Import..." : "Import"}
           </button>
-          <button className="btn btn-secondary btn-sm" onClick={() => window.open("/api/attendance/export", "_blank")}>
-            <Download size={14} /> Export Excel
+          <button className="btn btn-secondary btn-sm" onClick={() => window.open("/api/attendance/export", "_blank")} style={isMobile ? { flex: 1, fontSize: "0.75rem", padding: "6px 8px" } : undefined}>
+            <Download size={14} /> Export
           </button>
-          <button className="btn btn-primary btn-sm" onClick={() => setModalOpen(true)}>
-            <Plus size={14} /> Ghi nhận chi tiết
+          <button className="btn btn-primary btn-sm" onClick={() => setModalOpen(true)} style={isMobile ? { flex: 1, fontSize: "0.75rem", padding: "6px 8px" } : undefined}>
+            <Plus size={14} /> Ghi nhận
           </button>
         </div>
       </div>
 
       {/* Controls Bar: Date + Class Filter + Tổ + Search + Sort */}
-      <div className="card" style={{ padding: "16px 20px", marginBottom: 20, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flex: "1 1 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <CalendarIcon size={16} color="var(--primary)" />
+      <div className="card" style={{ padding: isMobile ? "12px 14px" : "16px 20px", marginBottom: isMobile ? 12 : 20, display: "flex", gap: isMobile ? 8 : 12, alignItems: "stretch", flexWrap: "wrap", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 10, flexWrap: "wrap", flex: "1 1 auto" }}>
+          {/* Row 1 on mobile: Date + Class + Tổ */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, ...(isMobile ? { width: "100%" } : {}) }}>
+            <CalendarIcon size={isMobile ? 14 : 16} color="var(--primary)" />
             <input
               type="date"
               className="input"
-              style={{ minHeight: 36, padding: "4px 10px", width: 145 }}
+              style={{ minHeight: 36, padding: "4px 10px", width: isMobile ? undefined : 145, flex: isMobile ? 1 : undefined }}
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
             />
           </div>
 
-          <select
-            className="select"
-            style={{ width: 145, fontWeight: 700, color: "var(--primary)", minHeight: 36 }}
-            value={filterLop}
-            onChange={(e) => setFilterLop(e.target.value)}
-          >
-            <option value="ALL">🏫 Tất cả lớp</option>
-            {classList.map(c => (
-              <option key={c} value={c}>Lớp {c}</option>
-            ))}
-          </select>
+          <div style={{ display: "flex", gap: 6, ...(isMobile ? { width: "100%" } : {}) }}>
+            <select
+              className="select"
+              style={{ width: isMobile ? undefined : 145, flex: isMobile ? 1 : undefined, fontWeight: 700, color: "var(--primary)", minHeight: 36 }}
+              value={filterLop}
+              onChange={(e) => setFilterLop(e.target.value)}
+            >
+              <option value="ALL">🏫 Tất cả lớp</option>
+              {classList.map(c => (
+                <option key={c} value={c}>Lớp {c}</option>
+              ))}
+            </select>
 
-          <select
-            className="select"
-            style={{ width: 120, minHeight: 36 }}
-            value={selectedTo}
-            onChange={(e) => setSelectedTo(Number(e.target.value))}
-          >
-            <option value={0}>Tất cả tổ</option>
-            {[1, 2, 3, 4].map(t => <option key={t} value={t}>Tổ {t}</option>)}
-          </select>
+            <select
+              className="select"
+              style={{ width: isMobile ? undefined : 120, flex: isMobile ? 1 : undefined, minHeight: 36 }}
+              value={selectedTo}
+              onChange={(e) => setSelectedTo(Number(e.target.value))}
+            >
+              <option value={0}>Tất cả tổ</option>
+              {[1, 2, 3, 4].map(t => <option key={t} value={t}>Tổ {t}</option>)}
+            </select>
+          </div>
 
-          {/* Thanh gõ tìm kiếm tên học sinh */}
-          <div style={{ position: "relative", minWidth: 180, flex: "1 1 180px" }}>
+          {/* Search bar */}
+          <div style={{ position: "relative", minWidth: isMobile ? undefined : 180, flex: "1 1 180px", ...(isMobile ? { width: "100%" } : {}) }}>
             <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
             <input
               className="input"
-              style={{ paddingLeft: 34, minHeight: 36 }}
+              style={{ paddingLeft: 34, minHeight: 36, width: "100%" }}
               placeholder="Tìm tên học sinh..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -335,63 +395,142 @@ export default function DiemDanhAdminPage() {
             )}
           </div>
 
-          {/* Nút Sort Tên A-Z / Z-A */}
-          <button
-            type="button"
-            className={`btn btn-sm ${sortOrder !== "default" ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => {
-              if (sortOrder === "default") handleSetSortOrder("asc");
-              else if (sortOrder === "asc") handleSetSortOrder("desc");
-              else handleSetSortOrder("default");
-            }}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, minHeight: 36 }}
-            title="Bấm để đổi sắp xếp tên: A-Z -> Z-A -> Mặc định"
-          >
-            {sortOrder === "asc" ? (
-              <>
-                <ArrowUpAZ size={15} /> Tên: A → Z
-              </>
-            ) : sortOrder === "desc" ? (
-              <>
-                <ArrowDownAZ size={15} /> Tên: Z → A
-              </>
-            ) : (
-              <>
-                <ArrowUpDown size={14} /> Sắp xếp tên
-              </>
-            )}
-          </button>
-
-          {(search || selectedTo > 0 || filterLop !== "ALL" || sortOrder !== "default") && (
+          {/* Sort + Clear row */}
+          <div style={{ display: "flex", gap: 6, ...(isMobile ? { width: "100%" } : {}) }}>
             <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => { setSearch(""); setSelectedTo(0); setFilterLop("ALL"); handleSetSortOrder("default"); }}
-              style={{ minHeight: 36 }}
+              type="button"
+              className={`btn btn-sm ${sortOrder !== "default" ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => {
+                if (sortOrder === "default") handleSetSortOrder("asc");
+                else if (sortOrder === "asc") handleSetSortOrder("desc");
+                else handleSetSortOrder("default");
+              }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, minHeight: 36, flex: isMobile ? 1 : undefined, justifyContent: "center" }}
+              title="Bấm để đổi sắp xếp tên: A-Z -> Z-A -> Mặc định"
             >
-              <X size={13} /> Bỏ lọc
+              {sortOrder === "asc" ? (
+                <>
+                  <ArrowUpAZ size={15} /> {isMobile ? "A→Z" : "Tên: A → Z"}
+                </>
+              ) : sortOrder === "desc" ? (
+                <>
+                  <ArrowDownAZ size={15} /> {isMobile ? "Z→A" : "Tên: Z → A"}
+                </>
+              ) : (
+                <>
+                  <ArrowUpDown size={14} /> {isMobile ? "Sắp xếp" : "Sắp xếp tên"}
+                </>
+              )}
             </button>
-          )}
+
+            {(search || selectedTo > 0 || filterLop !== "ALL" || sortOrder !== "default" || statusFilter !== "ALL") && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => { setSearch(""); setSelectedTo(0); setFilterLop("ALL"); handleSetSortOrder("default"); setStatusFilter("ALL"); }}
+                style={{ minHeight: 36, flex: isMobile ? 1 : undefined, justifyContent: "center" }}
+              >
+                <X size={13} /> Bỏ lọc
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Quick Stats on selected day */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <span className="badge badge-success" style={{ padding: "6px 10px", fontSize: "0.8rem" }}>
-            Có mặt: {coMat}
-          </span>
-          <span className="badge badge-warning" style={{ padding: "6px 10px", fontSize: "0.8rem" }}>
-            Có phép: {vangCoPhep}
-          </span>
-          <span className="badge badge-danger" style={{ padding: "6px 10px", fontSize: "0.8rem" }}>
-            Không phép: {vangKhongPhep}
-          </span>
-          <span className="badge badge-info" style={{ padding: "6px 10px", fontSize: "0.8rem" }}>
-            Đi trễ: {diTre}
-          </span>
+        {/* Quick Stats on selected day — BỘ LỌC 1-CHẠM TRỰC QUAN */}
+        <div style={{
+          display: "flex",
+          gap: isMobile ? 6 : 8,
+          flexWrap: isMobile ? "nowrap" : "wrap",
+          alignItems: "center",
+          ...(isMobile ? { overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 4, width: "100%", msOverflowStyle: "none", scrollbarWidth: "none" } : {}),
+        }}>
+          {([
+            { key: "ALL" as const, label: "Tất cả", count: totalStudentsCount, activeBg: "#334155", activeBorder: "#334155", inactiveBg: "#f8fafc", inactiveBorder: "#cbd5e1", activeColor: "#ffffff", inactiveColor: "#475569", shadow: "rgba(51, 65, 85, 0.25)" },
+            { key: "CO_MAT" as const, label: "Có mặt", count: coMat, activeBg: "#16a34a", activeBorder: "#15803d", inactiveBg: "#ecfdf5", inactiveBorder: "#86efac", activeColor: "#ffffff", inactiveColor: "#065f46", shadow: "rgba(22, 163, 74, 0.3)" },
+            { key: "VANG_CO_PHEP" as const, label: "Có phép", count: vangCoPhep, activeBg: "#ca8a04", activeBorder: "#a16207", inactiveBg: "#fffbeb", inactiveBorder: "#fde047", activeColor: "#ffffff", inactiveColor: "#92400e", shadow: "rgba(202, 138, 4, 0.3)" },
+            { key: "VANG_KHONG_PHEP" as const, label: isMobile ? "K.phép" : "Không phép", count: vangKhongPhep, activeBg: "#dc2626", activeBorder: "#b91c1c", inactiveBg: "#fef2f2", inactiveBorder: "#fca5a5", activeColor: "#ffffff", inactiveColor: "#991b1b", shadow: "rgba(220, 38, 38, 0.3)" },
+            { key: "DI_TRE" as const, label: "Đi trễ", count: diTre, activeBg: "#2563eb", activeBorder: "#1d4ed8", inactiveBg: "#eff6ff", inactiveBorder: "#bfdbfe", activeColor: "#ffffff", inactiveColor: "#1e40af", shadow: "rgba(37, 99, 235, 0.3)" },
+          ] as const).map(pill => {
+            const isActive = statusFilter === pill.key;
+            return (
+              <button
+                key={pill.key}
+                type="button"
+                onClick={() => setStatusFilter(isActive && pill.key !== "ALL" ? "ALL" : pill.key)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: isMobile ? "5px 10px" : "6px 12px",
+                  fontSize: isMobile ? "0.73rem" : "0.8rem",
+                  fontWeight: isActive ? 800 : 600,
+                  borderRadius: 9999,
+                  border: isActive ? `2px solid ${pill.activeBorder}` : `1.5px solid ${pill.inactiveBorder}`,
+                  background: isActive ? pill.activeBg : pill.inactiveBg,
+                  color: isActive ? pill.activeColor : pill.inactiveColor,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  boxShadow: isActive ? `0 2px 8px ${pill.shadow}` : "none",
+                  transform: isActive ? "scale(1.03)" : "scale(1)",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}
+              >
+                {isActive && <Check size={11} />}
+                {pill.label}: {pill.count}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Main Student Attendance Table */}
       <div className="card" style={{ overflow: "hidden" }}>
+        {statusFilter !== "ALL" && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "8px 16px",
+              background: "rgba(59, 130, 246, 0.06)",
+              borderBottom: "1px solid var(--border)",
+              fontSize: "0.82rem",
+              fontWeight: 600,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Filter size={13} color="var(--primary)" />
+              <span>
+                Đang lọc:{" "}
+                <strong style={{ color: "var(--primary)" }}>
+                  {statusFilter === "CO_MAT" && "🟢 Học sinh Có mặt"}
+                  {statusFilter === "VANG_CO_PHEP" && "🟡 Học sinh Vắng có phép"}
+                  {statusFilter === "VANG_KHONG_PHEP" && "🔴 Học sinh Vắng không phép"}
+                  {statusFilter === "DI_TRE" && "🔵 Học sinh Đi trễ"}
+                </strong>{" "}
+                ({filteredStudents.length} học sinh)
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("ALL")}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--primary)",
+                fontWeight: 700,
+                fontSize: "0.78rem",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <X size={12} /> Xem tất cả ({totalStudentsCount})
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div style={{ padding: 32 }}>
             {[...Array(8)].map((_, i) => (
@@ -401,7 +540,118 @@ export default function DiemDanhAdminPage() {
         ) : filteredStudents.length === 0 ? (
           <div style={{ padding: 48, textAlign: "center", color: "var(--text-muted)" }}>
             <Users size={36} style={{ margin: "0 auto 10px", opacity: 0.3 }} />
-            <p>Không có học sinh nào</p>
+            <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text-primary)", margin: 0 }}>
+              {statusFilter === "VANG_CO_PHEP"
+                ? `Không có học sinh nào Vắng có phép trong ngày ${formatDate(selectedDate)}`
+                : statusFilter === "VANG_KHONG_PHEP"
+                ? `Không có học sinh nào Vắng không phép trong ngày ${formatDate(selectedDate)}`
+                : statusFilter === "DI_TRE"
+                ? `Không có học sinh nào Đi trễ trong ngày ${formatDate(selectedDate)}`
+                : statusFilter === "CO_MAT"
+                ? `Không có học sinh nào Có mặt trong ngày ${formatDate(selectedDate)}`
+                : "Không có học sinh nào phù hợp"}
+            </p>
+            {statusFilter !== "ALL" && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setStatusFilter("ALL")}
+                style={{ marginTop: 12 }}
+              >
+                Xem tất cả ({totalStudentsCount} học sinh)
+              </button>
+            )}
+          </div>
+        ) : isMobile ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {filteredStudents.map((s, idx) => {
+              const studentRecords = records.filter(r => r.studentId === s.id);
+              const isVangCoPhep = studentRecords.some(r => r.loai === "Vắng có phép");
+              const isVangKhongPhep = studentRecords.some(r => r.loai === "Vắng không phép");
+              const isDiTre = studentRecords.some(r => r.loai === "Đi trễ");
+
+              return (
+                <div
+                  key={s.id}
+                  style={{
+                    padding: "10px 14px",
+                    borderBottom: "1px solid var(--border)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flex: 1 }}>
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.72rem", fontWeight: 600, flexShrink: 0, width: 22, textAlign: "right" }}>{idx + 1}.</span>
+                      <span style={{ fontWeight: 700, fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.hoTen}</span>
+                    </div>
+                    <div style={{ flexShrink: 0, display: "flex", gap: 4, alignItems: "center" }}>
+                      <span className="badge badge-info" style={{ fontSize: "0.68rem", padding: "1px 6px" }}>{s.lop}</span>
+                      <span className="badge badge-neutral" style={{ fontSize: "0.68rem", padding: "1px 5px" }}>T{s.to}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                    <div style={{ flexShrink: 0 }}>
+                      {studentRecords.length === 0 ? (
+                        <span className="badge badge-success" style={{ fontSize: "0.72rem", padding: "2px 8px" }}>
+                          <CheckCircle size={11} /> Có mặt
+                        </span>
+                      ) : (
+                        <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                          {studentRecords.map(r => (
+                            <span
+                              key={r.id}
+                              className={`badge ${
+                                r.loai === "Vắng có phép" ? "badge-warning"
+                                  : r.loai === "Vắng không phép" ? "badge-danger"
+                                  : "badge-info"
+                              }`}
+                              style={{ fontSize: "0.68rem", padding: "2px 6px" }}
+                            >
+                              {r.loai === "Vắng có phép" ? "Có phép" : r.loai === "Vắng không phép" ? "K.phép" : "Đi trễ"}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                      <button
+                        onClick={() => handleToggleStatus(s.id, "Vắng có phép")}
+                        className={`btn btn-sm ${isVangCoPhep ? "btn-primary" : "btn-secondary"}`}
+                        style={{
+                          fontSize: "0.68rem", padding: "3px 8px", minHeight: 28,
+                          background: isVangCoPhep ? "var(--warning)" : undefined,
+                          color: isVangCoPhep ? "black" : undefined,
+                        }}
+                      >
+                        Phép
+                      </button>
+                      <button
+                        onClick={() => handleToggleStatus(s.id, "Vắng không phép")}
+                        className={`btn btn-sm ${isVangKhongPhep ? "btn-danger" : "btn-secondary"}`}
+                        style={{ fontSize: "0.68rem", padding: "3px 8px", minHeight: 28 }}
+                      >
+                        K.P
+                      </button>
+                      <button
+                        onClick={() => handleToggleStatus(s.id, "Đi trễ")}
+                        className={`btn btn-sm ${isDiTre ? "btn-primary" : "btn-secondary"}`}
+                        style={{
+                          fontSize: "0.68rem", padding: "3px 8px", minHeight: 28,
+                          background: isDiTre ? "var(--info)" : undefined,
+                          color: isDiTre ? "white" : undefined,
+                        }}
+                      >
+                        Trễ
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>

@@ -299,10 +299,31 @@ export default function AdminSoDoLopPage() {
       const pageHeight = 297;
       const marginX = 4;
       const marginY = 4;
-      const renderWidth = pageWidth - marginX * 2; // 202mm
-      const renderHeight = pageHeight - marginY * 2; // 289mm
+      const maxW = pageWidth - marginX * 2;  // 202mm
+      const maxH = pageHeight - marginY * 2; // 289mm
 
-      pdf.addImage(imgData, "PNG", marginX, marginY, renderWidth, renderHeight);
+      // Preserve aspect ratio — scale canvas to fit A4 without distortion
+      const canvasRatio = canvas.width / canvas.height;
+      const pageRatio = maxW / maxH;
+
+      let renderWidth: number;
+      let renderHeight: number;
+
+      if (canvasRatio > pageRatio) {
+        // Canvas is wider than page ratio → fit by width
+        renderWidth = maxW;
+        renderHeight = maxW / canvasRatio;
+      } else {
+        // Canvas is taller than page ratio → fit by height
+        renderHeight = maxH;
+        renderWidth = maxH * canvasRatio;
+      }
+
+      // Center the image on the page
+      const offsetX = marginX + (maxW - renderWidth) / 2;
+      const offsetY = marginY + (maxH - renderHeight) / 2;
+
+      pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight);
       pdf.save(`So_do_lop_${selectedLop}_A4_${selectedMonth.replace(/[\s/]+/g, "_")}.pdf`);
       showToast("Đã xuất file PDF A4 chuẩn tràn trang thành công!");
     } catch (error) {
@@ -399,13 +420,18 @@ export default function AdminSoDoLopPage() {
 
   // Edit Slot Modal
   function openEditSlotModal(slot: SeatSlotData) {
-    const slotTo = slot.to || (slot.studentId ? students.find(s => s.id === slot.studentId)?.to : null) || 1;
+    const matchedStudent = students.find(
+      (s) =>
+        (slot.studentId && s.id === slot.studentId) ||
+        (slot.studentName && s.hoTen.trim().toLowerCase() === slot.studentName.trim().toLowerCase())
+    );
+    const slotTo = (matchedStudent && matchedStudent.to) ? matchedStudent.to : (slot.to || 1);
     setEditSlotModal(slot);
     setModalFilterTo(slotTo);
     setSlotForm({
-      studentId: slot.studentId || null,
+      studentId: slot.studentId || (matchedStudent ? matchedStudent.id : null),
       studentName: slot.studentName || "",
-      studentPhoto: slot.studentPhoto || null,
+      studentPhoto: slot.studentPhoto || (matchedStudent ? matchedStudent.avatar : null),
       to: slotTo,
     });
   }
@@ -413,7 +439,7 @@ export default function AdminSoDoLopPage() {
   function handleStudentSelect(stId: number) {
     if (!editSlotModal) return;
     if (stId === 0) {
-      setSlotForm({ studentId: null, studentName: "", studentPhoto: null, to: null });
+      setSlotForm({ studentId: null, studentName: "", studentPhoto: null, to: 1 });
       return;
     }
     const st = students.find((s) => s.id === stId);
@@ -454,38 +480,50 @@ export default function AdminSoDoLopPage() {
   async function handleSaveSlot() {
     if (!editSlotModal) return;
 
-    // 1. If student has studentId, persist photo to Student table
-    if (slotForm.studentId) {
+    // Tìm học sinh tương ứng theo ID hoặc theo Họ Tên
+    const targetStudent = slotForm.studentId
+      ? students.find((s) => s.id === slotForm.studentId)
+      : (slotForm.studentName.trim()
+          ? students.find((s) => s.hoTen.trim().toLowerCase() === slotForm.studentName.trim().toLowerCase())
+          : null);
+
+    const studentIdToUpdate = slotForm.studentId || (targetStudent ? targetStudent.id : null);
+    const finalTo = slotForm.to || (targetStudent ? targetStudent.to : 1);
+
+    // 1. Cập nhật Tổ và Ảnh của học sinh vào Database (bảng Student)
+    if (studentIdToUpdate) {
       try {
-        await fetch(`/api/students/${slotForm.studentId}`, {
+        await fetch(`/api/students/${studentIdToUpdate}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             avatar: slotForm.studentPhoto,
+            to: finalTo,
           }),
         });
       } catch (err) {
-        console.error("Student avatar save error:", err);
+        console.error("Student avatar/to save error:", err);
       }
 
-      // Update local student list
+      // Cập nhật ngay danh sách học sinh ở state local
       setStudents((prev) =>
         prev.map((st) =>
-          st.id === slotForm.studentId ? { ...st, avatar: slotForm.studentPhoto } : st
+          st.id === studentIdToUpdate
+            ? { ...st, avatar: slotForm.studentPhoto, to: finalTo }
+            : st
         )
       );
     }
 
-    // 2. Update slot in seating chart state
-    const studentTo = slotForm.to || (slotForm.studentId ? students.find(s => s.id === slotForm.studentId)?.to : null) || null;
+    // 2. Cập nhật ô vị trí trên Sơ đồ chỗ ngồi
     const updated = slots.map((s) => {
       if (s.id === editSlotModal.id) {
         return {
           ...s,
           studentName: slotForm.studentName.trim() ? slotForm.studentName.trim().toUpperCase() : null,
           studentPhoto: slotForm.studentPhoto,
-          studentId: slotForm.studentId,
-          to: studentTo,
+          studentId: studentIdToUpdate || slotForm.studentId,
+          to: finalTo,
         };
       }
       return s;
@@ -494,7 +532,7 @@ export default function AdminSoDoLopPage() {
     setSlots(updated);
     handleSaveChart(updated);
     setEditSlotModal(null);
-    showToast("Đã lưu vị trí chỗ ngồi thành công");
+    showToast("Đã lưu vị trí và cập nhật thông tin Tổ thành công!");
   }
 
   function handleClearSlot() {
@@ -1491,6 +1529,63 @@ export default function AdminSoDoLopPage() {
                   placeholder="Nhập tên học sinh (HOẶC CHỌN Ở TRÊN)"
                   style={{ textTransform: "uppercase", fontWeight: 800 }}
                 />
+              </div>
+
+              {/* Student Tổ Selector (Điều chỉnh thông tin Tổ học sinh) */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <label className="label" style={{ fontWeight: 800, margin: 0 }}>
+                    Tổ của học sinh:
+                  </label>
+                  <span style={{ fontSize: "0.75rem", color: "#0284c7", fontWeight: 600 }}>
+                    (Tự động đồng bộ hồ sơ)
+                  </span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                  {[
+                    { id: 1, label: "Tổ 1", color: "#0284c7", bg: "#e0f2fe", border: "#38bdf8" },
+                    { id: 2, label: "Tổ 2", color: "#16a34a", bg: "#dcfce7", border: "#4ade80" },
+                    { id: 3, label: "Tổ 3", color: "#d97706", bg: "#fef3c7", border: "#fcd34d" },
+                    { id: 4, label: "Tổ 4", color: "#9333ea", bg: "#f3e8ff", border: "#c084fc" },
+                  ].map((t) => {
+                    const isSelected = (slotForm.to || 1) === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setSlotForm((f) => ({ ...f, to: t.id }))}
+                        style={{
+                          border: isSelected ? `2.5px solid ${t.color}` : `1px solid var(--border)`,
+                          background: isSelected ? t.bg : "#ffffff",
+                          color: isSelected ? t.color : "#475569",
+                          fontWeight: isSelected ? 800 : 600,
+                          fontSize: "0.85rem",
+                          padding: "8px 6px",
+                          borderRadius: 10,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                          boxShadow: isSelected ? `0 2px 8px ${t.color}33` : "none",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            background: t.color,
+                            display: "inline-block",
+                            flexShrink: 0,
+                          }}
+                        />
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Photo Upload with Live Preview */}

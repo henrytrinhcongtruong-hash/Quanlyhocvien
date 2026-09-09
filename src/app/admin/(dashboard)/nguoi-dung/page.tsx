@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   UserCog,
@@ -23,7 +23,18 @@ import {
   EyeOff,
   Copy,
   Check,
+  Search,
 } from "lucide-react";
+
+function normalizeVN(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .trim();
+}
 
 interface UserItem {
   id: number;
@@ -151,6 +162,46 @@ export default function AdminNguoiDungPage() {
   const [classList, setClassList] = useState<string[]>(["11AT3", "12T2"]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+
+  // Search & Filter State
+  const [search, setSearch] = useState("");
+  const [filterLop, setFilterLop] = useState("ALL");
+  const [filterRole, setFilterRole] = useState("ALL");
+
+  // Filtered Users
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      // 1. Filter by Class
+      if (filterLop !== "ALL") {
+        if (u.assignedLop !== filterLop) return false;
+      }
+      // 2. Filter by Role
+      if (filterRole !== "ALL") {
+        if (filterRole === "ADMIN") {
+          if (!u.isSuperAdmin) return false;
+        } else if (filterRole === "GVCN") {
+          const r = u.roleLabel?.toLowerCase() || "";
+          if (!r.includes("chủ nhiệm") && !r.includes("gvcn") && !r.includes("giáo viên")) return false;
+        } else if (filterRole === "CAN_SU") {
+          const r = u.roleLabel?.toLowerCase() || "";
+          if (!r.includes("lớp trưởng") && !r.includes("lớp phó") && !r.includes("tổ trưởng") && !r.includes("thủ quỹ")) return false;
+        }
+      }
+      // 3. Search query
+      if (!search.trim()) return true;
+      const q = normalizeVN(search);
+      const nameNorm = normalizeVN(u.hoTen || "");
+      const userNorm = normalizeVN(u.username || "");
+      const roleNorm = normalizeVN(u.roleLabel || "");
+      const lopNorm = normalizeVN(u.assignedLop || "");
+      return (
+        nameNorm.includes(q) ||
+        userNorm.includes(q) ||
+        roleNorm.includes(q) ||
+        lopNorm.includes(q)
+      );
+    });
+  }, [users, search, filterLop, filterRole]);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -597,6 +648,109 @@ export default function AdminNguoiDungPage() {
         </div>
       </div>
 
+      {/* Search & Filter Toolbar */}
+      <div
+        className="card"
+        style={{
+          padding: "12px 16px",
+          borderRadius: 14,
+          marginBottom: 16,
+          background: "#ffffff",
+          border: "1px solid var(--border)",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 10,
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", flex: "1 1 300px" }}>
+          {/* Search Box */}
+          <div style={{ position: "relative", flex: "1 1 240px", minWidth: 200 }}>
+            <Search
+              size={15}
+              style={{
+                position: "absolute",
+                left: 11,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)",
+                pointerEvents: "none",
+              }}
+            />
+            <input
+              type="text"
+              className="input"
+              placeholder="🔍 Tìm theo họ tên, username, chức danh..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                paddingLeft: 34,
+                paddingRight: search ? 32 : 12,
+                fontSize: "0.86rem",
+                height: 38,
+                borderRadius: 10,
+                width: "100%",
+                background: "var(--bg-muted)",
+                boxSizing: "border-box",
+              }}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                style={{
+                  position: "absolute",
+                  right: 8,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  padding: 4,
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Filter by Class */}
+          <select
+            className="select"
+            value={filterLop}
+            onChange={(e) => setFilterLop(e.target.value)}
+            style={{ width: "auto", minWidth: 130, height: 38, fontSize: "0.85rem", borderRadius: 10 }}
+          >
+            <option value="ALL">🏫 Tất cả lớp</option>
+            {classList.map((c) => (
+              <option key={c} value={c}>
+                Lớp {c}
+              </option>
+            ))}
+          </select>
+
+          {/* Filter by Role */}
+          <select
+            className="select"
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
+            style={{ width: "auto", minWidth: 150, height: 38, fontSize: "0.85rem", borderRadius: 10 }}
+          >
+            <option value="ALL">👑 Tất cả vai trò</option>
+            <option value="ADMIN">🛡️ Admin Hệ Thống</option>
+            <option value="GVCN">👑 Giáo Viên Chủ Nhiệm</option>
+            <option value="CAN_SU">🌟 Ban Cán Sự / Tổ Trưởng</option>
+          </select>
+        </div>
+
+        {/* Counter Badge */}
+        <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+          Hiển thị <span style={{ color: "var(--primary)", fontWeight: 900 }}>{filteredUsers.length}</span> / {users.length} tài khoản
+        </div>
+      </div>
+
       {/* User Table */}
       <div className="card" style={{ overflow: "hidden", borderRadius: 14 }}>
         {loading ? (
@@ -620,170 +774,219 @@ export default function AdminNguoiDungPage() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
-                  <tr key={u.id}>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {u.isSuperAdmin ? (
-                          <span className="badge badge-primary" style={{ padding: "3px 8px" }}>
-                            <Shield size={12} /> Admin
-                          </span>
-                        ) : null}
-                        <span style={{ fontWeight: 700, color: "var(--primary)" }}>{u.username}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          background: "#f8fafc",
-                          padding: "4px 8px",
-                          borderRadius: 8,
-                          border: "1px solid var(--border)",
-                        }}
-                      >
-                        <Key size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-                        <span
-                          style={{
-                            fontFamily: "monospace",
-                            fontSize: "0.85rem",
-                            fontWeight: 700,
-                            letterSpacing: showPasswordIds[u.id] ? "0px" : "2px",
-                            color: showPasswordIds[u.id] ? "var(--primary)" : "var(--text-secondary)",
-                          }}
-                        >
-                          {showPasswordIds[u.id]
-                            ? u.plainPassword || (u.username === "admin" ? "admin123" : "123456")
-                            : "••••••••"}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setShowPasswordIds((prev) => ({
-                              ...prev,
-                              [u.id]: !prev[u.id],
-                            }))
-                          }
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: "2px 4px",
-                            display: "flex",
-                            alignItems: "center",
-                            color: "var(--text-muted)",
-                            borderRadius: 4,
-                          }}
-                          title={showPasswordIds[u.id] ? "Ẩn mật khẩu" : "Xem mật khẩu"}
-                        >
-                          {showPasswordIds[u.id] ? <EyeOff size={13} /> : <Eye size={13} />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const pass =
-                              u.plainPassword ||
-                              (u.username === "admin" ? "admin123" : "123456");
-                            navigator.clipboard.writeText(pass);
-                            setCopiedId(u.id);
-                            setTimeout(() => setCopiedId(null), 2000);
-                          }}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: "2px 4px",
-                            display: "flex",
-                            alignItems: "center",
-                            color: copiedId === u.id ? "#10b981" : "var(--text-muted)",
-                            borderRadius: 4,
-                          }}
-                          title="Sao chép mật khẩu"
-                        >
-                          {copiedId === u.id ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
-                        </button>
-                      </div>
-                    </td>
-                    <td style={{ fontWeight: 600 }}>{u.hoTen}</td>
-                    <td>
-                      <span className="badge badge-info" style={{ fontWeight: 700 }}>
-                        Lớp {u.assignedLop || "12T2"}
-                      </span>
-                    </td>
-                    <td style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
-                      {u.roleLabel || "Thành viên"}
-                    </td>
-                    <td style={{ fontSize: "0.78rem", color: "var(--text-muted)", maxWidth: 300 }}>
-                      {u.isSuperAdmin ? (
-                        <span style={{ color: "var(--primary)", fontWeight: 700 }}>Toàn quyền hệ thống</span>
-                      ) : (
-                        u.permissions
-                          .map(
-                            (p) =>
-                              `${p.module} (${
-                                p.level === "toan_quyen"
-                                  ? "Toàn quyền"
-                                  : p.level === "chi_xem"
-                                  ? "Chỉ xem"
-                                  : "Không"
-                              })`
-                          )
-                          .join(", ")
-                      )}
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <div style={{ display: "inline-flex", gap: 6, justifyContent: "flex-end" }}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setResetPassUser(u);
-                            setQuickNewPassword("");
-                            setQuickError("");
-                            setQuickShowPassword(false);
-                          }}
-                          className="btn btn-sm"
-                          style={{
-                            background: "#eff6ff",
-                            color: "#2563eb",
-                            border: "1px solid #bfdbfe",
-                            padding: "4px 8px",
-                          }}
-                          title={`Đổi mật khẩu cho ${u.hoTen} (@${u.username})`}
-                        >
-                          <Key size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openEdit(u)}
-                          className="btn btn-secondary btn-sm"
-                          style={{ padding: "4px 8px" }}
-                          title="Chỉnh sửa thông tin & phân quyền"
-                        >
-                          <Edit2 size={13} />
-                        </button>
-                        {!u.isSuperAdmin && (
-                          <button
-                            type="button"
-                            onClick={() => setDeleteUser(u)}
-                            className="btn btn-sm"
-                            style={{
-                              background: "#fee2e2",
-                              color: "#dc2626",
-                              border: "1px solid #fca5a5",
-                              padding: "4px 8px",
-                            }}
-                            title="Xóa người dùng"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
-                      </div>
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: "center", padding: "40px 16px", color: "var(--text-muted)" }}>
+                      <Users size={32} style={{ margin: "0 auto 8px", opacity: 0.4 }} />
+                      <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>Không tìm thấy tài khoản nào</div>
+                      <div style={{ fontSize: "0.8rem", marginTop: 4 }}>Thử thay đổi từ khóa tìm kiếm hoặc bỏ chọn các bộ lọc</div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredUsers.map((u) => (
+                    <tr key={u.id}>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {u.isSuperAdmin ? (
+                            <span className="badge badge-primary" style={{ padding: "3px 8px" }}>
+                              <Shield size={12} /> Admin
+                            </span>
+                          ) : null}
+                          <span style={{ fontWeight: 700, color: "var(--primary)" }}>{u.username}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            background: "#f8fafc",
+                            padding: "4px 8px",
+                            borderRadius: 8,
+                            border: "1px solid var(--border)",
+                          }}
+                        >
+                          <Key size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+                          <span
+                            style={{
+                              fontFamily: "monospace",
+                              fontSize: "0.85rem",
+                              fontWeight: 700,
+                              letterSpacing: showPasswordIds[u.id] ? "0.5px" : "2px",
+                              color: showPasswordIds[u.id] ? "#0f172a" : "#94a3b8",
+                            }}
+                          >
+                            {showPasswordIds[u.id] ? u.plainPassword || "********" : "••••••••"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPasswordIds((prev) => ({
+                                ...prev,
+                                [u.id]: !prev[u.id],
+                              }))
+                            }
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: 2,
+                              color: "var(--text-muted)",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                            title={showPasswordIds[u.id] ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                          >
+                            {showPasswordIds[u.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                          </button>
+                          {u.plainPassword && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(u.plainPassword || "");
+                                setCopiedId(u.id);
+                                setTimeout(() => setCopiedId(null), 2000);
+                              }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 2,
+                                color: copiedId === u.id ? "var(--success)" : "var(--text-muted)",
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                              title="Sao chép mật khẩu"
+                            >
+                              {copiedId === u.id ? <Check size={13} /> : <Copy size={13} />}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <strong style={{ color: "#0f172a" }}>{u.hoTen}</strong>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            background: "#f0f9ff",
+                            color: "#0369a1",
+                            border: "1px solid #bae6fd",
+                            padding: "3px 8px",
+                            borderRadius: 6,
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {u.assignedLop ? `Lớp ${u.assignedLop}` : "Toàn trường"}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge badge-secondary" style={{ fontWeight: 600 }}>
+                          {u.roleLabel || "Thành viên"}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxWidth: 320 }}>
+                          {u.isSuperAdmin ? (
+                            <span
+                              style={{
+                                background: "#fef2f2",
+                                color: "#b91c1c",
+                                border: "1px solid #fecaca",
+                                fontSize: "0.72rem",
+                                fontWeight: 800,
+                                padding: "2px 6px",
+                                borderRadius: 4,
+                              }}
+                            >
+                              Toàn quyền tối cao
+                            </span>
+                          ) : u.permissions && u.permissions.length > 0 ? (
+                            u.permissions.slice(0, 3).map((p) => {
+                              const mod = MODULES.find((m) => m.key === p.module);
+                              const isFull = p.level === "toan_quyen";
+                              return (
+                                <span
+                                  key={p.module}
+                                  style={{
+                                    background: isFull ? "#dcfce7" : "#f1f5f9",
+                                    color: isFull ? "#15803d" : "#475569",
+                                    border: `1px solid ${isFull ? "#bbf7d0" : "#e2e8f0"}`,
+                                    fontSize: "0.7rem",
+                                    fontWeight: 700,
+                                    padding: "2px 6px",
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  {mod?.label.split(" ")[0] || p.module}: {isFull ? "Toàn quyền" : "Xem"}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Chưa phân quyền</span>
+                          )}
+                          {u.permissions && u.permissions.length > 3 && (
+                            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", alignSelf: "center" }}>
+                              +{u.permissions.length - 3} mục khác
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setResetPassUser(u);
+                              setQuickNewPassword("");
+                              setQuickError("");
+                              setQuickShowPassword(false);
+                            }}
+                            className="btn btn-sm"
+                            style={{
+                              background: "#eff6ff",
+                              color: "#2563eb",
+                              border: "1px solid #bfdbfe",
+                              padding: "4px 8px",
+                            }}
+                            title={`Đổi mật khẩu cho ${u.hoTen} (@${u.username})`}
+                          >
+                            <Key size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(u)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: "4px 8px" }}
+                            title="Chỉnh sửa thông tin & phân quyền"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          {!u.isSuperAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => setDeleteUser(u)}
+                              className="btn btn-sm"
+                              style={{
+                                background: "#fee2e2",
+                                color: "#dc2626",
+                                border: "1px solid #fca5a5",
+                                padding: "4px 8px",
+                              }}
+                              title="Xóa người dùng"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
+
             </table>
           </div>
         )}

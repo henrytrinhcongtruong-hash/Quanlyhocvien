@@ -3,26 +3,17 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  BarChart3, TrendingUp, Users, Wallet, Calendar as CalendarIcon, Download,
-  CheckCircle, AlertCircle, ArrowUpRight, ArrowDownRight, School,
+  BarChart3, Users, Calendar as CalendarIcon, Download,
+  CheckCircle, AlertCircle, School,
   Search, Filter, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, X, Clock,
   XCircle, FileSpreadsheet, Sparkles, Check, ChevronDown, RefreshCw,
 } from "lucide-react";
-import { formatVND, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { compareVietnameseNames } from "@/lib/utils";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer,
 } from "recharts";
-
-interface FeeSummary {
-  tongThu: number;
-  tongChi: number;
-  conLai: number;
-  soHSDaDong: number;
-  tongHS: number;
-  chiTheoHangMuc: { hangMucChi: string; total: number }[];
-}
+import ReportTabs from "@/components/admin/ReportTabs";
 
 interface StudentItem {
   id: number;
@@ -43,33 +34,9 @@ interface AttendanceRecord {
   student: { id: number; hoTen: string; tenGoi: string | null; to: number; lop: string; avatar?: string | null };
 }
 
-const CATEGORY_COLORS = [
-  "#3b82f6",
-  "#10b981",
-  "#f59e0b",
-  "#ec4899",
-  "#8b5cf6",
-  "#06b6d4",
-  "#f97316",
-  "#64748b",
-];
+type TimeRangeType = "all" | "day" | "range" | "week" | "month" | "year";
 
-function formatShortVND(num: number): string {
-  if (num === 0) return "0đ";
-  if (num >= 1_000_000) {
-    const val = num / 1_000_000;
-    return `${Number.isInteger(val) ? val : val.toFixed(1)}Tr`;
-  }
-  if (num >= 1_000) {
-    const val = num / 1_000;
-    return `${Number.isInteger(val) ? val : val.toFixed(0)}k`;
-  }
-  return `${num}đ`;
-}
-
-type TimeRangeType = "all" | "day" | "week" | "month" | "year";
-
-export default function AdminBaoCaoPage() {
+export default function AdminBaoCaoChuyenCanPage() {
   const searchParams = useSearchParams();
   const urlLop = searchParams.get("lop");
   const { data: session } = useSession();
@@ -82,14 +49,22 @@ export default function AdminBaoCaoPage() {
     return urlLop || "12T2";
   });
   const [classList, setClassList] = useState<string[]>(["12T2", "11AT3"]);
-  const [summary, setSummary] = useState<FeeSummary | null>(null);
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [rawAttendance, setRawAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Time Range Filter states
-  const [timeType, setTimeType] = useState<TimeRangeType>("month");
+  const [timeType, setTimeType] = useState<TimeRangeType>("day");
   const [selectedDay, setSelectedDay] = useState(() => new Date().toISOString().split("T")[0]);
+  
+  // Custom Date Range states (Từ ngày... Đến ngày...)
+  const [rangeFrom, setRangeFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().split("T")[0];
+  });
+  const [rangeTo, setRangeTo] = useState(() => new Date().toISOString().split("T")[0]);
+
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
   const [selectedWeekPreset, setSelectedWeekPreset] = useState<"current" | "7days" | "last">("current");
@@ -111,6 +86,72 @@ export default function AdminBaoCaoPage() {
     }
   };
 
+  // Helper điều hướng ngày
+  const stepDay = (deltaDays: number) => {
+    const d = new Date(selectedDay);
+    d.setDate(d.getDate() + deltaDays);
+    setSelectedDay(d.toISOString().split("T")[0]);
+  };
+
+  const getDayOfWeekName = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      const days = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+      return days[d.getDay()];
+    } catch {
+      return "";
+    }
+  };
+
+  // Tính số ngày trong giai đoạn
+  const rangeDaysCount = useMemo(() => {
+    if (!rangeFrom || !rangeTo) return 0;
+    const from = new Date(rangeFrom);
+    const to = new Date(rangeTo);
+    const diffTime = Math.abs(to.getTime() - from.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  }, [rangeFrom, rangeTo]);
+
+  // Phím tắt chọn nhanh giai đoạn
+  const applyRangePreset = (preset: "7days" | "14days" | "30days" | "this_week" | "this_month" | "last_month") => {
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    if (preset === "7days") {
+      const past = new Date();
+      past.setDate(now.getDate() - 6);
+      setRangeFrom(past.toISOString().split("T")[0]);
+      setRangeTo(todayStr);
+    } else if (preset === "14days") {
+      const past = new Date();
+      past.setDate(now.getDate() - 13);
+      setRangeFrom(past.toISOString().split("T")[0]);
+      setRangeTo(todayStr);
+    } else if (preset === "30days") {
+      const past = new Date();
+      past.setDate(now.getDate() - 29);
+      setRangeFrom(past.toISOString().split("T")[0]);
+      setRangeTo(todayStr);
+    } else if (preset === "this_week") {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(now.setDate(diff));
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      setRangeFrom(monday.toISOString().split("T")[0]);
+      setRangeTo(sunday.toISOString().split("T")[0]);
+    } else if (preset === "this_month") {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+      setRangeFrom(first);
+      setRangeTo(last);
+    } else if (preset === "last_month") {
+      const first = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
+      const last = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split("T")[0];
+      setRangeFrom(first);
+      setRangeTo(last);
+    }
+  };
+
   // Sync with URL query parameter or assignedLop
   useEffect(() => {
     if (!isSuperAdmin && assignedLop) {
@@ -120,11 +161,24 @@ export default function AdminBaoCaoPage() {
     if (urlLop) setFilterLop(urlLop);
   }, [urlLop, isSuperAdmin, assignedLop]);
 
-  // Calculate Date Range (from, to, ngay) based on Time Filter
+  // Calculate Date Range based on Time Filter
   const dateRange = useMemo(() => {
     const now = new Date();
     if (timeType === "day") {
-      return { ngay: selectedDay, from: null, to: null, label: `Ngày ${formatDate(selectedDay)}` };
+      return {
+        ngay: selectedDay,
+        from: null,
+        to: null,
+        label: `${getDayOfWeekName(selectedDay)}, ${formatDate(selectedDay)}`,
+      };
+    }
+    if (timeType === "range") {
+      return {
+        ngay: null,
+        from: rangeFrom,
+        to: rangeTo,
+        label: `Giai đoạn từ ${formatDate(rangeFrom)} đến ${formatDate(rangeTo)} (${rangeDaysCount} ngày)`,
+      };
     }
     if (timeType === "week") {
       if (selectedWeekPreset === "7days") {
@@ -162,15 +216,14 @@ export default function AdminBaoCaoPage() {
       return { ngay: null, from: firstDay, to: lastDay, label: `Năm ${selectedYear}` };
     }
     // "all"
-    return { ngay: null, from: null, to: null, label: "Tất cả thời gian" };
-  }, [timeType, selectedDay, selectedWeekPreset, selectedMonth, selectedYear]);
+    return { ngay: null, from: null, to: null, label: "Tất cả thời gian (Toàn bộ)" };
+  }, [timeType, selectedDay, rangeFrom, rangeTo, rangeDaysCount, selectedWeekPreset, selectedMonth, selectedYear]);
 
-  // Fetch all report data
+  // Fetch report data
   const fetchData = async () => {
     setLoading(true);
     try {
       const activeClass = !isSuperAdmin ? assignedLop : filterLop;
-      const lopQuery = activeClass !== "ALL" ? `&lop=${encodeURIComponent(activeClass)}` : "";
       const feeLopQuery = activeClass !== "ALL" ? `?lop=${encodeURIComponent(activeClass)}` : "";
 
       const attParams = new URLSearchParams();
@@ -179,26 +232,23 @@ export default function AdminBaoCaoPage() {
       if (dateRange.from) attParams.set("from", dateRange.from);
       if (dateRange.to) attParams.set("to", dateRange.to);
 
-      const [feeRes, stdRes, attRes, classRes] = await Promise.all([
-        fetch(`/api/fees/summary${feeLopQuery}`),
+      const [stdRes, attRes, classRes] = await Promise.all([
         fetch(`/api/students${feeLopQuery}`),
         fetch(`/api/attendance?${attParams.toString()}`),
         fetch("/api/classes"),
       ]);
 
-      const [feeData, stdData, attData, classData] = await Promise.all([
-        feeRes.json(),
+      const [stdData, attData, classData] = await Promise.all([
         stdRes.json(),
         attRes.json(),
         classRes.json(),
       ]);
 
-      setSummary(feeData);
       setStudents(stdData.data || []);
       setRawAttendance(attData.data || []);
       if (classData.data && classData.data.length > 0) setClassList(classData.data);
     } catch (e) {
-      console.error("Fetch report data error:", e);
+      console.error("Fetch attendance report data error:", e);
     } finally {
       setLoading(false);
     }
@@ -278,17 +328,6 @@ export default function AdminBaoCaoPage() {
     return list;
   }, [rawAttendance, violationSearch, violationLoai, violationSort]);
 
-  // Expense Category Bar Chart Data
-  const expenseCategoryData = useMemo(() => {
-    if (!summary?.chiTheoHangMuc || summary.chiTheoHangMuc.length === 0) return [];
-    return summary.chiTheoHangMuc.map((item, idx) => ({
-      hangMucChi: item.hangMucChi,
-      total: item.total,
-      percent: summary.tongChi > 0 ? ((item.total / summary.tongChi) * 100).toFixed(1) : "0",
-      color: CATEGORY_COLORS[idx % CATEGORY_COLORS.length],
-    }));
-  }, [summary]);
-
   const handleExportAttendance = () => {
     const params = new URLSearchParams();
     if (filterLop && filterLop !== "ALL") params.set("lop", filterLop);
@@ -302,13 +341,13 @@ export default function AdminBaoCaoPage() {
   return (
     <div className="animate-fade-in" style={{ paddingBottom: 40 }}>
       {/* ====== HEADER & GLOBAL CONTROLS ====== */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 14 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 14 }}>
         <div>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 800, marginBottom: 4, color: "var(--text-primary)" }}>
-            Báo cáo & Thống kê {filterLop !== "ALL" ? `— Lớp ${filterLop}` : "Toàn trường"}
+            Báo cáo Chuyên cần & Vi phạm {filterLop !== "ALL" ? `— Lớp ${filterLop}` : "Toàn trường"}
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
-            Tổng hợp đa chiều: Quỹ tài chính, biểu đồ chuyên cần 4 trạng thái và nhật ký vi phạm
+            Thống kê tỷ lệ chuyên cần 4 trạng thái, theo dõi nề nếp và danh sách chi tiết các trường hợp vắng / đi trễ
           </p>
         </div>
 
@@ -328,14 +367,6 @@ export default function AdminBaoCaoPage() {
           </select>
 
           <button
-            className="btn btn-secondary btn-sm"
-            onClick={() => window.open(`/api/fees/export${filterLop !== "ALL" ? `?lop=${filterLop}` : ""}`, "_blank")}
-            style={{ minHeight: 38, display: "inline-flex", alignItems: "center", gap: 6 }}
-          >
-            <Download size={14} /> Export Báo cáo quỹ
-          </button>
-
-          <button
             className="btn btn-primary btn-sm"
             onClick={handleExportAttendance}
             style={{ minHeight: 38, display: "inline-flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, hsl(213,94%,44%) 0%, hsl(260,80%,58%) 100%)" }}
@@ -345,143 +376,318 @@ export default function AdminBaoCaoPage() {
         </div>
       </div>
 
-      {/* ====== BỘ LỌC THỜI GIAN THEO: NGÀY / TUẦN / THÁNG / NĂM / TẤT CẢ ====== */}
+      {/* ====== SUB TABS NAVIGATION ====== */}
+      <ReportTabs activeTab="chuyen-can" filterLop={filterLop} />
+
+      {/* ====== BỘ LỌC THỜI GIAN NÂNG CAO ====== */}
       <div
         className="card"
         style={{
-          padding: "14px 18px",
-          marginBottom: 20,
+          padding: "16px 20px",
+          marginBottom: 22,
           background: "#ffffff",
           border: "1.5px solid var(--border)",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+          borderRadius: 14,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          {/* Main Time Range Tabs */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
-              <CalendarIcon size={16} color="var(--primary)" /> Thời gian:
+        {/* Header hàng 1: Tiêu đề & Badge phạm vi đang chọn */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+              <CalendarIcon size={16} color="var(--primary)" /> Bộ lọc thời gian:
             </span>
-
-            {[
-              { key: "day", label: "📅 Ngày" },
-              { key: "week", label: "🗓️ Tuần" },
-              { key: "month", label: "📆 Tháng" },
-              { key: "year", label: "🏛️ Năm" },
-              { key: "all", label: "♾️ Tất cả" },
-            ].map((t) => {
-              const active = timeType === t.key;
-              return (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => setTimeType(t.key as TimeRangeType)}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: 8,
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                    border: active ? "1.5px solid var(--primary)" : "1px solid var(--border)",
-                    background: active ? "var(--primary)" : "#f8fafc",
-                    color: active ? "white" : "var(--text-secondary)",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
+            <span className="badge badge-info" style={{ fontWeight: 700, fontSize: "0.82rem", padding: "4px 10px" }}>
+              {dateRange.label}
+            </span>
           </div>
 
-          {/* Sub-selectors for chosen time range */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            {timeType === "day" && (
+          {/* Type selector tabs */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--bg-page)", padding: 4, borderRadius: 8, border: "1px solid var(--border)" }}>
+            {[
+              { key: "day", label: "📅 Ngày cụ thể" },
+              { key: "range", label: "📍 Giai đoạn" },
+              { key: "week", label: "🗓️ Tuần" },
+              { key: "month", label: "📆 Tháng" },
+              { key: "year", label: "📈 Năm" },
+              { key: "all", label: "♾️ Tất cả" },
+            ].map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTimeType(t.key as TimeRangeType)}
+                style={{
+                  padding: "5px 11px",
+                  fontSize: "0.78rem",
+                  fontWeight: timeType === t.key ? 800 : 600,
+                  borderRadius: 6,
+                  border: "none",
+                  cursor: "pointer",
+                  background: timeType === t.key ? "var(--primary)" : "transparent",
+                  color: timeType === t.key ? "#ffffff" : "var(--text-secondary)",
+                  transition: "all 0.15s ease",
+                  boxShadow: timeType === t.key ? "0 2px 6px rgba(59,130,246,0.3)" : "none",
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Hàng 2: Chi tiết điều khiển tùy chọn theo từng kiểu thời gian */}
+        <div style={{ paddingTop: 10, borderTop: "1px dashed var(--border)" }}>
+          {/* 1. CHỌN 1 NGÀY CỤ THỂ */}
+          {timeType === "day" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => stepDay(-1)}
+                  style={{ minHeight: 34, padding: "4px 10px", fontSize: "0.8rem" }}
+                >
+                  ◀ Ngày trước
+                </button>
                 <input
                   type="date"
                   className="input"
-                  style={{ minHeight: 34, padding: "4px 8px", width: 145, fontSize: "0.82rem" }}
+                  style={{ minHeight: 34, padding: "4px 10px", fontWeight: 700, fontSize: "0.88rem", border: "1.5px solid var(--primary)", borderRadius: 8, background: "#ffffff" }}
                   value={selectedDay}
                   onChange={(e) => setSelectedDay(e.target.value)}
                 />
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
-                  style={{ padding: "4px 8px", fontSize: "0.78rem" }}
+                  onClick={() => stepDay(1)}
+                  style={{ minHeight: 34, padding: "4px 10px", fontSize: "0.8rem" }}
+                >
+                  Ngày sau ▶
+                </button>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
                   onClick={() => setSelectedDay(new Date().toISOString().split("T")[0])}
+                  style={{ minHeight: 34, padding: "4px 12px", fontSize: "0.8rem" }}
                 >
                   Hôm nay
                 </button>
-              </div>
-            )}
-
-            {timeType === "week" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <select
-                  className="select"
-                  style={{ minHeight: 34, padding: "4px 10px", fontSize: "0.82rem", width: 135 }}
-                  value={selectedWeekPreset}
-                  onChange={(e) => setSelectedWeekPreset(e.target.value as "current" | "7days" | "last")}
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    setSelectedDay(yesterday.toISOString().split("T")[0]);
+                  }}
+                  style={{ minHeight: 34, padding: "4px 12px", fontSize: "0.8rem" }}
                 >
-                  <option value="current">Tuần này</option>
-                  <option value="7days">7 ngày qua</option>
-                  <option value="last">Tuần trước</option>
-                </select>
+                  Hôm qua
+                </button>
               </div>
-            )}
 
-            {timeType === "month" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <select
-                  className="select"
-                  style={{ minHeight: 34, padding: "4px 8px", fontSize: "0.82rem", width: 110 }}
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                >
-                  {[...Array(12)].map((_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      Tháng {i + 1}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="select"
-                  style={{ minHeight: 34, padding: "4px 8px", fontSize: "0.82rem", width: 85 }}
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                >
-                  {[2024, 2025, 2026, 2027].map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
+              <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--primary)" }}>
+                📅 {getDayOfWeekName(selectedDay)}, ngày {formatDate(selectedDay)}
               </div>
-            )}
+            </div>
+          )}
 
-            {timeType === "year" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <select
-                  className="select"
-                  style={{ minHeight: 34, padding: "4px 8px", fontSize: "0.82rem", width: 100 }}
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                >
-                  {[2024, 2025, 2026, 2027].map((y) => (
-                    <option key={y} value={y}>
-                      Năm {y}
-                    </option>
-                  ))}
-                </select>
+          {/* 2. CHỌN THEO GIAI ĐOẠN TỪ NGÀY... ĐẾN NGÀY... */}
+          {timeType === "range" && (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+                    Từ ngày:
+                  </label>
+                  <input
+                    type="date"
+                    className="input"
+                    max={rangeTo}
+                    style={{
+                      minHeight: 36,
+                      padding: "4px 10px",
+                      fontWeight: 700,
+                      fontSize: "0.88rem",
+                      border: "1.5px solid var(--primary)",
+                      borderRadius: 8,
+                      background: "#ffffff",
+                    }}
+                    value={rangeFrom}
+                    onChange={(e) => setRangeFrom(e.target.value)}
+                  />
+                </div>
+
+                <span style={{ fontWeight: 800, color: "var(--text-muted)", fontSize: "1.1rem" }}>➔</span>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+                    Đến ngày:
+                  </label>
+                  <input
+                    type="date"
+                    className="input"
+                    min={rangeFrom}
+                    style={{
+                      minHeight: 36,
+                      padding: "4px 10px",
+                      fontWeight: 700,
+                      fontSize: "0.88rem",
+                      border: "1.5px solid var(--primary)",
+                      borderRadius: 8,
+                      background: "#ffffff",
+                    }}
+                    value={rangeTo}
+                    onChange={(e) => setRangeTo(e.target.value)}
+                  />
+                </div>
+
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--primary)", background: "rgba(59,130,246,0.1)", padding: "4px 12px", borderRadius: 6 }}>
+                  📊 Tổng cộng: {rangeDaysCount} ngày
+                </span>
               </div>
-            )}
 
-            {/* Active Range Badge */}
-            <span className="badge badge-info" style={{ fontWeight: 700, padding: "5px 10px", fontSize: "0.8rem" }}>
-              Đang xem: {dateRange.label}
-            </span>
-          </div>
+              {/* Nút chọn nhanh */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)", marginRight: 2 }}>
+                  Gợi ý nhanh:
+                </span>
+                {[
+                  { key: "7days", label: "⚡ 7 ngày qua" },
+                  { key: "14days", label: "⚡ 14 ngày qua" },
+                  { key: "30days", label: "⚡ 30 ngày qua" },
+                  { key: "this_week", label: "🗓️ Tuần này" },
+                  { key: "this_month", label: "📆 Tháng này" },
+                  { key: "last_month", label: "⏮️ Tháng trước" },
+                ].map((preset) => (
+                  <button
+                    key={preset.key}
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: "4px 10px", fontSize: "0.78rem", borderRadius: 6, background: "#ffffff" }}
+                    onClick={() => applyRangePreset(preset.key as any)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 3. CHỌN THEO TUẦN */}
+          {timeType === "week" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+                Chọn mốc tuần:
+              </span>
+              <select
+                className="select"
+                style={{ minHeight: 36, padding: "4px 12px", fontSize: "0.85rem", width: 180, fontWeight: 700 }}
+                value={selectedWeekPreset}
+                onChange={(e) => setSelectedWeekPreset(e.target.value as "current" | "7days" | "last")}
+              >
+                <option value="current">🗓️ Tuần này (Thứ 2 - CN)</option>
+                <option value="7days">⚡ 7 ngày gần nhất</option>
+                <option value="last">⏮️ Tuần trước</option>
+              </select>
+            </div>
+          )}
+
+          {/* 4. CHỌN THEO THÁNG */}
+          {timeType === "month" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+                Chọn tháng và năm:
+              </span>
+              <select
+                className="select"
+                style={{ minHeight: 36, padding: "4px 12px", fontSize: "0.85rem", width: 130, fontWeight: 700 }}
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              >
+                {[...Array(12)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    Tháng {i + 1}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="select"
+                style={{ minHeight: 36, padding: "4px 12px", fontSize: "0.85rem", width: 110, fontWeight: 700 }}
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+              >
+                {[2024, 2025, 2026, 2027].map((y) => (
+                  <option key={y} value={y}>
+                    Năm {y}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  const now = new Date();
+                  setSelectedMonth(now.getMonth() + 1);
+                  setSelectedYear(now.getFullYear());
+                }}
+                style={{ minHeight: 36, padding: "4px 12px", fontSize: "0.8rem" }}
+              >
+                Tháng hiện tại
+              </button>
+            </div>
+          )}
+
+          {/* 5. CHỌN THEO NĂM */}
+          {timeType === "year" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+                Chọn năm báo cáo:
+              </span>
+              <select
+                className="select"
+                style={{ minHeight: 36, padding: "4px 12px", fontSize: "0.85rem", width: 120, fontWeight: 700 }}
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+              >
+                {[2024, 2025, 2026, 2027].map((y) => (
+                  <option key={y} value={y}>
+                    Năm {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 6. TOÀN BỘ (TẤT CẢ) */}
+          {timeType === "all" && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+              <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                ♾️ Đang tổng hợp số liệu chuyên cần của <strong>toàn bộ thời gian</strong> từ trước tới nay.
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setTimeType("day")}
+                  style={{ minHeight: 34, padding: "4px 12px", fontSize: "0.82rem" }}
+                >
+                  📅 Xem 1 ngày cụ thể
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setTimeType("range")}
+                  style={{ minHeight: 34, padding: "4px 12px", fontSize: "0.82rem" }}
+                >
+                  📍 Xem theo giai đoạn
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -492,218 +698,98 @@ export default function AdminBaoCaoPage() {
         </div>
       ) : (
         <>
-          {/* ====== KPI FINANCIAL OVERVIEW ====== */}
-          {summary && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 22 }}>
-              <div className="card" style={{ padding: "18px 20px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div>
-                    <div className="kpi-number" style={{ color: "var(--success)" }}>
-                      {formatVND(summary.tongThu)}
-                    </div>
-                    <div className="kpi-label">Tổng quỹ đã thu {filterLop !== "ALL" ? `(${filterLop})` : ""}</div>
-                  </div>
-                  <ArrowDownRight size={24} color="var(--success)" opacity={0.7} />
-                </div>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 6 }}>
-                  {summary.soHSDaDong} / {summary.tongHS} học sinh đã đóng
+          {/* ====== CƠ CẤU CHUYÊN CẦN & VI PHẠM (4 THẺ SỐ LIỆU + BIỂU ĐỒ TRÒN) ====== */}
+          <div className="card" style={{ padding: "22px 24px", marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
+              <div>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
+                  Cơ cấu Chuyên cần & Vi phạm
+                </h3>
+                <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: 3 }}>
+                  Khung thời gian đang xem: <strong style={{ color: "var(--primary)" }}>{dateRange.label}</strong>
                 </div>
               </div>
-
-              <div className="card" style={{ padding: "18px 20px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div>
-                    <div className="kpi-number" style={{ color: "var(--danger)" }}>
-                      {formatVND(summary.tongChi)}
-                    </div>
-                    <div className="kpi-label">Tổng đã chi tiêu</div>
-                  </div>
-                  <ArrowUpRight size={24} color="var(--danger)" opacity={0.7} />
-                </div>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 6 }}>
-                  {summary.chiTheoHangMuc?.length || 0} hạng mục chi
-                </div>
-              </div>
-
-              <div
-                className="card"
-                style={{
-                  padding: "18px 20px",
-                  background: "linear-gradient(135deg, hsl(213,94%,44%) 0%, hsl(213,80%,58%) 100%)",
-                  border: "none",
-                }}
-              >
-                <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase" }}>
-                  Số dư quỹ hiện tại {filterLop !== "ALL" ? `(${filterLop})` : ""}
-                </div>
-                <div style={{ color: "white", fontSize: "1.8rem", fontWeight: 800, marginTop: 4 }}>
-                  {formatVND(summary.conLai)}
-                </div>
-              </div>
+              <span className="badge badge-info" style={{ fontSize: "0.8rem", fontWeight: 700, padding: "6px 14px" }}>
+                Tổng ghi nhận: {attendanceBreakdown.totalEvents} lượt
+              </span>
             </div>
-          )}
 
-          {/* ====== CHARTS ROW (FINANCIAL + ATTENDANCE 4 TRẠNG THÁI) ====== */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 16, marginBottom: 24 }}>
-            {/* Chart 1: Biểu đồ Chi tiêu theo Hạng mục */}
-            <div className="card" style={{ padding: "20px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <div>
-                  <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
-                    <Wallet size={16} color="var(--primary)" /> Chi tiêu theo Hạng mục
-                  </h3>
-                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>
-                    Phân bổ các khoản chi của quỹ lớp
-                  </div>
+            {/* 4 THẺ SỐ LIỆU TRỰC QUAN ĐẦY ĐỦ */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))", gap: 10, marginBottom: 20 }}>
+              <div style={{ background: "#ecfdf5", border: "1.5px solid #a7f3d0", padding: "14px 16px", borderRadius: 10, textAlign: "center" }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#065f46" }}>🟢 Có mặt đầy đủ</div>
+                <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#059669", marginTop: 4 }}>
+                  {attendanceBreakdown.coMat}
                 </div>
-                <span className="badge badge-neutral" style={{ fontSize: "0.78rem", fontWeight: 700 }}>
-                  Tổng chi: <strong style={{ color: "var(--danger)", marginLeft: 4 }}>{formatVND(summary?.tongChi || 0)}</strong>
-                </span>
+                <div style={{ fontSize: "0.78rem", color: "#047857", fontWeight: 700 }}>{attendanceBreakdown.pctCoMat}% tổng số</div>
               </div>
 
-              <div style={{ width: "100%", height: 260 }}>
-                {expenseCategoryData.length === 0 ? (
-                  <div
-                    style={{
-                      height: "100%",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--text-muted)",
-                      background: "#f8fafc",
-                      borderRadius: 10,
-                      border: "1px dashed var(--border)",
-                    }}
-                  >
-                    <Wallet size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
-                    <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Chưa có dữ liệu chi tiêu theo hạng mục</span>
-                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Các khoản chi sẽ tự động xuất hiện tại đây</span>
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={expenseCategoryData} margin={{ top: 10, right: 10, left: -10, bottom: 25 }}>
-                      <XAxis
-                        dataKey="hangMucChi"
-                        stroke="#888888"
-                        fontSize={11}
-                        interval={0}
-                        angle={-15}
-                        textAnchor="end"
-                      />
-                      <YAxis
-                        stroke="#888888"
-                        fontSize={11}
-                        tickFormatter={(v) => formatShortVND(Number(v))}
-                      />
-                      <Tooltip
-                        formatter={(value: unknown) => [
-                          `${formatVND(Number(value))} (${summary && summary.tongChi > 0 ? ((Number(value) / summary.tongChi) * 100).toFixed(1) : 0}%)`,
-                          "Số tiền",
-                        ]}
-                      />
-                      <Bar dataKey="total" radius={[6, 6, 0, 0]}>
-                        {expenseCategoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
+              <div style={{ background: "#fffbeb", border: "1.5px solid #fde68a", padding: "14px 16px", borderRadius: 10, textAlign: "center" }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#92400e" }}>🟡 Vắng có phép</div>
+                <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#d97706", marginTop: 4 }}>
+                  {attendanceBreakdown.vangCoPhep}
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "#b45309", fontWeight: 700 }}>{attendanceBreakdown.pctVangCoPhep}% tổng số</div>
+              </div>
+
+              <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", padding: "14px 16px", borderRadius: 10, textAlign: "center" }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#991b1b" }}>🔴 Vắng không phép</div>
+                <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#dc2626", marginTop: 4 }}>
+                  {attendanceBreakdown.vangKhongPhep}
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "#b91c1c", fontWeight: 700 }}>{attendanceBreakdown.pctVangKhongPhep}% tổng số</div>
+              </div>
+
+              <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", padding: "14px 16px", borderRadius: 10, textAlign: "center" }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1e40af" }}>🔵 Đi trễ</div>
+                <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#2563eb", marginTop: 4 }}>
+                  {attendanceBreakdown.diTre}
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "#1d4ed8", fontWeight: 700 }}>{attendanceBreakdown.pctDiTre}% tổng số</div>
               </div>
             </div>
 
-            {/* Chart 2: Cơ cấu Chuyên cần & Vi phạm (ĐỦ 4 THÔNG TIN + SỐ LIỆU RÕ RÀNG) */}
-            <div className="card" style={{ padding: "20px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <div>
-                  <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>Cơ cấu Chuyên cần & Vi phạm</h3>
-                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>
-                    Khung thời gian: <strong style={{ color: "var(--primary)" }}>{dateRange.label}</strong>
-                  </div>
+            {/* Pie Chart */}
+            <div style={{ width: "100%", height: 260 }}>
+              {attendanceBreakdown.pieData.length === 0 ? (
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
+                  Chưa có dữ liệu chuyên cần trong khoảng thời gian này
                 </div>
-                <span className="badge badge-info" style={{ fontSize: "0.75rem" }}>
-                  Tổng: {attendanceBreakdown.totalEvents} lượt
-                </span>
-              </div>
-
-              {/* 4 THẺ SỐ LIỆU TRỰC QUAN ĐẦY ĐỦ */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
-                <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", padding: "8px 6px", borderRadius: 8, textAlign: "center" }}>
-                  <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#065f46" }}>🟢 Có mặt</div>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#059669", marginTop: 2 }}>
-                    {attendanceBreakdown.coMat}
-                  </div>
-                  <div style={{ fontSize: "0.68rem", color: "#047857", fontWeight: 600 }}>{attendanceBreakdown.pctCoMat}%</div>
-                </div>
-
-                <div style={{ background: "#fffbeb", border: "1px solid #fde68a", padding: "8px 6px", borderRadius: 8, textAlign: "center" }}>
-                  <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#92400e" }}>🟡 Có phép</div>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#d97706", marginTop: 2 }}>
-                    {attendanceBreakdown.vangCoPhep}
-                  </div>
-                  <div style={{ fontSize: "0.68rem", color: "#b45309", fontWeight: 600 }}>{attendanceBreakdown.pctVangCoPhep}%</div>
-                </div>
-
-                <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "8px 6px", borderRadius: 8, textAlign: "center" }}>
-                  <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#991b1b" }}>🔴 Không phép</div>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#dc2626", marginTop: 2 }}>
-                    {attendanceBreakdown.vangKhongPhep}
-                  </div>
-                  <div style={{ fontSize: "0.68rem", color: "#b91c1c", fontWeight: 600 }}>{attendanceBreakdown.pctVangKhongPhep}%</div>
-                </div>
-
-                <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: "8px 6px", borderRadius: 8, textAlign: "center" }}>
-                  <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#1e40af" }}>🔵 Đi trễ</div>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#2563eb", marginTop: 2 }}>
-                    {attendanceBreakdown.diTre}
-                  </div>
-                  <div style={{ fontSize: "0.68rem", color: "#1d4ed8", fontWeight: 600 }}>{attendanceBreakdown.pctDiTre}%</div>
-                </div>
-              </div>
-
-              {/* Pie Chart */}
-              <div style={{ width: "100%", height: 210 }}>
-                {attendanceBreakdown.pieData.length === 0 ? (
-                  <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
-                    Chưa có dữ liệu chuyên cần trong khoảng thời gian này
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={attendanceBreakdown.pieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={52}
-                        outerRadius={80}
-                        paddingAngle={4}
-                        dataKey="value"
-                      >
-                        {attendanceBreakdown.pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: unknown, name: unknown) => [
-                          `${value} lượt (${attendanceBreakdown.totalEvents > 0 ? (((Number(value)) / attendanceBreakdown.totalEvents) * 100).toFixed(1) : 0}%)`,
-                          name as string,
-                        ]}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={attendanceBreakdown.pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={62}
+                      outerRadius={95}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {attendanceBreakdown.pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: unknown, name: unknown) => [
+                        `${value} lượt (${attendanceBreakdown.totalEvents > 0 ? (((Number(value)) / attendanceBreakdown.totalEvents) * 100).toFixed(1) : 0}%)`,
+                        name as string,
+                      ]}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
 
           {/* ====== BÁO CÁO DẠNG CHI TIẾT: DANH SÁCH CÁC TRƯỜNG HỢP VI PHẠM ====== */}
-          <div className="card" style={{ padding: "20px", marginBottom: 24, overflow: "hidden" }}>
+          <div className="card" style={{ padding: "22px 24px", marginBottom: 24, overflow: "hidden" }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
               <div>
-                <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
-                  <AlertCircle size={18} color="#dc2626" /> Báo cáo chi tiết các trường hợp vi phạm & vắng/trễ
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                  <AlertCircle size={19} color="#dc2626" /> Báo cáo chi tiết các trường hợp vi phạm & vắng/trễ
                 </h3>
                 <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", margin: "4px 0 0" }}>
                   Danh sách từng trường hợp vắng có phép, vắng không phép và đi trễ trong: <strong style={{ color: "var(--primary)" }}>{dateRange.label}</strong>
@@ -711,7 +797,7 @@ export default function AdminBaoCaoPage() {
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span className="badge badge-warning" style={{ fontWeight: 700, padding: "5px 12px" }}>
+                <span className="badge badge-warning" style={{ fontWeight: 700, padding: "6px 14px" }}>
                   {filteredViolations.length} trường hợp vi phạm
                 </span>
                 <button
@@ -801,141 +887,175 @@ export default function AdminBaoCaoPage() {
                 </p>
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 45 }}>STT</th>
-                      <th>Họ và tên</th>
-                      <th>Lớp</th>
-                      <th>Tổ</th>
-                      <th>Nội dung vi phạm</th>
-                      <th>Ngày ghi nhận</th>
-                      <th>Ghi chú / Lý do</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredViolations.map((item, idx) => {
-                      const isVangCP = item.loai === "Vắng có phép";
-                      const isVangKP = item.loai === "Vắng không phép";
-                      const isDiTre = item.loai === "Đi trễ";
+              <>
+                {/* Desktop Violations Table */}
+                <div className="hide-on-mobile" style={{ overflowX: "auto" }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 45 }}>STT</th>
+                        <th>Họ và tên</th>
+                        <th>Lớp</th>
+                        <th>Tổ</th>
+                        <th>Nội dung vi phạm</th>
+                        <th>Ngày ghi nhận</th>
+                        <th>Ghi chú / Lý do</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredViolations.map((item, idx) => {
+                        const isVangCP = item.loai === "Vắng có phép";
+                        const isVangKP = item.loai === "Vắng không phép";
+                        const isDiTre = item.loai === "Đi trễ";
 
-                      return (
-                        <tr key={item.id}>
-                          <td style={{ color: "var(--text-muted)", fontSize: "0.82rem", fontWeight: 600 }}>
-                            {idx + 1}
-                          </td>
-                          <td style={{ fontWeight: 700 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <div
+                        return (
+                          <tr key={item.id}>
+                            <td style={{ color: "var(--text-muted)", fontSize: "0.82rem", fontWeight: 600 }}>
+                              {idx + 1}
+                            </td>
+                            <td style={{ fontWeight: 700 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <div
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: "50%",
+                                    background: isVangKP ? "#fee2e2" : isVangCP ? "#fef3c7" : "#dbeafe",
+                                    color: isVangKP ? "#dc2626" : isVangCP ? "#d97706" : "#2563eb",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontWeight: 800,
+                                    fontSize: "0.72rem",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {item.student.hoTen.substring(0, 1)}
+                                </div>
+                                <div>
+                                  <span style={{ color: "var(--text-primary)" }}>{item.student.hoTen}</span>
+                                  {item.student.tenGoi && (
+                                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: 6 }}>
+                                      ({item.student.tenGoi})
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="badge badge-info" style={{ fontWeight: 700, fontSize: "0.75rem" }}>
+                                Lớp {item.student.lop}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="badge badge-neutral" style={{ fontSize: "0.75rem" }}>
+                                Tổ {item.student.to}
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                className={`badge ${
+                                  isVangKP
+                                    ? "badge-danger"
+                                    : isVangCP
+                                    ? "badge-warning"
+                                    : "badge-info"
+                                }`}
                                 style={{
-                                  width: 28,
-                                  height: 28,
-                                  borderRadius: "50%",
-                                  background: isVangKP ? "#fee2e2" : isVangCP ? "#fef3c7" : "#dbeafe",
-                                  color: isVangKP ? "#dc2626" : isVangCP ? "#d97706" : "#2563eb",
-                                  display: "flex",
+                                  display: "inline-flex",
                                   alignItems: "center",
-                                  justifyContent: "center",
-                                  fontWeight: 800,
-                                  fontSize: "0.72rem",
-                                  flexShrink: 0,
+                                  gap: 5,
+                                  fontWeight: 700,
+                                  fontSize: "0.78rem",
+                                  padding: "4px 10px",
                                 }}
                               >
-                                {item.student.hoTen.substring(0, 1)}
-                              </div>
-                              <div>
-                                <span style={{ color: "var(--text-primary)" }}>{item.student.hoTen}</span>
-                                {item.student.tenGoi && (
-                                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: 6 }}>
-                                    ({item.student.tenGoi})
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="badge badge-info" style={{ fontWeight: 700, fontSize: "0.75rem" }}>
-                              Lớp {item.student.lop}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="badge badge-neutral" style={{ fontSize: "0.75rem" }}>
-                              Tổ {item.student.to}
-                            </span>
-                          </td>
-                          <td>
-                            <span
-                              className={`badge ${
-                                isVangKP
-                                  ? "badge-danger"
-                                  : isVangCP
-                                  ? "badge-warning"
-                                  : "badge-info"
-                              }`}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                                fontWeight: 700,
-                                fontSize: "0.78rem",
-                                padding: "4px 10px",
-                              }}
-                            >
-                              {isVangKP && <XCircle size={12} />}
-                              {isVangCP && <Clock size={12} />}
-                              {isDiTre && <AlertCircle size={12} />}
-                              {item.loai}
-                            </span>
-                          </td>
-                          <td style={{ fontWeight: 600, color: "var(--text-secondary)", fontSize: "0.85rem" }}>
-                            {formatDate(item.ngay)}
-                          </td>
-                          <td style={{ color: item.ghiChu ? "var(--text-primary)" : "var(--text-muted)", fontSize: "0.82rem" }}>
-                            {item.ghiChu || "—"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                                {isVangKP && <XCircle size={12} />}
+                                {isVangCP && <Clock size={12} />}
+                                {isDiTre && <AlertCircle size={12} />}
+                                {item.loai}
+                              </span>
+                            </td>
+                            <td style={{ fontWeight: 600, color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+                              {formatDate(item.ngay)}
+                            </td>
+                            <td style={{ color: item.ghiChu ? "var(--text-primary)" : "var(--text-muted)", fontSize: "0.82rem" }}>
+                              {item.ghiChu || "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-          {/* ====== EXPENSE BREAKDOWN BY CATEGORY ====== */}
-          {summary && summary.chiTheoHangMuc && summary.chiTheoHangMuc.length > 0 && (
-            <div className="card" style={{ padding: "20px" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 16 }}>Phân bổ chi tiêu theo Hạng mục</h3>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Hạng mục chi</th>
-                    <th style={{ textAlign: "right" }}>Số tiền</th>
-                    <th style={{ textAlign: "right" }}>Tỷ trọng</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.chiTheoHangMuc.map((item, idx) => {
-                    const pct = summary.tongChi > 0 ? ((item.total / summary.tongChi) * 100).toFixed(1) : "0";
+                {/* Mobile Violations Card List */}
+                <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 4px" }}>
+                  {filteredViolations.map((item, idx) => {
+                    const isVangCP = item.loai === "Vắng có phép";
+                    const isVangKP = item.loai === "Vắng không phép";
+                    const isDiTre = item.loai === "Đi trễ";
+
                     return (
-                      <tr key={idx}>
-                        <td style={{ color: "var(--text-muted)" }}>{idx + 1}</td>
-                        <td style={{ fontWeight: 600 }}>{item.hangMucChi}</td>
-                        <td style={{ textAlign: "right", fontWeight: 700, color: "var(--danger)" }}>
-                          {formatVND(item.total)}
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <span className="badge badge-neutral">{pct}%</span>
-                        </td>
-                      </tr>
+                      <div
+                        key={item.id}
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: 12,
+                          background: "#ffffff",
+                          border: "1px solid var(--border)",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
+                              #{idx + 1}
+                            </span>
+                            <span style={{ fontWeight: 800, fontSize: "0.9rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {item.student.hoTen}
+                            </span>
+                            <span className="badge badge-neutral" style={{ fontSize: "0.68rem", padding: "1px 5px" }}>
+                              T{item.student.to}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
+                            📅 {formatDate(item.ngay)} {item.ghiChu ? `• ${item.ghiChu}` : ""}
+                          </div>
+                        </div>
+
+                        <span
+                          className={`badge ${
+                            isVangKP
+                              ? "badge-danger"
+                              : isVangCP
+                              ? "badge-warning"
+                              : "badge-info"
+                          }`}
+                          style={{
+                            fontSize: "0.72rem",
+                            padding: "4px 8px",
+                            flexShrink: 0,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          {isVangKP && <XCircle size={11} />}
+                          {isVangCP && <Clock size={11} />}
+                          {isDiTre && <AlertCircle size={11} />}
+                          {item.loai}
+                        </span>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                </div>
+              </>
+            )}
+          </div>
         </>
       )}
     </div>

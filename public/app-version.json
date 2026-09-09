@@ -1,0 +1,8 @@
+{
+  "latestVersionCode": 11,
+  "latestVersionName": "1.8.1",
+  "apkUrl": "https://quanlyhocvien-fs84.vercel.app/downloads/QuanLyHocVien_v1.8.1.apk",
+  "changelog": "• Bổ sung tính năng chọn ngày và lọc báo cáo theo giai đoạn (Từ ngày... Đến ngày...)\n• Nâng cấp hệ thống tự động kiểm tra và cài đè cập nhật trong app\n• Tối ưu hóa hiệu năng và bảo mật cao cấp với R8 Optimizer\n• Sẵn sàng cho kiến trúc Native Offline-First",
+  "forceUpdate": false,
+  "releaseDate": "2026-09-06"
+}

@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   ShieldAlert,
   History,
+  TrendingUp,
 } from "lucide-react";
 
 // Nav items với icon và label
@@ -41,7 +42,8 @@ const NAV_BASE = [
   { href: "/admin/quy", icon: Wallet, label: "Quỹ lớp", module: "quy" },
   { href: "/admin/lich-truc", icon: Calendar, label: "Lịch trực", module: "lich_truc" },
   { href: "/admin/su-kien", icon: Star, label: "Sự kiện", module: "su_kien" },
-  { href: "/admin/bao-cao", icon: BarChart3, label: "Báo cáo", module: "bao_cao" },
+  { href: "/admin/bao-cao", icon: BarChart3, label: "BC Chuyên cần", exact: true, module: "bao_cao" },
+  { href: "/admin/bao-cao/thu-chi", icon: TrendingUp, label: "BC Thu chi", exact: true, module: "bao_cao" },
 ];
 
 export default function AdminLayout({
@@ -378,6 +380,7 @@ export default function AdminLayout({
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Top bar */}
         <header
+          className="admin-header"
           style={{
             background: "white",
             borderBottom: "1px solid var(--border)",
@@ -409,11 +412,11 @@ export default function AdminLayout({
           {realIsSuperAdmin ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <School size={16} color="var(--primary)" />
-              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+              <span className="admin-class-label" style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)" }}>
                 Quản lý lớp:
               </span>
               <select
-                className="select"
+                className="select admin-class-select"
                 style={{
                   minHeight: 34,
                   padding: "4px 28px 4px 10px",
@@ -554,7 +557,7 @@ export default function AdminLayout({
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, padding: "20px 24px", overflowX: "hidden" }}>
+        <main className="admin-main" style={{ flex: 1, overflowX: "hidden" }}>
           <div style={{ maxWidth: 1560, margin: "0 auto", width: "100%" }}>
             {children}
           </div>
@@ -795,10 +798,29 @@ export default function AdminLayout({
       )}
 
       <style>{`
+        .admin-main {
+          padding: 20px 24px;
+        }
         @media (max-width: 768px) {
           .admin-sidebar-desktop { display: none !important; }
           .admin-mobile-menu-btn { display: flex !important; }
           .user-name-text { display: none; }
+          .admin-header {
+            height: 48px !important;
+            padding: 0 12px !important;
+            gap: 8px !important;
+          }
+          .admin-class-label {
+            display: none !important;
+          }
+          .admin-class-select {
+            width: 125px !important;
+            min-height: 32px !important;
+            font-size: 0.8rem !important;
+          }
+          .admin-main {
+            padding: 12px 10px !important;
+          }
         }
       `}</style>
     </div>

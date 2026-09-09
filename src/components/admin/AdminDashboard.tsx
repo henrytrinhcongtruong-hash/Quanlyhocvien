@@ -235,9 +235,9 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
         style={{
           background: "linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0369a1 100%)",
           borderRadius: 24,
-          padding: "32px 36px",
+          padding: "clamp(18px, 4vw, 30px) clamp(16px, 4vw, 32px)",
           color: "white",
-          marginBottom: 26,
+          marginBottom: 24,
           boxShadow: "0 14px 34px rgba(2,132,199,0.22)",
           position: "relative",
           overflow: "hidden",
@@ -258,180 +258,286 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
         />
 
         <div style={{ position: "relative", zIndex: 1 }}>
+          {/* Badges Row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+            <span
+              style={{
+                background: "rgba(56, 189, 248, 0.2)",
+                border: "1px solid rgba(56, 189, 248, 0.5)",
+                color: "#38bdf8",
+                fontSize: "0.72rem",
+                fontWeight: 900,
+                padding: "4px 10px",
+                borderRadius: 20,
+                letterSpacing: "0.5px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <Sparkles size={11} /> BẢNG ĐIỀU KHIỂN TRUNG TÂM
+            </span>
+
+            <span
+              style={{
+                background: "rgba(255, 255, 255, 0.12)",
+                color: "rgba(255, 255, 255, 0.9)",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                padding: "4px 10px",
+                borderRadius: 20,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <Clock size={11} /> {currentDateStr || "Hôm nay"}
+            </span>
+
+            <span
+              style={{
+                background: "rgba(34, 197, 94, 0.2)",
+                border: "1px solid rgba(34, 197, 94, 0.4)",
+                color: "#4ade80",
+                fontSize: "0.72rem",
+                fontWeight: 800,
+                padding: "4px 10px",
+                borderRadius: 20,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <Database size={11} /> Cloud Supabase: Online
+            </span>
+          </div>
+
+          {/* Title & Slogan */}
+          <h1
+            style={{
+              fontSize: "clamp(1.35rem, 4vw, 2.1rem)",
+              fontWeight: 900,
+              margin: "0 0 6px",
+              color: "#ffffff",
+              letterSpacing: "-0.5px",
+              lineHeight: 1.25,
+            }}
+          >
+            Hệ Thống Quản Lý — {lopTitle}
+          </h1>
+
+          {/* Ban Cán Sự & GVCN — Tách riêng mỗi người 1 hàng thẳng tắp */}
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-              gap: 18,
+              flexDirection: "column",
+              gap: 6,
+              margin: "6px 0 16px",
+              background: "rgba(255, 255, 255, 0.07)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              borderRadius: 12,
+              padding: "10px 14px",
+              backdropFilter: "blur(6px)",
             }}
           >
-            <div>
-              {/* Badges Row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
-                <span
-                  style={{
-                    background: "rgba(56, 189, 248, 0.2)",
-                    border: "1px solid rgba(56, 189, 248, 0.5)",
-                    color: "#38bdf8",
-                    fontSize: "0.75rem",
-                    fontWeight: 900,
-                    padding: "4px 12px",
-                    borderRadius: 20,
-                    letterSpacing: "0.5px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <Sparkles size={12} /> BẢNG ĐIỀU KHIỂN TRUNG TÂM
-                </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem" }}>
+              <span style={{ color: "#38bdf8", fontWeight: 700, minWidth: 92 }}>• GVCN:</span>
+              <strong style={{ color: "#ffffff", letterSpacing: "0.2px" }}>{stats.leaders.gvcn}</strong>
+            </div>
 
-                <span
-                  style={{
-                    background: "rgba(255, 255, 255, 0.12)",
-                    color: "rgba(255, 255, 255, 0.9)",
-                    fontSize: "0.75rem",
-                    fontWeight: 700,
-                    padding: "4px 12px",
-                    borderRadius: 20,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <Clock size={12} /> {currentDateStr || "Hôm nay"}
-                </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem" }}>
+              <span style={{ color: "#4ade80", fontWeight: 700, minWidth: 92 }}>• Lớp trưởng:</span>
+              <strong style={{ color: "#ffffff", letterSpacing: "0.2px" }}>{stats.leaders.lopTruong}</strong>
+            </div>
 
-                <span
-                  style={{
-                    background: "rgba(34, 197, 94, 0.2)",
-                    border: "1px solid rgba(34, 197, 94, 0.4)",
-                    color: "#4ade80",
-                    fontSize: "0.72rem",
-                    fontWeight: 800,
-                    padding: "4px 10px",
-                    borderRadius: 20,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 5,
-                  }}
-                >
-                  <Database size={11} /> Cloud Supabase (Singapore): Online
-                </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem" }}>
+              <span style={{ color: "#fcd34d", fontWeight: 700, minWidth: 92 }}>• Lớp phó:</span>
+              <strong style={{ color: "#ffffff", letterSpacing: "0.2px" }}>{stats.leaders.lopPho}</strong>
+            </div>
+          </div>
+
+          {/* Grid 4 Thẻ Thông Tin & Nút Thao Tác — Đều Tăm Tắp 100% trên Mọi Thiết Bị */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
+              gap: 10,
+              width: "100%",
+            }}
+          >
+            {/* 1. Thẻ Sĩ số */}
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.09)",
+                border: "1px solid rgba(255, 255, 255, 0.16)",
+                backdropFilter: "blur(10px)",
+                borderRadius: 14,
+                padding: "10px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                boxSizing: "border-box",
+                width: "100%",
+                minHeight: 60,
+              }}
+            >
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  background: "rgba(56, 189, 248, 0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  border: "1px solid rgba(56, 189, 248, 0.35)",
+                }}
+              >
+                <Users size={19} color="#38bdf8" />
               </div>
-
-              {/* Title & Slogan */}
-              <h1
-                style={{
-                  fontSize: "2.1rem",
-                  fontWeight: 900,
-                  margin: "0 0 6px",
-                  color: "#ffffff",
-                  letterSpacing: "-0.5px",
-                }}
-              >
-                Hệ Thống Quản Lý — {lopTitle}
-              </h1>
-
-              <p
-                style={{
-                  color: "rgba(255,255,255,0.85)",
-                  fontSize: "0.95rem",
-                  margin: "0 0 16px",
-                  fontWeight: 500,
-                }}
-              >
-                GVCN: <strong>{stats.leaders.gvcn}</strong> • Lớp trưởng: <strong>{stats.leaders.lopTruong}</strong> • Lớp phó: <strong>{stats.leaders.lopPho}</strong>
-              </p>
-
-              {/* Quick Class Meta Pills */}
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <div
-                  style={{
-                    background: "rgba(255,255,255,0.1)",
-                    backdropFilter: "blur(8px)",
-                    borderRadius: 12,
-                    padding: "8px 14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    fontSize: "0.85rem",
-                  }}
-                >
-                  <Users size={16} color="#38bdf8" />
-                  <span>Sĩ số: <strong style={{ color: "white" }}>{stats.totalStudents} Học sinh</strong> ({stats.maleCount} Nam • {stats.femaleCount} Nữ)</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  SĨ SỐ HỌC SINH
                 </div>
-
-                <div
-                  style={{
-                    background: "rgba(255,255,255,0.1)",
-                    backdropFilter: "blur(8px)",
-                    borderRadius: 12,
-                    padding: "8px 14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    fontSize: "0.85rem",
-                  }}
-                >
-                  <Layers size={16} color="#4ade80" />
-                  <span>Cơ cấu: <strong style={{ color: "white" }}>4 Tổ học tập</strong></span>
+                <div style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.92rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {stats.totalStudents} Học sinh <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 500, fontSize: "0.78rem" }}>({stats.maleCount} Nam • {stats.femaleCount} Nữ)</span>
                 </div>
               </div>
             </div>
 
-            {/* Quick Action Primary Buttons */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 190 }}>
-              <Link href={`/admin/so-do-lop?lop=${lopName}`} style={{ textDecoration: "none" }}>
-                <button
-                  className="btn"
-                  style={{
-                    width: "100%",
-                    background: "linear-gradient(135deg, #0284c7 0%, #0284c7 100%)",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    fontWeight: 800,
-                    padding: "10px 18px",
-                    borderRadius: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    boxShadow: "0 6px 16px rgba(2,132,199,0.35)",
-                  }}
-                >
-                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <LayoutGrid size={16} /> Sơ Đồ Lớp Học
-                  </span>
-                  <ChevronRight size={16} />
-                </button>
-              </Link>
-
-              <Link href={isAllClass ? "/admin/hoc-sinh" : `/admin/hoc-sinh?lop=${lopName}`} style={{ textDecoration: "none" }}>
-                <button
-                  className="btn"
-                  style={{
-                    width: "100%",
-                    background: "rgba(255,255,255,0.15)",
-                    backdropFilter: "blur(6px)",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.25)",
-                    fontWeight: 700,
-                    padding: "9px 18px",
-                    borderRadius: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Users size={16} /> Quản Lý {stats.totalStudents} Học Sinh
-                  </span>
-                  <ChevronRight size={16} />
-                </button>
-              </Link>
+            {/* 2. Thẻ Cơ cấu */}
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.09)",
+                border: "1px solid rgba(255, 255, 255, 0.16)",
+                backdropFilter: "blur(10px)",
+                borderRadius: 14,
+                padding: "10px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                boxSizing: "border-box",
+                width: "100%",
+                minHeight: 60,
+              }}
+            >
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  background: "rgba(74, 222, 128, 0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  border: "1px solid rgba(74, 222, 128, 0.35)",
+                }}
+              >
+                <Layers size={19} color="#4ade80" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  CƠ CẤU PHÂN BỔ
+                </div>
+                <div style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.92rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  4 Tổ học tập <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 500, fontSize: "0.78rem" }}>(Tổ 1 đến Tổ 4)</span>
+                </div>
+              </div>
             </div>
+
+            {/* 3. Nút Sơ Đồ Lớp */}
+            <Link href={`/admin/so-do-lop?lop=${lopName}`} style={{ textDecoration: "none", width: "100%", display: "block" }}>
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  borderRadius: 14,
+                  padding: "10px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  boxShadow: "0 4px 14px rgba(2,132,199,0.35)",
+                  cursor: "pointer",
+                  boxSizing: "border-box",
+                  width: "100%",
+                  minHeight: 60,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 10,
+                      background: "rgba(255, 255, 255, 0.2)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <LayoutGrid size={19} color="#ffffff" />
+                  </div>
+                  <div>
+                    <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase" }}>
+                      SƠ ĐỒ CHỖ NGỒI
+                    </div>
+                    <div style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.95rem" }}>
+                      Sơ Đồ Lớp Học
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight size={18} color="rgba(255,255,255,0.9)" />
+              </div>
+            </Link>
+
+            {/* 4. Nút Quản Lý Học Sinh */}
+            <Link href={isAllClass ? "/admin/hoc-sinh" : `/admin/hoc-sinh?lop=${lopName}`} style={{ textDecoration: "none", width: "100%", display: "block" }}>
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.12)",
+                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  backdropFilter: "blur(10px)",
+                  borderRadius: 14,
+                  padding: "10px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  cursor: "pointer",
+                  boxSizing: "border-box",
+                  width: "100%",
+                  minHeight: 60,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 10,
+                      background: "rgba(255, 255, 255, 0.15)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Users size={19} color="#ffffff" />
+                  </div>
+                  <div>
+                    <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase" }}>
+                      DANH SÁCH LỚP
+                    </div>
+                    <div style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.95rem" }}>
+                      Quản Lý {stats.totalStudents} Học Sinh
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight size={18} color="rgba(255,255,255,0.9)" />
+              </div>
+            </Link>
           </div>
         </div>
       </div>
@@ -442,8 +548,8 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: 16,
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
+          gap: 14,
           marginBottom: 28,
         }}
       >
@@ -693,7 +799,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
           </Link>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: 14 }}>
           {groups.map((g) => (
             <Link key={g.id} href={`/admin/hoc-sinh?lop=${lopName}&to=${g.id}`} style={{ textDecoration: "none" }}>
               <div
@@ -782,7 +888,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 250px), 1fr))", gap: 14 }}>
           {coreModules.map((m, idx) => (
             <Link key={idx} href={m.href} style={{ textDecoration: "none" }}>
               <div
@@ -879,7 +985,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
       {/* ========================================================================= */}
       {/* 5. TWO-COLUMN ACTIVITY & EVENTS FEED                                      */}
       {/* ========================================================================= */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: 16 }}>
         {/* Left Card: Sự Kiện & Kỳ Thi Sắp Tới */}
         <div
           className="card"

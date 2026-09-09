@@ -128,6 +128,7 @@ export default function AdminThoiKhoaBieuPage() {
   });
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [activeMobileThu, setActiveMobileThu] = useState<number>(2);
 
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -328,17 +329,21 @@ export default function AdminThoiKhoaBieuPage() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           <button
             className="btn btn-secondary btn-sm"
             onClick={handleResetDefault}
             disabled={resetting}
             title="Khôi phục thời khóa biểu mẫu theo đúng kế hoạch"
           >
-            <RotateCcw size={14} /> {resetting ? "Đang nạp..." : "Nạp TKB Chuẩn Mẫu"}
+            <RotateCcw size={14} />
+            <span className="hide-on-mobile">{resetting ? "Đang nạp..." : "Nạp TKB Chuẩn Mẫu"}</span>
+            <span className="hide-on-desktop">{resetting ? "..." : "Mẫu"}</span>
           </button>
           <button className="btn btn-secondary btn-sm" onClick={() => window.print()}>
-            <Printer size={14} /> In Thời Khóa Biểu
+            <Printer size={14} />
+            <span className="hide-on-mobile">In Thời Khóa Biểu</span>
+            <span className="hide-on-desktop">In</span>
           </button>
         </div>
       </div>
@@ -391,8 +396,127 @@ export default function AdminThoiKhoaBieuPage() {
         </div>
       </div>
 
+      {/* Mobile Day Tabs */}
+      <div className="mobile-day-tabs hide-on-desktop">
+        {DAYS.map((d) => (
+          <button
+            key={d.thu}
+            type="button"
+            className={`mobile-tab-btn ${activeMobileThu === d.thu ? "active" : ""}`}
+            onClick={() => setActiveMobileThu(d.thu)}
+          >
+            {d.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Mobile Schedule Cards for Selected Day */}
+      <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+        {periodsList.map((tietNum) => {
+          const isBreakTime = tietNum === 3;
+          const timeInfo = EVENING_TIMES[tietNum];
+          const item = getPeriodItem(activeMobileThu, tietNum);
+          const color = item?.monHoc ? getSubjectColor(item.monHoc) : null;
+
+          return (
+            <React.Fragment key={tietNum}>
+              {isBreakTime && (
+                <div
+                  style={{
+                    background: "#fef3c7",
+                    border: "1px solid #fde68a",
+                    padding: "8px 14px",
+                    borderRadius: 10,
+                    textAlign: "center",
+                    fontSize: "0.78rem",
+                    fontWeight: 800,
+                    color: "#b45309",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Coffee size={14} />
+                  <span>GIẢI LAO: 19h20 - 19h35 (15 phút)</span>
+                </div>
+              )}
+
+              <div
+                className="card"
+                onClick={() => openEditCell(activeMobileThu, tietNum)}
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  background: color ? color.bg : "#ffffff",
+                  border: color ? `1.5px solid ${color.border}` : "1px dashed var(--border)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 10,
+                      background: "rgba(6, 182, 212, 0.15)",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span style={{ fontWeight: 900, fontSize: "0.95rem", color: "#0891b2", lineHeight: 1 }}>
+                      T{tietNum}
+                    </span>
+                    <span style={{ fontSize: "0.6rem", color: "#475569", fontWeight: 700, marginTop: 2 }}>
+                      {timeInfo.time.split(" - ")[0]}
+                    </span>
+                  </div>
+
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 800, fontSize: "0.92rem", color: color ? color.text : "var(--text-muted)" }}>
+                      {item?.monHoc || "— Chưa xếp môn —"}
+                    </div>
+                    {item?.giaoVien && (
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 2, fontWeight: 600 }}>
+                        🧑‍🏫 GV: {item.giaoVien}
+                      </div>
+                    )}
+                    <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
+                      ⏱️ {timeInfo.time} ({timeInfo.duration})
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: "rgba(6, 182, 212, 0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#0891b2",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Edit2 size={13} />
+                </div>
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+
       {/* Main Timetable Table (Pixel Perfect match to User's Excel) */}
-      <div className="card" style={{ overflow: "hidden", borderRadius: 16, border: "2px solid #06b6d4" }}>
+      <div className="card hide-on-mobile" style={{ overflow: "hidden", borderRadius: 16, border: "2px solid #06b6d4" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
             <thead>

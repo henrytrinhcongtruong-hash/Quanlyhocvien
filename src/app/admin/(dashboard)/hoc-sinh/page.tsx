@@ -396,7 +396,7 @@ export default function HocSinhPage() {
             {total} học sinh • 4 tổ
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: "none" }} id="import-excel" />
           <button
             className="btn btn-secondary btn-sm"
@@ -404,7 +404,8 @@ export default function HocSinhPage() {
             disabled={importing}
           >
             <Upload size={14} />
-            {importing ? "Đang import..." : "Import Excel"}
+            <span className="hide-on-mobile">{importing ? "Đang import..." : "Import Excel"}</span>
+            <span className="hide-on-desktop">{importing ? "..." : "Import"}</span>
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleExport}>
             <Download size={14} />
@@ -412,7 +413,8 @@ export default function HocSinhPage() {
           </button>
           <button className="btn btn-primary btn-sm" onClick={openAdd}>
             <Plus size={14} />
-            Thêm học sinh
+            <span className="hide-on-mobile">Thêm học sinh</span>
+            <span className="hide-on-desktop">Thêm HS</span>
           </button>
           {filterLop !== "ALL" && (
             <button
@@ -433,24 +435,34 @@ export default function HocSinhPage() {
               title={`Xóa bỏ hoàn toàn lớp ${filterLop} và dữ liệu liên quan`}
             >
               <Trash2 size={14} color="#dc2626" />
-              Xóa lớp {filterLop}
+              <span className="hide-on-mobile">Xóa lớp {filterLop}</span>
+              <span className="hide-on-desktop">Xóa</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Tổng hợp theo tổ */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+      {/* Tổng hợp theo tổ - Horizontal scrollable chips on mobile */}
+      <div className="mobile-chips-bar" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {[1, 2, 3, 4].map((t, i) => (
           <div
             key={t}
             className="card"
-            style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", border: filterTo === t ? "2px solid var(--primary)" : undefined }}
+            style={{
+              padding: "7px 12px",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flexShrink: 0,
+              cursor: "pointer",
+              border: filterTo === t ? "2px solid var(--primary)" : undefined,
+              background: filterTo === t ? "var(--primary-light)" : "#ffffff",
+            }}
             onClick={() => setFilterTo(filterTo === t ? 0 : t)}
           >
-            <Users size={14} color="var(--primary)" />
-            <span style={{ fontWeight: 700, fontSize: "0.875rem" }}>Tổ {t}:</span>
-            <span style={{ fontWeight: 800, color: "var(--primary)", fontSize: "1rem" }}>{byTo[i]}</span>
+            <Users size={13} color="var(--primary)" />
+            <span style={{ fontWeight: 700, fontSize: "0.82rem" }}>Tổ {t}:</span>
+            <span style={{ fontWeight: 800, color: "var(--primary)", fontSize: "0.95rem" }}>{byTo[i]}</span>
           </div>
         ))}
       </div>
@@ -536,135 +548,254 @@ export default function HocSinhPage() {
         )}
       </div>
 
-      {/* Table */}
+      {/* Table & Mobile Cards */}
       <div className="card" style={{ overflow: "hidden" }}>
         {loading ? (
-          <div style={{ padding: 32 }}>
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="skeleton" style={{ height: 42, marginBottom: 6, borderRadius: 6 }} />
+          <div style={{ padding: 24 }}>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="skeleton" style={{ height: 48, marginBottom: 8, borderRadius: 8 }} />
             ))}
           </div>
         ) : sortedStudents.length === 0 ? (
-          <div style={{ padding: 64, textAlign: "center", color: "var(--text-muted)" }}>
+          <div style={{ padding: 48, textAlign: "center", color: "var(--text-muted)" }}>
             <Users size={40} style={{ margin: "0 auto 12px", display: "block", opacity: 0.3 }} />
             <p style={{ fontWeight: 600 }}>Không tìm thấy học sinh nào</p>
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th style={{ width: 40 }}>#</th>
-                  <th
-                    style={{ cursor: "pointer", userSelect: "none" }}
-                    onClick={() => {
-                      if (sortOrder === "default") handleSetSortOrder("asc");
-                      else if (sortOrder === "asc") handleSetSortOrder("desc");
-                      else handleSetSortOrder("default");
-                    }}
-                    title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
-                  >
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <span>Họ và tên</span>
-                      {sortOrder === "asc" ? (
-                        <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
-                          <ArrowUpAZ size={12} /> A-Z
+          <>
+            {/* Desktop Table View */}
+            <div className="hide-on-mobile" style={{ overflowX: "auto" }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 40 }}>#</th>
+                    <th
+                      style={{ cursor: "pointer", userSelect: "none" }}
+                      onClick={() => {
+                        if (sortOrder === "default") handleSetSortOrder("asc");
+                        else if (sortOrder === "asc") handleSetSortOrder("desc");
+                        else handleSetSortOrder("default");
+                      }}
+                      title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
+                    >
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <span>Họ và tên</span>
+                        {sortOrder === "asc" ? (
+                          <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                            <ArrowUpAZ size={12} /> A-Z
+                          </span>
+                        ) : sortOrder === "desc" ? (
+                          <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                            <ArrowDownAZ size={12} /> Z-A
+                          </span>
+                        ) : (
+                          <ArrowUpDown size={12} style={{ color: "var(--text-muted)" }} />
+                        )}
+                      </div>
+                    </th>
+                    <th>Tên gọi</th>
+                    <th>Lớp</th>
+                    <th>Tổ</th>
+                    <th>Giới tính</th>
+                    <th>Ghi chú</th>
+                    <th style={{ width: 90 }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedStudents.map((s, idx) => (
+                    <tr key={s.id}>
+                      <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
+                        {(page - 1) * PER_PAGE + idx + 1}
+                      </td>
+                      <td style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: "50%",
+                              background: s.avatar ? "transparent" : (s.gioiTinh === "Nữ" ? "#fce7f3" : "#e0f2fe"),
+                              color: s.gioiTinh === "Nữ" ? "#db2777" : "#0284c7",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontWeight: 800,
+                              fontSize: "0.75rem",
+                              overflow: "hidden",
+                              flexShrink: 0,
+                              border: "1px solid var(--border)",
+                            }}
+                          >
+                            {s.avatar ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={s.avatar} alt={s.hoTen} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                              s.hoTen.substring(0, 1)
+                            )}
+                          </div>
+                          <span>{s.hoTen}</span>
+                        </div>
+                      </td>
+                      <td style={{ color: "var(--text-secondary)" }}>{s.tenGoi || "—"}</td>
+                      <td>
+                        <span className="badge badge-info" style={{ fontSize: "0.75rem", fontWeight: 700 }}>
+                          {s.lop}
                         </span>
-                      ) : sortOrder === "desc" ? (
-                        <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
-                          <ArrowDownAZ size={12} /> Z-A
+                      </td>
+                      <td>
+                        <span className="badge badge-neutral" style={{ fontSize: "0.75rem" }}>Tổ {s.to}</span>
+                      </td>
+                      <td>
+                        <span style={{
+                          fontSize: "0.8rem", fontWeight: 600,
+                          color: s.gioiTinh === "Nữ" ? "hsl(330,70%,50%)" : "var(--info)",
+                        }}>
+                          {s.gioiTinh}
                         </span>
+                      </td>
+                      <td style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                        {s.ghiChu || "—"}
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button
+                            onClick={() => openEdit(s)}
+                            style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--primary)", display: "flex", alignItems: "center" }}
+                            title="Sửa"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => setDeleteId(s.id)}
+                            style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--danger)", display: "flex", alignItems: "center" }}
+                            title="Xóa"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards View (No horizontal scroll needed!) */}
+            <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 8px" }}>
+              {sortedStudents.map((s, idx) => (
+                <div
+                  key={s.id}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: 12,
+                    background: "#ffffff",
+                    border: "1px solid var(--border)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, width: 22 }}>
+                      {(page - 1) * PER_PAGE + idx + 1}
+                    </div>
+                    {/* Avatar */}
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        background: s.avatar ? "transparent" : (s.gioiTinh === "Nữ" ? "#fce7f3" : "#e0f2fe"),
+                        color: s.gioiTinh === "Nữ" ? "#db2777" : "#0284c7",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: "0.8rem",
+                        overflow: "hidden",
+                        flexShrink: 0,
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      {s.avatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={s.avatar} alt={s.hoTen} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
-                        <ArrowUpDown size={12} style={{ color: "var(--text-muted)" }} />
+                        s.hoTen.substring(0, 1)
                       )}
                     </div>
-                  </th>
-                  <th>Tên gọi</th>
-                  <th>Lớp</th>
-                  <th>Tổ</th>
-                  <th>Giới tính</th>
-                  <th>Ghi chú</th>
-                  <th style={{ width: 90 }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedStudents.map((s, idx) => (
-                  <tr key={s.id}>
-                    <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
-                      {(page - 1) * PER_PAGE + idx + 1}
-                    </td>
-                    <td style={{ fontWeight: 700, color: "var(--text-primary)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div
-                          style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: "50%",
-                            background: s.avatar ? "transparent" : (s.gioiTinh === "Nữ" ? "#fce7f3" : "#e0f2fe"),
-                            color: s.gioiTinh === "Nữ" ? "#db2777" : "#0284c7",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontWeight: 800,
-                            fontSize: "0.75rem",
-                            overflow: "hidden",
-                            flexShrink: 0,
-                            border: "1px solid var(--border)",
-                          }}
-                        >
-                          {s.avatar ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={s.avatar} alt={s.hoTen} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          ) : (
-                            s.hoTen.substring(0, 1)
-                          )}
-                        </div>
-                        <span>{s.hoTen}</span>
+
+                    {/* Info */}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                        <span style={{ fontWeight: 800, fontSize: "0.9rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {s.hoTen}
+                        </span>
+                        {s.tenGoi && (
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", flexShrink: 0 }}>
+                            ({s.tenGoi})
+                          </span>
+                        )}
                       </div>
-                    </td>
-                    <td style={{ color: "var(--text-secondary)" }}>{s.tenGoi || "—"}</td>
-                    <td>
-                      <span className="badge badge-info" style={{ fontSize: "0.75rem", fontWeight: 700 }}>
-                        {s.lop}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-neutral" style={{ fontSize: "0.75rem" }}>Tổ {s.to}</span>
-                    </td>
-                    <td>
-                      <span style={{
-                        fontSize: "0.8rem", fontWeight: 600,
-                        color: s.gioiTinh === "Nữ" ? "hsl(330,70%,50%)" : "var(--info)",
-                      }}>
-                        {s.gioiTinh}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                      {s.ghiChu || "—"}
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", gap: 4 }}>
-                        <button
-                          onClick={() => openEdit(s)}
-                          style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--primary)", display: "flex", alignItems: "center" }}
-                          title="Sửa"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteId(s.id)}
-                          style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--danger)", display: "flex", alignItems: "center" }}
-                          title="Xóa"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
+                        <span className="badge badge-info" style={{ fontSize: "0.68rem", padding: "1px 5px" }}>
+                          {s.lop}
+                        </span>
+                        <span className="badge badge-neutral" style={{ fontSize: "0.68rem", padding: "1px 5px" }}>
+                          T{s.to}
+                        </span>
+                        <span style={{ fontSize: "0.7rem", fontWeight: 700, color: s.gioiTinh === "Nữ" ? "hsl(330,70%,50%)" : "var(--info)" }}>
+                          {s.gioiTinh}
+                        </span>
+                        {s.ghiChu && (
+                          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            • {s.ghiChu}
+                          </span>
+                        )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                    <button
+                      onClick={() => openEdit(s)}
+                      style={{
+                        background: "var(--primary-light)",
+                        border: "1px solid var(--primary-border)",
+                        borderRadius: 8,
+                        padding: "6px 8px",
+                        cursor: "pointer",
+                        color: "var(--primary)",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                      title="Sửa"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    <button
+                      onClick={() => setDeleteId(s.id)}
+                      style={{
+                        background: "#fee2e2",
+                        border: "1px solid #fca5a5",
+                        borderRadius: 8,
+                        padding: "6px 8px",
+                        cursor: "pointer",
+                        color: "#dc2626",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                      title="Xóa"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Pagination */}

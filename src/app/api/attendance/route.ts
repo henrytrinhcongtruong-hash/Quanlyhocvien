@@ -24,11 +24,16 @@ export async function GET(req: NextRequest) {
 
     const where: Record<string, unknown> = {};
     if (studentId) where.studentId = Number(studentId);
-    if (ngay) where.ngay = new Date(ngay);
-    if (from || to) {
+    if (ngay) {
+      const startOfDay = new Date(ngay.length === 10 ? `${ngay}T00:00:00.000` : ngay);
+      const endOfDay = new Date(ngay.length === 10 ? `${ngay}T23:59:59.999` : ngay);
+      where.ngay = { gte: startOfDay, lte: endOfDay };
+    } else if (from || to) {
+      const fromDate = from ? new Date(from.length === 10 ? `${from}T00:00:00.000` : from) : undefined;
+      const toDate = to ? new Date(to.length === 10 ? `${to}T23:59:59.999` : to) : undefined;
       where.ngay = {
-        ...(from ? { gte: new Date(from) } : {}),
-        ...(to ? { lte: new Date(to) } : {}),
+        ...(fromDate ? { gte: fromDate } : {}),
+        ...(toDate ? { lte: toDate } : {}),
       };
     }
     if (toFilter !== null && toFilter.length > 0) {

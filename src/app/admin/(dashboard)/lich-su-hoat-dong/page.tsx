@@ -32,6 +32,12 @@ import {
   ChevronRight,
   Sparkles,
   Zap,
+  X,
+  ArrowRight,
+  Code2,
+  Copy,
+  Check,
+  Maximize2,
 } from "lucide-react";
 
 interface ActivityLogItem {
@@ -99,6 +105,440 @@ const TARGET_LABELS: Record<string, string> = {
   Auth: "Xác thực",
 };
 
+const TO_COLORS: Record<number, { label: string; bg: string; text: string; border: string }> = {
+  1: { label: "Tổ 1", bg: "#e0f2fe", text: "#0369a1", border: "#38bdf8" },
+  2: { label: "Tổ 2", bg: "#dcfce7", text: "#15803d", border: "#4ade80" },
+  3: { label: "Tổ 3", bg: "#fef3c7", text: "#b45309", border: "#fcd34d" },
+  4: { label: "Tổ 4", bg: "#f3e8ff", text: "#7e22ce", border: "#c084fc" },
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  hoTen: "Họ và tên",
+  tenGoi: "Tên gọi / Biệt danh",
+  ngaySinh: "Ngày sinh",
+  gioiTinh: "Giới tính",
+  to: "Tổ",
+  lop: "Lớp",
+  avatar: "Ảnh đại diện (Avatar)",
+  ghiChu: "Ghi chú",
+  kyThu: "Kỳ thu quỹ",
+  soTien: "Số tiền",
+  hinhThucDong: "Hình thức đóng",
+  trangThai: "Trạng thái",
+  ngayDong: "Ngày đóng quỹ",
+  danhSachChi: "Nội dung chi",
+  hangMucChi: "Hạng mục chi",
+  soLuong: "Số lượng",
+  donGia: "Đơn giá",
+  thanhTien: "Thành tiền",
+  ngayChi: "Ngày chi",
+  ngay: "Ngày điểm danh",
+  loai: "Loại điểm danh / Vi phạm",
+  toId: "Tổ",
+  tuan: "Tuần trực nhật",
+  thu: "Thứ",
+  thuOrder: "Thứ tự thứ",
+  tenSuKien: "Tên sự kiện",
+  hangMuc: "Hạng mục sự kiện",
+  chiTiet: "Chi tiết sự kiện",
+  deadline: "Hạn chót (Deadline)",
+  ketHoachTrienKhai: "Kế hoạch triển khai",
+  vaiTro: "Vai trò tham gia",
+  monHoc: "Môn học",
+  tenKyThi: "Tên kỳ thi",
+  loaiKyThi: "Loại kỳ thi",
+  ngayThi: "Ngày thi",
+  gioThi: "Giờ thi",
+  thoiLuong: "Thời lượng (phút)",
+  hinhThuc: "Hình thức thi",
+  phongThi: "Phòng thi",
+  giamThi: "Giám thị",
+  phamViOnTap: "Phạm vi ôn tập",
+  tiet: "Tiết học",
+  buoi: "Buổi học",
+  thoiGian: "Khung thời gian",
+  giaoVien: "Giáo viên",
+  phongHoc: "Phòng học",
+  hocKy: "Học kỳ",
+  title: "Tiêu đề sơ đồ",
+  gvcn: "Giáo viên chủ nhiệm",
+  slogan: "Khẩu hiệu lớp",
+  month: "Tháng áp dụng",
+  slotsData: "Bố trí chỗ ngồi",
+  username: "Tên đăng nhập",
+  plainPassword: "Mật khẩu",
+  passwordHash: "Mã bảo mật mật khẩu",
+  roleLabel: "Vai trò / Chức danh",
+  assignedLop: "Lớp phụ trách",
+  isSuperAdmin: "Quản trị viên tối cao",
+  isActive: "Trạng thái tài khoản",
+  permissions: "Phân quyền chi tiết",
+  path: "Đường dẫn trang",
+  description: "Mô tả trang",
+  isLocked: "Trạng thái khóa trang",
+  lockReason: "Lý do khóa bảo trì",
+  lockUntil: "Thời gian mở khóa dự kiến",
+  lockedBy: "Người thực hiện khóa",
+  submittedBy: "Người nộp",
+  ipAddress: "Địa chỉ IP",
+  userAgent: "Thiết bị",
+  status: "Trạng thái xử lý",
+};
+
+interface ParsedDiffItem {
+  key: string;
+  label: string;
+  oldVal: any;
+  newVal: any;
+  type: "avatar" | "password" | "money" | "date" | "boolean" | "to" | "gender" | "slots" | "text";
+}
+
+function parseJsonSafe(val: any) {
+  if (val === null || val === undefined) return null;
+  if (typeof val === "object") return val;
+  if (typeof val !== "string") return val;
+  const trimmed = val.trim();
+  if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return val;
+    }
+  }
+  return val;
+}
+
+function detectDiffFieldType(key: string, val: any): ParsedDiffItem["type"] {
+  const k = key.toLowerCase();
+  if (
+    k === "avatar" ||
+    k === "photo" ||
+    k === "image" ||
+    k === "anh" ||
+    (typeof val === "string" &&
+      (val.startsWith("data:image") || val.startsWith("http://") || val.startsWith("https://")) &&
+      (val.includes("image") || /\.(png|jpe?g|webp|gif|svg)/i.test(val)))
+  ) {
+    return "avatar";
+  }
+  if (k.includes("password") || k.includes("pass")) {
+    return "password";
+  }
+  if (k === "to" || k === "toid") {
+    return "to";
+  }
+  if (k === "gioitinh") {
+    return "gender";
+  }
+  if (k === "sotien" || k === "dongia" || k === "thanhtien" || k === "chiphi") {
+    return "money";
+  }
+  if (k === "slotsdata") {
+    return "slots";
+  }
+  if (typeof val === "boolean" || k.startsWith("is") || k.startsWith("has")) {
+    return "boolean";
+  }
+  if (
+    k.includes("ngay") ||
+    k.includes("date") ||
+    k.includes("deadline") ||
+    k.includes("time") ||
+    (typeof val === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(val))
+  ) {
+    return "date";
+  }
+  return "text";
+}
+
+function computeItemDiffs(action: string, rawOld: any, rawNew: any): ParsedDiffItem[] {
+  const oldObj = parseJsonSafe(rawOld);
+  const newObj = parseJsonSafe(rawNew);
+
+  const isOldObj = oldObj && typeof oldObj === "object" && !Array.isArray(oldObj);
+  const isNewObj = newObj && typeof newObj === "object" && !Array.isArray(newObj);
+
+  // Trường hợp UPDATE (so sánh key giữa 2 object)
+  if (isOldObj && isNewObj) {
+    const allKeys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)]));
+    const result: ParsedDiffItem[] = [];
+
+    for (const key of allKeys) {
+      // Bỏ qua các trường kỹ thuật không mang ý nghĩa nghiệp vụ
+      if (key === "updatedAt" || key === "createdAt" || key === "id") continue;
+
+      const vOld = oldObj[key];
+      const vNew = newObj[key];
+
+      const sOld = vOld === undefined || vOld === null ? "" : typeof vOld === "string" ? vOld.trim() : JSON.stringify(vOld);
+      const sNew = vNew === undefined || vNew === null ? "" : typeof vNew === "string" ? vNew.trim() : JSON.stringify(vNew);
+
+      if (sOld !== sNew) {
+        result.push({
+          key,
+          label: FIELD_LABELS[key] || key,
+          oldVal: vOld,
+          newVal: vNew,
+          type: detectDiffFieldType(key, vNew ?? vOld),
+        });
+      }
+    }
+    return result;
+  }
+
+  // Trường hợp CREATE / REGISTER (oldVal = null, liệt kê các thông tin mới)
+  if (!isOldObj && isNewObj) {
+    const result: ParsedDiffItem[] = [];
+    for (const key of Object.keys(newObj)) {
+      if (key === "updatedAt" || key === "createdAt" || key === "id") continue;
+      const vNew = newObj[key];
+      if (vNew !== null && vNew !== undefined && vNew !== "") {
+        result.push({
+          key,
+          label: FIELD_LABELS[key] || key,
+          oldVal: null,
+          newVal: vNew,
+          type: detectDiffFieldType(key, vNew),
+        });
+      }
+    }
+    return result;
+  }
+
+  // Trường hợp DELETE (newVal = null, liệt kê thông tin vừa bị xóa)
+  if (isOldObj && !isNewObj) {
+    const result: ParsedDiffItem[] = [];
+    for (const key of Object.keys(oldObj)) {
+      if (key === "updatedAt" || key === "createdAt" || key === "id") continue;
+      const vOld = oldObj[key];
+      if (vOld !== null && vOld !== undefined && vOld !== "") {
+        result.push({
+          key,
+          label: FIELD_LABELS[key] || key,
+          oldVal: vOld,
+          newVal: null,
+          type: detectDiffFieldType(key, vOld),
+        });
+      }
+    }
+    return result;
+  }
+
+  // Giá trị nguyên thủy khác
+  if (rawOld || rawNew) {
+    return [
+      {
+        key: "value",
+        label: "Dữ liệu",
+        oldVal: rawOld,
+        newVal: rawNew,
+        type: "text",
+      },
+    ];
+  }
+
+  return [];
+}
+
+function renderFormattedDiffValue(
+  key: string,
+  val: any,
+  type: ParsedDiffItem["type"],
+  onPreviewImage: (url: string) => void
+) {
+  if (val === null || val === undefined || val === "") {
+    return (
+      <span style={{ color: "#94a3b8", fontStyle: "italic", fontSize: "0.8rem" }}>
+        (Trống / Chưa đặt)
+      </span>
+    );
+  }
+
+  if (type === "avatar") {
+    if (typeof val === "string" && (val.startsWith("data:image") || val.startsWith("http") || val.startsWith("/"))) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div
+            onClick={() => onPreviewImage(val)}
+            title="Nhấp để xem ảnh lớn"
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 10,
+              overflow: "hidden",
+              border: "2px solid #cbd5e1",
+              background: "#ffffff",
+              cursor: "pointer",
+              flexShrink: 0,
+              boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
+              position: "relative",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={val} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: "0.8rem", color: "#0f172a" }}>Ảnh đại diện</div>
+            <button
+              type="button"
+              onClick={() => onPreviewImage(val)}
+              style={{
+                border: "none",
+                background: "transparent",
+                color: "#0284c7",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                padding: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+              }}
+            >
+              <Maximize2 size={11} /> Xem ảnh lớn
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return <span style={{ fontSize: "0.8rem" }}>{String(val)}</span>;
+  }
+
+  if (type === "password") {
+    return (
+      <span style={{ fontFamily: "monospace", letterSpacing: 2, color: "#64748b", fontWeight: 800, fontSize: "0.85rem" }}>
+        •••••••• <span style={{ fontSize: "0.72rem", color: "#10b981", fontWeight: 700, fontFamily: "sans-serif" }}>(Đã mã hóa an toàn)</span>
+      </span>
+    );
+  }
+
+  if (type === "to") {
+    const toNum = Number(val);
+    const toConfig = TO_COLORS[toNum] || { label: `Tổ ${val}`, bg: "#f1f5f9", text: "#475569", border: "#cbd5e1" };
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "3px 10px",
+          borderRadius: 8,
+          fontWeight: 800,
+          fontSize: "0.78rem",
+          background: toConfig.bg,
+          color: toConfig.text,
+          border: `1.5px solid ${toConfig.border}`,
+        }}
+      >
+        {toConfig.label}
+      </span>
+    );
+  }
+
+  if (type === "gender") {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "3px 10px",
+          borderRadius: 8,
+          fontWeight: 800,
+          fontSize: "0.78rem",
+          background: val === "Nam" ? "#e0f2fe" : "#fce7f3",
+          color: val === "Nam" ? "#0369a1" : "#be185d",
+          border: `1px solid ${val === "Nam" ? "#bae6fd" : "#fbcfe8"}`,
+        }}
+      >
+        {val}
+      </span>
+    );
+  }
+
+  if (type === "money") {
+    const num = Number(val);
+    if (!isNaN(num)) {
+      return (
+        <span style={{ fontWeight: 800, color: "#0284c7", fontSize: "0.85rem" }}>
+          {num.toLocaleString("vi-VN")} đ
+        </span>
+      );
+    }
+  }
+
+  if (type === "boolean") {
+    const bool = Boolean(val);
+    let label = bool ? "Có / Bật" : "Không / Tắt";
+    if (key === "isActive") label = bool ? "Đang hoạt động" : "Đã khóa";
+    if (key === "isLocked") label = bool ? "Đã khóa trang" : "Mở bình thường";
+    if (key === "isSuperAdmin") label = bool ? "Quản trị viên tối cao" : "Thành viên thường";
+
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "3px 9px",
+          borderRadius: 7,
+          fontWeight: 800,
+          fontSize: "0.76rem",
+          background: bool ? "#dcfce7" : "#fee2e2",
+          color: bool ? "#15803d" : "#b91c1c",
+          border: `1px solid ${bool ? "#bbf7d0" : "#fecaca"}`,
+        }}
+      >
+        {label}
+      </span>
+    );
+  }
+
+  if (type === "date") {
+    try {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        const hasTime = typeof val === "string" && (val.includes("T") || val.includes(":"));
+        return (
+          <span style={{ fontWeight: 700, color: "#1e293b", fontSize: "0.82rem" }}>
+            {hasTime
+              ? d.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" })
+              : d.toLocaleDateString("vi-VN")}
+          </span>
+        );
+      }
+    } catch {}
+  }
+
+  if (type === "slots") {
+    try {
+      const slots = typeof val === "string" ? JSON.parse(val) : val;
+      if (Array.isArray(slots)) {
+        const occupied = slots.filter((s: any) => s && (s.studentName || s.studentId));
+        return (
+          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#0284c7" }}>
+            Sơ đồ chỗ ngồi ({occupied.length}/{slots.length} vị trí có học sinh)
+          </span>
+        );
+      }
+    } catch {}
+  }
+
+  // Generic object or array
+  if (typeof val === "object") {
+    try {
+      return (
+        <code style={{ fontSize: "0.75rem", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, color: "#334155" }}>
+          {JSON.stringify(val)}
+        </code>
+      );
+    } catch {}
+  }
+
+  return (
+    <span style={{ fontSize: "0.82rem", color: "#1e293b", fontWeight: 600, wordBreak: "break-word" }}>
+      {String(val)}
+    </span>
+  );
+}
+
 export default function LichSuHoatDongPage() {
   const [logs, setLogs] = useState<ActivityLogItem[]>([]);
   const [summary, setSummary] = useState<SummaryData | null>(null);
@@ -129,6 +569,9 @@ export default function LichSuHoatDongPage() {
 
   // Diff Modal State
   const [diffModalItem, setDiffModalItem] = useState<ActivityLogItem | null>(null);
+  const [diffViewMode, setDiffViewMode] = useState<"visual" | "json">("visual");
+  const [previewImgUrl, setPreviewImgUrl] = useState<string | null>(null);
+  const [copiedJson, setCopiedJson] = useState<"old" | "new" | null>(null);
 
   // Cleanup Modal State
   const [cleanupModalOpen, setCleanupModalOpen] = useState(false);
@@ -532,19 +975,41 @@ export default function LichSuHoatDongPage() {
           {/* Left search & filters */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", flex: 1 }}>
             {/* Search input */}
-            <div style={{ position: "relative", minWidth: 220, flex: "1 1 220px" }}>
-              <Search size={15} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+            <div style={{ position: "relative", minWidth: 260, flex: "1 1 260px" }}>
+              <Search size={15} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
               <input
                 type="text"
                 className="input"
-                placeholder="Tìm người dùng, IP, chi tiết..."
+                placeholder="🔍 Tìm theo tên người dùng, vai trò, IP, chi tiết..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                style={{ paddingLeft: 32, fontSize: "0.85rem", height: 36, width: "100%" }}
+                style={{ paddingLeft: 34, paddingRight: search ? 32 : 12, fontSize: "0.85rem", height: 38, width: "100%", borderRadius: 10, background: "var(--bg-muted)", boxSizing: "border-box" }}
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setPage(1);
+                  }}
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    color: "var(--text-muted)",
+                    cursor: "pointer",
+                    padding: 4,
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             {/* Action Filter */}
@@ -737,7 +1202,7 @@ export default function LichSuHoatDongPage() {
                   </div>
                 </th>
                 <th style={{ padding: "12px 14px", fontWeight: 800 }}>Chi Tiết Thao Tác</th>
-                <th style={{ padding: "12px 14px", fontWeight: 800, textAlign: "center", whiteSpace: "nowrap" }}>Diff Dữ Liệu</th>
+                <th style={{ padding: "12px 14px", fontWeight: 800, textAlign: "center", whiteSpace: "nowrap" }}>Chi Tiết Thay Đổi</th>
                 <th style={{ padding: "12px 14px", fontWeight: 800, whiteSpace: "nowrap" }}>IP &amp; Thiết Bị</th>
                 <th style={{ padding: "12px 14px", fontWeight: 800, textAlign: "center", whiteSpace: "nowrap" }}>Kết Quả</th>
               </tr>
@@ -897,11 +1362,14 @@ export default function LichSuHoatDongPage() {
                         {hasDiff ? (
                           <button
                             type="button"
-                            onClick={() => setDiffModalItem(item)}
+                            onClick={() => {
+                              setDiffModalItem(item);
+                              setDiffViewMode("visual");
+                            }}
                             className="btn btn-secondary btn-sm"
-                            style={{ fontSize: "0.75rem", padding: "4px 8px", borderRadius: 6, fontWeight: 700 }}
+                            style={{ fontSize: "0.75rem", padding: "4px 9px", borderRadius: 6, fontWeight: 700 }}
                           >
-                            <Eye size={12} /> Xem Diff
+                            <Eye size={12} /> Xem Thay Đổi
                           </button>
                         ) : (
                           <span style={{ color: "#cbd5e1", fontSize: "0.75rem" }}>—</span>
@@ -1039,126 +1507,445 @@ export default function LichSuHoatDongPage() {
             overflowY: "auto",
           }}
         >
-          <div
-            className="card"
-            style={{
-              width: "100%",
-              maxWidth: 680,
-              background: "#ffffff",
-              borderRadius: 20,
-              padding: "24px 22px",
-              boxShadow: "0 25px 60px rgba(0,0,0,0.3)",
-              animation: "slideUp 0.2s ease-out",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: "#f0f9ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0284c7" }}>
-                  <Eye size={20} />
+          {(() => {
+            const diffs = computeItemDiffs(diffModalItem.action, diffModalItem.oldValue, diffModalItem.newValue);
+            const actConfig = ACTION_CONFIG[diffModalItem.action] || {
+              label: diffModalItem.action,
+              color: "#475569",
+              bg: "#f1f5f9",
+              icon: Edit3,
+            };
+            const ActIcon = actConfig.icon;
+
+            const copyToClipboard = (text: string, type: "old" | "new") => {
+              if (!text) return;
+              navigator.clipboard.writeText(text);
+              setCopiedJson(type);
+              setTimeout(() => setCopiedJson(null), 2000);
+            };
+
+            const formattedOldJson = diffModalItem.oldValue
+              ? (() => {
+                  try {
+                    return JSON.stringify(JSON.parse(diffModalItem.oldValue), null, 2);
+                  } catch {
+                    return diffModalItem.oldValue;
+                  }
+                })()
+              : "";
+
+            const formattedNewJson = diffModalItem.newValue
+              ? (() => {
+                  try {
+                    return JSON.stringify(JSON.parse(diffModalItem.newValue), null, 2);
+                  } catch {
+                    return diffModalItem.newValue;
+                  }
+                })()
+              : "";
+
+            return (
+              <div
+                className="card"
+                style={{
+                  width: "100%",
+                  maxWidth: 740,
+                  background: "#ffffff",
+                  borderRadius: 20,
+                  padding: "24px 22px",
+                  boxShadow: "0 25px 60px rgba(0,0,0,0.3)",
+                  animation: "slideUp 0.2s ease-out",
+                  maxHeight: "90vh",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 12,
+                        background: actConfig.bg,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: actConfig.color,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <ActIcon size={22} />
+                    </div>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <h3 style={{ fontSize: "1.15rem", fontWeight: 900, margin: 0, color: "#0f172a" }}>
+                          Chi Tiết Thay Đổi (Log #{diffModalItem.id})
+                        </h3>
+                        <span
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 800,
+                            padding: "2px 8px",
+                            borderRadius: 6,
+                            background: actConfig.bg,
+                            color: actConfig.color,
+                          }}
+                        >
+                          {actConfig.label}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: 2 }}>
+                        {TARGET_LABELS[diffModalItem.target] || diffModalItem.target} (ID: {diffModalItem.targetId || "—"}) • Thực hiện bởi: <strong>{diffModalItem.userName || "Khách"}</strong> ({new Date(diffModalItem.createdAt).toLocaleString("vi-VN")})
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setDiffModalItem(null)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ borderRadius: "50%", width: 32, height: 32, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    ✕
+                  </button>
                 </div>
-                <div>
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, margin: 0 }}>
-                    Chi Tiết Dữ Liệu Thay Đổi (Log #{diffModalItem.id})
-                  </h3>
-                  <span style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
-                    {diffModalItem.action} • {TARGET_LABELS[diffModalItem.target] || diffModalItem.target} (ID: {diffModalItem.targetId || "—"})
-                  </span>
+
+                {/* Mô tả thao tác */}
+                <div style={{ fontSize: "0.84rem", color: "#334155", marginBottom: 12, background: "#f8fafc", padding: "9px 13px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                  <strong style={{ color: "#0f172a" }}>Mô tả:</strong> {diffModalItem.details || "—"}
+                </div>
+
+                {/* View Mode Switcher */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, borderBottom: "1px solid #e2e8f0", paddingBottom: 10 }}>
+                  <div>
+                    {diffViewMode === "visual" && (
+                      <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#0369a1", display: "flex", alignItems: "center", gap: 5 }}>
+                        <Sparkles size={15} color="#0284c7" />
+                        {diffModalItem.action === "CREATE" || diffModalItem.action === "REGISTER"
+                          ? `Thông tin khởi tạo (${diffs.length} trường)`
+                          : diffModalItem.action === "DELETE"
+                          ? `Thông tin bản ghi đã xóa (${diffs.length} trường)`
+                          : diffs.length > 0
+                          ? `Phát hiện chính xác ${diffs.length} thông tin đã được sửa đổi:`
+                          : "Dữ liệu được giữ nguyên"}
+                      </div>
+                    )}
+                    {diffViewMode === "json" && (
+                      <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#475569" }}>
+                        Mã JSON kỹ thuật thô (Trước &amp; Sau)
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", background: "#f1f5f9", padding: 3, borderRadius: 8, gap: 2 }}>
+                    <button
+                      type="button"
+                      onClick={() => setDiffViewMode("visual")}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: 6,
+                        border: "none",
+                        fontSize: "0.75rem",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        background: diffViewMode === "visual" ? "#0284c7" : "transparent",
+                        color: diffViewMode === "visual" ? "#ffffff" : "#64748b",
+                        transition: "all 0.15s ease",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <Sparkles size={12} /> Trực quan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDiffViewMode("json")}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: 6,
+                        border: "none",
+                        fontSize: "0.75rem",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        background: diffViewMode === "json" ? "#0284c7" : "transparent",
+                        color: diffViewMode === "json" ? "#ffffff" : "#64748b",
+                        transition: "all 0.15s ease",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <Code2 size={12} /> Mã JSON
+                    </button>
+                  </div>
+                </div>
+
+                {/* Main Content Area */}
+                <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
+                  {diffViewMode === "visual" ? (
+                    diffs.length === 0 ? (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "36px 20px",
+                          background: "#f8fafc",
+                          borderRadius: 14,
+                          border: "1.5px dashed #cbd5e1",
+                        }}
+                      >
+                        <CheckCircle2 size={36} color="#10b981" style={{ margin: "0 auto 8px" }} />
+                        <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.95rem", marginBottom: 4 }}>
+                          Dữ liệu nghiệp vụ không có thay đổi nội dung
+                        </div>
+                        <div style={{ color: "#64748b", fontSize: "0.8rem", maxWidth: 440, margin: "0 auto" }}>
+                          Bản ghi được lưu lại thành công nhưng toàn bộ các trường thông tin vẫn giữ nguyên giá trị ban đầu.
+                        </div>
+                      </div>
+                    ) : diffModalItem.action === "CREATE" || diffModalItem.action === "REGISTER" ? (
+                      // Hiển thị dạng thẻ cho CREATE
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+                        {diffs.map((d) => (
+                          <div
+                            key={d.key}
+                            style={{
+                              background: "#f0fdf4",
+                              border: "1px solid #bbf7d0",
+                              borderRadius: 12,
+                              padding: "10px 12px",
+                            }}
+                          >
+                            <div style={{ fontSize: "0.7rem", fontWeight: 800, color: "#166534", textTransform: "uppercase", marginBottom: 3 }}>
+                              {d.label}
+                            </div>
+                            <div>{renderFormattedDiffValue(d.key, d.newVal, d.type, (url) => setPreviewImgUrl(url))}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : diffModalItem.action === "DELETE" ? (
+                      // Hiển thị dạng thẻ cho DELETE
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+                        {diffs.map((d) => (
+                          <div
+                            key={d.key}
+                            style={{
+                              background: "#fef2f2",
+                              border: "1px solid #fecaca",
+                              borderRadius: 12,
+                              padding: "10px 12px",
+                            }}
+                          >
+                            <div style={{ fontSize: "0.7rem", fontWeight: 800, color: "#991b1b", textTransform: "uppercase", marginBottom: 3 }}>
+                              {d.label}
+                            </div>
+                            <div>{renderFormattedDiffValue(d.key, d.oldVal, d.type, (url) => setPreviewImgUrl(url))}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      // Hiển thị dạng so sánh Trước ➔ Sau cho UPDATE
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {diffs.map((d) => (
+                          <div
+                            key={d.key}
+                            style={{
+                              background: "#ffffff",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: 14,
+                              padding: "12px 14px",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0284c7" }} />
+                                <strong style={{ fontSize: "0.86rem", color: "#0f172a" }}>{d.label}</strong>
+                                <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontFamily: "monospace" }}>({d.key})</span>
+                              </div>
+                              <span style={{ fontSize: "0.68rem", fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#fef3c7", color: "#b45309" }}>
+                                Đã thay đổi
+                              </span>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 28px 1fr", gap: 10, alignItems: "center" }}>
+                              {/* Cũ */}
+                              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "10px 12px", minHeight: 48, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                                <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#dc2626", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#dc2626" }} />
+                                  TRƯỚC THAY ĐỔI
+                                </div>
+                                <div>{renderFormattedDiffValue(d.key, d.oldVal, d.type, (url) => setPreviewImgUrl(url))}</div>
+                              </div>
+
+                              {/* Mũi tên */}
+                              <div style={{ display: "flex", justifyContent: "center", color: "#94a3b8" }}>
+                                <ArrowRight size={18} />
+                              </div>
+
+                              {/* Mới */}
+                              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "10px 12px", minHeight: 48, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                                <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#16a34a", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#16a34a" }} />
+                                  SAU THAY ĐỔI (MỚI)
+                                </div>
+                                <div>{renderFormattedDiffValue(d.key, d.newVal, d.type, (url) => setPreviewImgUrl(url))}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  ) : (
+                    // Chế độ xem JSON kỹ thuật
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      {/* Old Value */}
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#dc2626", display: "flex", alignItems: "center", gap: 5 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#dc2626" }} />
+                            Giá Trị Trước Thay Đổi (Old Value)
+                          </div>
+                          {formattedOldJson && (
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(formattedOldJson, "old")}
+                              style={{ border: "none", background: "transparent", cursor: "pointer", color: "#64748b", fontSize: "0.72rem", display: "flex", alignItems: "center", gap: 3 }}
+                            >
+                              {copiedJson === "old" ? <Check size={12} color="#16a34a" /> : <Copy size={12} />}
+                              {copiedJson === "old" ? "Đã chép" : "Sao chép"}
+                            </button>
+                          )}
+                        </div>
+                        <pre
+                          style={{
+                            background: "#fef2f2",
+                            border: "1px solid #fecaca",
+                            borderRadius: 10,
+                            padding: "10px 12px",
+                            fontSize: "0.75rem",
+                            fontFamily: "monospace",
+                            maxHeight: 280,
+                            overflowY: "auto",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-all",
+                            margin: 0,
+                            color: "#991b1b",
+                          }}
+                        >
+                          {formattedOldJson || "(Không có giá trị cũ / Bản ghi tạo mới)"}
+                        </pre>
+                      </div>
+
+                      {/* New Value */}
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#16a34a", display: "flex", alignItems: "center", gap: 5 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a" }} />
+                            Giá Trị Sau Thay Đổi (New Value)
+                          </div>
+                          {formattedNewJson && (
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(formattedNewJson, "new")}
+                              style={{ border: "none", background: "transparent", cursor: "pointer", color: "#64748b", fontSize: "0.72rem", display: "flex", alignItems: "center", gap: 3 }}
+                            >
+                              {copiedJson === "new" ? <Check size={12} color="#16a34a" /> : <Copy size={12} />}
+                              {copiedJson === "new" ? "Đã chép" : "Sao chép"}
+                            </button>
+                          )}
+                        </div>
+                        <pre
+                          style={{
+                            background: "#f0fdf4",
+                            border: "1px solid #bbf7d0",
+                            borderRadius: 10,
+                            padding: "10px 12px",
+                            fontSize: "0.75rem",
+                            fontFamily: "monospace",
+                            maxHeight: 280,
+                            overflowY: "auto",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-all",
+                            margin: 0,
+                            color: "#166534",
+                          }}
+                        >
+                          {formattedNewJson || "(Không có giá trị mới / Bản ghi bị xóa)"}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer Buttons */}
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 12, borderTop: "1px solid #e2e8f0" }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => setDiffModalItem(null)}
+                    style={{ padding: "8px 22px", borderRadius: 8, fontWeight: 800 }}
+                  >
+                    Đóng
+                  </button>
                 </div>
               </div>
+            );
+          })()}
+        </div>,
+        document.body
+      )}
 
+      {/* Modal Xem Phóng To Hình Ảnh */}
+      {previewImgUrl && typeof document !== "undefined" && createPortal(
+        <div
+          onClick={() => setPreviewImgUrl(null)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.8)",
+            zIndex: 1000000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              maxWidth: 420,
+              width: "100%",
+              background: "#ffffff",
+              borderRadius: 16,
+              overflow: "hidden",
+              boxShadow: "0 25px 50px rgba(0,0,0,0.5)",
+              animation: "slideUp 0.18s ease-out",
+            }}
+          >
+            <div style={{ padding: "12px 16px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 800, fontSize: "0.85rem", color: "#0f172a" }}>Xem Ảnh Đầy Đủ</span>
               <button
                 type="button"
-                onClick={() => setDiffModalItem(null)}
-                className="btn btn-secondary btn-sm"
-                style={{ borderRadius: "50%", width: 32, height: 32, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                onClick={() => setPreviewImgUrl(null)}
+                style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: "1rem", color: "#64748b" }}
               >
                 ✕
               </button>
             </div>
-
-            <div style={{ fontSize: "0.85rem", color: "#334155", marginBottom: 14, background: "#f8fafc", padding: "10px 12px", borderRadius: 10 }}>
-              <strong>Mô tả:</strong> {diffModalItem.details || "—"}
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              {/* Old Value */}
-              <div>
-                <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#dc2626", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#dc2626" }} />
-                  Giá Trị Trước Thay Đổi (Old Value)
-                </div>
-                <pre
-                  style={{
-                    background: "#fef2f2",
-                    border: "1px solid #fecaca",
-                    borderRadius: 10,
-                    padding: "10px 12px",
-                    fontSize: "0.75rem",
-                    fontFamily: "monospace",
-                    maxHeight: 240,
-                    overflowY: "auto",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-all",
-                    margin: 0,
-                    color: "#991b1b",
-                  }}
-                >
-                  {diffModalItem.oldValue
-                    ? (() => {
-                        try {
-                          return JSON.stringify(JSON.parse(diffModalItem.oldValue), null, 2);
-                        } catch {
-                          return diffModalItem.oldValue;
-                        }
-                      })()
-                    : "(Không có giá trị cũ / Bản ghi tạo mới)"}
-                </pre>
-              </div>
-
-              {/* New Value */}
-              <div>
-                <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#16a34a", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a" }} />
-                  Giá Trị Sau Thay Đổi (New Value)
-                </div>
-                <pre
-                  style={{
-                    background: "#f0fdf4",
-                    border: "1px solid #bbf7d0",
-                    borderRadius: 10,
-                    padding: "10px 12px",
-                    fontSize: "0.75rem",
-                    fontFamily: "monospace",
-                    maxHeight: 240,
-                    overflowY: "auto",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-all",
-                    margin: 0,
-                    color: "#166534",
-                  }}
-                >
-                  {diffModalItem.newValue
-                    ? (() => {
-                        try {
-                          return JSON.stringify(JSON.parse(diffModalItem.newValue), null, 2);
-                        } catch {
-                          return diffModalItem.newValue;
-                        }
-                      })()
-                    : "(Không có giá trị mới / Bản ghi bị xóa)"}
-                </pre>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => setDiffModalItem(null)}
-                style={{ padding: "7px 18px", borderRadius: 8, fontWeight: 700 }}
-              >
-                Đóng
-              </button>
+            <div style={{ padding: 16, display: "flex", justifyContent: "center", background: "#0f172a" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewImgUrl}
+                alt="Preview"
+                style={{ maxWidth: "100%", maxHeight: "65vh", objectFit: "contain", borderRadius: 8 }}
+              />
             </div>
           </div>
         </div>,

@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const rosters = await prisma.dutyRoster.findMany({
       where,
       include: {
-        student: { select: { id: true, hoTen: true, tenGoi: true, to: true, lop: true } },
+        student: { select: { id: true, hoTen: true, tenGoi: true, to: true, lop: true, ghiChu: true, gioiTinh: true } },
       },
       orderBy: { thuOrder: "asc" },
     });
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       {
         thu: string;
         thuOrder: number;
-        items: { id: number; studentId: number; name: string; to: number; lop: string }[];
+        items: { id: number; studentId: number; name: string; to: number; lop: string; ghiChu: string | null; gioiTinh?: string | null }[];
         students: string[];
       }
     > = {};
@@ -47,12 +47,36 @@ export async function GET(req: NextRequest) {
         name: r.student.hoTen,
         to: r.student.to,
         lop: r.student.lop,
+        ghiChu: r.student.ghiChu || null,
+        gioiTinh: r.student.gioiTinh || null,
       });
       grouped[r.thu].students.push(displayName);
     }
 
     const entries = Object.values(grouped).sort((a, b) => a.thuOrder - b.thuOrder);
-    return NextResponse.json({ week, entries, raw: rosters });
+
+    // Tính tổng số ca trực tích lũy và số ca của các tuần trước (phục vụ bù ca công bằng)
+    const allDuties = await prisma.dutyRoster.findMany({
+      where: lop && lop !== "ALL" ? { student: { lop } } : {},
+      select: { studentId: true, tuan: true },
+    });
+
+    const cumulativeDutyCounts: Record<number, number> = {};
+    const priorDutyCounts: Record<number, number> = {};
+    for (const d of allDuties) {
+      cumulativeDutyCounts[d.studentId] = (cumulativeDutyCounts[d.studentId] || 0) + 1;
+      if (d.tuan !== week) {
+        priorDutyCounts[d.studentId] = (priorDutyCounts[d.studentId] || 0) + 1;
+      }
+    }
+
+    return NextResponse.json({
+      week,
+      entries,
+      raw: rosters,
+      cumulativeDutyCounts,
+      priorDutyCounts,
+    });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Lỗi server" }, { status: 500 });

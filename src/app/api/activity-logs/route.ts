@@ -91,14 +91,17 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Tìm kiếm từ khóa theo nhiều trường
+    // Tìm kiếm từ khóa theo nhiều trường (Tên người dùng, chi tiết, mã đối tượng, IP, lớp, vai trò, hành động, module)
     if (search) {
       where.OR = [
         { userName: { contains: search, mode: "insensitive" } },
+        { userRole: { contains: search, mode: "insensitive" } },
+        { userLop: { contains: search, mode: "insensitive" } },
         { details: { contains: search, mode: "insensitive" } },
+        { action: { contains: search, mode: "insensitive" } },
+        { target: { contains: search, mode: "insensitive" } },
         { targetId: { contains: search, mode: "insensitive" } },
         { ipAddress: { contains: search, mode: "insensitive" } },
-        { userLop: { contains: search, mode: "insensitive" } },
       ];
     }
 
