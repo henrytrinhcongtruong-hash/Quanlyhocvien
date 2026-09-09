@@ -332,15 +332,21 @@ export default function HocSinhPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setImporting(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch("/api/students/import", { method: "POST", body: formData });
-    if (res.ok) {
-      const d = await res.json();
-      showToast(`Đã import ${d.count} học sinh thành công.`);
-      fetchStudents();
-    } else {
-      showToast("Import thất bại. Kiểm tra lại file Excel.", "error");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/students/import", { method: "POST", body: formData });
+      if (res.ok) {
+        const d = await res.json();
+        showToast(`Đã import ${d.count} học sinh thành công.`);
+        fetchStudents();
+      } else {
+        const errData = await res.json().catch(() => null);
+        const errMsg = errData?.error || "Import thất bại. Kiểm tra lại file Excel.";
+        showToast(errMsg, "error");
+      }
+    } catch {
+      showToast("Lỗi kết nối máy chủ khi import.", "error");
     }
     setImporting(false);
     if (fileRef.current) fileRef.current.value = "";
