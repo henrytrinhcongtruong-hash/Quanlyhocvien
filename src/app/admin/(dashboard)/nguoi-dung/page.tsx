@@ -627,6 +627,7 @@ export default function AdminNguoiDungPage() {
 
       {/* Header */}
       <div
+        className="user-mgmt-header"
         style={{
           display: "flex",
           alignItems: "flex-start",
@@ -638,31 +639,31 @@ export default function AdminNguoiDungPage() {
       >
         <div>
           <h1 style={{ fontSize: "1.4rem", marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
-            <UserCog size={26} color="var(--primary)" />
-            Quản lý tài khoản & phân quyền lớp
+            <UserCog size={26} color="var(--primary)" style={{ flexShrink: 0 }} />
+            <span>Quản lý tài khoản & phân quyền lớp</span>
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
             Phân quyền chi tiết cho từng lớp học, GVCN, Ban cán sự và Tổ trưởng
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <div className="user-mgmt-header-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <button
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={openSelfChangePass}
             style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}
           >
-            <Key size={15} color="var(--primary)" /> Đổi mật khẩu của tôi
+            <Key size={15} color="var(--primary)" /> <span>Đổi mật khẩu của tôi</span>
           </button>
-          <button className="btn btn-primary btn-sm" onClick={openCreate}>
-            <Plus size={15} /> Thêm tài khoản mới
+          <button className="btn btn-primary btn-sm" onClick={openCreate} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Plus size={15} /> <span>Thêm tài khoản mới</span>
           </button>
         </div>
       </div>
 
       {/* Search & Filter Toolbar */}
       <div
-        className="card"
+        className="card user-mgmt-toolbar"
         style={{
           padding: "12px 16px",
           borderRadius: 14,
@@ -676,9 +677,9 @@ export default function AdminNguoiDungPage() {
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", flex: "1 1 300px" }}>
+        <div className="user-mgmt-toolbar-controls" style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", flex: "1 1 300px" }}>
           {/* Search Box */}
-          <div style={{ position: "relative", flex: "1 1 240px", minWidth: 200 }}>
+          <div style={{ position: "relative", flex: "1 1 240px", minWidth: 200, width: "100%" }}>
             <Search
               size={15}
               style={{
@@ -728,33 +729,35 @@ export default function AdminNguoiDungPage() {
             )}
           </div>
 
-          {/* Filter by Class */}
-          <select
-            className="select"
-            value={filterLop}
-            onChange={(e) => setFilterLop(e.target.value)}
-            style={{ width: "auto", minWidth: 130, height: 38, fontSize: "0.85rem", borderRadius: 10 }}
-          >
-            <option value="ALL">🏫 Tất cả lớp</option>
-            {classList.map((c) => (
-              <option key={c} value={c}>
-                Lớp {c}
-              </option>
-            ))}
-          </select>
+          <div className="user-mgmt-toolbar-selects" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            {/* Filter by Class */}
+            <select
+              className="select"
+              value={filterLop}
+              onChange={(e) => setFilterLop(e.target.value)}
+              style={{ width: "auto", minWidth: 130, height: 38, fontSize: "0.85rem", borderRadius: 10 }}
+            >
+              <option value="ALL">🏫 Tất cả lớp</option>
+              {classList.map((c) => (
+                <option key={c} value={c}>
+                  Lớp {c}
+                </option>
+              ))}
+            </select>
 
-          {/* Filter by Role */}
-          <select
-            className="select"
-            value={filterRole}
-            onChange={(e) => setFilterRole(e.target.value)}
-            style={{ width: "auto", minWidth: 150, height: 38, fontSize: "0.85rem", borderRadius: 10 }}
-          >
-            <option value="ALL">👑 Tất cả vai trò</option>
-            <option value="ADMIN">🛡️ Admin Hệ Thống</option>
-            <option value="GVCN">👑 Giáo Viên Chủ Nhiệm</option>
-            <option value="CAN_SU">🌟 Ban Cán Sự / Tổ Trưởng</option>
-          </select>
+            {/* Filter by Role */}
+            <select
+              className="select"
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value)}
+              style={{ width: "auto", minWidth: 150, height: 38, fontSize: "0.85rem", borderRadius: 10 }}
+            >
+              <option value="ALL">👑 Tất cả vai trò</option>
+              <option value="ADMIN">🛡️ Admin Hệ Thống</option>
+              <option value="GVCN">👑 Giáo Viên Chủ Nhiệm</option>
+              <option value="CAN_SU">🌟 Ban Cán Sự / Tổ Trưởng</option>
+            </select>
+          </div>
         </div>
 
         {/* Counter Badge */}
@@ -763,7 +766,7 @@ export default function AdminNguoiDungPage() {
         </div>
       </div>
 
-      {/* User Table */}
+      {/* User Table (Desktop) & User Cards (Mobile) */}
       <div className="card" style={{ overflow: "hidden", borderRadius: 14 }}>
         {loading ? (
           <div style={{ padding: 32 }}>
@@ -772,235 +775,475 @@ export default function AdminNguoiDungPage() {
             ))}
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Tên đăng nhập</th>
-                  <th>Mật khẩu</th>
-                  <th>Họ và tên</th>
-                  <th>Lớp phụ trách</th>
-                  <th>Chức danh</th>
-                  <th>Quyền hạn tóm tắt</th>
-                  <th style={{ width: 110, textAlign: "right" }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.length === 0 ? (
+          <>
+            {/* Desktop Table View */}
+            <div className="hide-on-mobile" style={{ overflowX: "auto" }}>
+              <table className="table">
+                <thead>
                   <tr>
-                    <td colSpan={7} style={{ textAlign: "center", padding: "40px 16px", color: "var(--text-muted)" }}>
-                      <Users size={32} style={{ margin: "0 auto 8px", opacity: 0.4 }} />
-                      <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>Không tìm thấy tài khoản nào</div>
-                      <div style={{ fontSize: "0.8rem", marginTop: 4 }}>Thử thay đổi từ khóa tìm kiếm hoặc bỏ chọn các bộ lọc</div>
-                    </td>
+                    <th>Tên đăng nhập</th>
+                    <th>Mật khẩu</th>
+                    <th>Họ và tên</th>
+                    <th>Lớp phụ trách</th>
+                    <th>Chức danh</th>
+                    <th>Quyền hạn tóm tắt</th>
+                    <th style={{ width: 110, textAlign: "right" }}>Thao tác</th>
                   </tr>
-                ) : (
-                  filteredUsers.map((u) => (
-                    <tr key={u.id}>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          {u.isSuperAdmin ? (
-                            <span className="badge badge-primary" style={{ padding: "3px 8px" }}>
-                              <Shield size={12} /> Admin
-                            </span>
-                          ) : null}
-                          <span style={{ fontWeight: 700, color: "var(--primary)" }}>{u.username}</span>
-                        </div>
+                </thead>
+                <tbody>
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: "center", padding: "40px 16px", color: "var(--text-muted)" }}>
+                        <Users size={32} style={{ margin: "0 auto 8px", opacity: 0.4 }} />
+                        <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>Không tìm thấy tài khoản nào</div>
+                        <div style={{ fontSize: "0.8rem", marginTop: 4 }}>Thử thay đổi từ khóa tìm kiếm hoặc bỏ chọn các bộ lọc</div>
                       </td>
-                      <td>
-                        <div
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            background: "#f8fafc",
-                            padding: "4px 8px",
-                            borderRadius: 8,
-                            border: "1px solid var(--border)",
-                          }}
-                        >
-                          <Key size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-                          <span
+                    </tr>
+                  ) : (
+                    filteredUsers.map((u) => (
+                      <tr key={u.id}>
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            {u.isSuperAdmin ? (
+                              <span className="badge badge-primary" style={{ padding: "3px 8px" }}>
+                                <Shield size={12} /> Admin
+                              </span>
+                            ) : null}
+                            <span style={{ fontWeight: 700, color: "var(--primary)" }}>{u.username}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div
                             style={{
-                              fontFamily: "monospace",
-                              fontSize: "0.85rem",
-                              fontWeight: 700,
-                              letterSpacing: showPasswordIds[u.id] ? "0.5px" : "2px",
-                              color: showPasswordIds[u.id] ? "#0f172a" : "#94a3b8",
-                            }}
-                          >
-                            {showPasswordIds[u.id] ? u.plainPassword || "********" : "••••••••"}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setShowPasswordIds((prev) => ({
-                                ...prev,
-                                [u.id]: !prev[u.id],
-                              }))
-                            }
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              padding: 2,
-                              color: "var(--text-muted)",
-                              display: "flex",
+                              display: "inline-flex",
                               alignItems: "center",
+                              gap: 6,
+                              background: "#f8fafc",
+                              padding: "4px 8px",
+                              borderRadius: 8,
+                              border: "1px solid var(--border)",
                             }}
-                            title={showPasswordIds[u.id] ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                           >
-                            {showPasswordIds[u.id] ? <EyeOff size={13} /> : <Eye size={13} />}
-                          </button>
-                          {u.plainPassword && (
+                            <Key size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+                            <span
+                              style={{
+                                fontFamily: "monospace",
+                                fontSize: "0.85rem",
+                                fontWeight: 700,
+                                letterSpacing: showPasswordIds[u.id] ? "0.5px" : "2px",
+                                color: showPasswordIds[u.id] ? "#0f172a" : "#94a3b8",
+                              }}
+                            >
+                              {showPasswordIds[u.id] ? u.plainPassword || "********" : "••••••••"}
+                            </span>
                             <button
                               type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(u.plainPassword || "");
-                                setCopiedId(u.id);
-                                setTimeout(() => setCopiedId(null), 2000);
-                              }}
+                              onClick={() =>
+                                setShowPasswordIds((prev) => ({
+                                  ...prev,
+                                  [u.id]: !prev[u.id],
+                                }))
+                              }
                               style={{
                                 background: "none",
                                 border: "none",
                                 cursor: "pointer",
                                 padding: 2,
-                                color: copiedId === u.id ? "var(--success)" : "var(--text-muted)",
+                                color: "var(--text-muted)",
                                 display: "flex",
                                 alignItems: "center",
                               }}
-                              title="Sao chép mật khẩu"
+                              title={showPasswordIds[u.id] ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                             >
-                              {copiedId === u.id ? <Check size={13} /> : <Copy size={13} />}
+                              {showPasswordIds[u.id] ? <EyeOff size={13} /> : <Eye size={13} />}
                             </button>
+                            {u.plainPassword && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(u.plainPassword || "");
+                                  setCopiedId(u.id);
+                                  setTimeout(() => setCopiedId(null), 2000);
+                                }}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  padding: 2,
+                                  color: copiedId === u.id ? "var(--success)" : "var(--text-muted)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                }}
+                                title="Sao chép mật khẩu"
+                              >
+                                {copiedId === u.id ? <Check size={13} /> : <Copy size={13} />}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <strong style={{ color: "#0f172a" }}>{u.hoTen}</strong>
+                        </td>
+                        <td>
+                          <span
+                            style={{
+                              background: "#f0f9ff",
+                              color: "#0369a1",
+                              border: "1px solid #bae6fd",
+                              padding: "3px 8px",
+                              borderRadius: 6,
+                              fontSize: "0.78rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {u.assignedLop ? `Lớp ${u.assignedLop}` : "Toàn trường"}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="badge badge-secondary" style={{ fontWeight: 600 }}>
+                            {u.roleLabel || "Thành viên"}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxWidth: 320 }}>
+                            {u.isSuperAdmin ? (
+                              <span
+                                style={{
+                                  background: "#fef2f2",
+                                  color: "#b91c1c",
+                                  border: "1px solid #fecaca",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 800,
+                                  padding: "2px 6px",
+                                  borderRadius: 4,
+                                }}
+                              >
+                                Toàn quyền tối cao
+                              </span>
+                            ) : u.permissions && u.permissions.length > 0 ? (
+                              u.permissions.slice(0, 3).map((p) => {
+                                const mod = MODULES.find((m) => m.key === p.module);
+                                const isFull = p.level === "toan_quyen";
+                                return (
+                                  <span
+                                    key={p.module}
+                                    style={{
+                                      background: isFull ? "#dcfce7" : "#f1f5f9",
+                                      color: isFull ? "#15803d" : "#475569",
+                                      border: `1px solid ${isFull ? "#bbf7d0" : "#e2e8f0"}`,
+                                      fontSize: "0.7rem",
+                                      fontWeight: 700,
+                                      padding: "2px 6px",
+                                      borderRadius: 4,
+                                    }}
+                                  >
+                                    {mod?.label.split(" ")[0] || p.module}: {isFull ? "Toàn quyền" : "Xem"}
+                                  </span>
+                                );
+                              })
+                            ) : (
+                              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Chưa phân quyền</span>
+                            )}
+                            {u.permissions && u.permissions.length > 3 && (
+                              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", alignSelf: "center" }}>
+                                +{u.permissions.length - 3} mục khác
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <div style={{ display: "inline-flex", gap: 6 }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setResetPassUser(u);
+                                setQuickNewPassword("");
+                                setQuickError("");
+                                setQuickShowPassword(false);
+                              }}
+                              className="btn btn-sm"
+                              style={{
+                                background: "#eff6ff",
+                                color: "#2563eb",
+                                border: "1px solid #bfdbfe",
+                                padding: "4px 8px",
+                              }}
+                              title={`Đổi mật khẩu cho ${u.hoTen} (@${u.username})`}
+                            >
+                              <Key size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openEdit(u)}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: "4px 8px" }}
+                              title="Chỉnh sửa thông tin & phân quyền"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            {!u.isSuperAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => setDeleteUser(u)}
+                                className="btn btn-sm"
+                                style={{
+                                  background: "#fee2e2",
+                                  color: "#dc2626",
+                                  border: "1px solid #fca5a5",
+                                  padding: "4px 8px",
+                                }}
+                                title="Xóa người dùng"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card List View (< 769px) */}
+            <div className="hide-on-desktop" style={{ padding: "10px 8px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {filteredUsers.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "32px 14px", color: "var(--text-muted)" }}>
+                  <Users size={32} style={{ margin: "0 auto 8px", opacity: 0.4 }} />
+                  <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>Không tìm thấy tài khoản nào</div>
+                  <div style={{ fontSize: "0.8rem", marginTop: 4 }}>Thử thay đổi từ khóa tìm kiếm hoặc bỏ chọn các bộ lọc</div>
+                </div>
+              ) : (
+                filteredUsers.map((u) => (
+                  <div
+                    key={u.id}
+                    style={{
+                      background: "#ffffff",
+                      borderRadius: 14,
+                      border: "1px solid var(--border)",
+                      padding: "12px 14px",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    {/* Card Header: User details and action buttons */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          {u.isSuperAdmin && (
+                            <span className="badge badge-primary" style={{ padding: "2px 6px", fontSize: "0.7rem" }}>
+                              <Shield size={11} /> Admin
+                            </span>
+                          )}
+                          <span style={{ fontWeight: 800, color: "var(--primary)", fontSize: "0.95rem", wordBreak: "break-all" }}>
+                            @{u.username}
+                          </span>
+                          <span
+                            style={{
+                              background: "#f0f9ff",
+                              color: "#0369a1",
+                              border: "1px solid #bae6fd",
+                              padding: "2px 6px",
+                              borderRadius: 6,
+                              fontSize: "0.7rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {u.assignedLop ? `Lớp ${u.assignedLop}` : "Toàn trường"}
+                          </span>
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#0f172a" }}>
+                          {u.hoTen}
+                          {u.roleLabel && (
+                            <span style={{ fontWeight: 500, color: "var(--text-muted)", fontSize: "0.78rem", marginLeft: 6 }}>
+                              • {u.roleLabel}
+                            </span>
                           )}
                         </div>
-                      </td>
-                      <td>
-                        <strong style={{ color: "#0f172a" }}>{u.hoTen}</strong>
-                      </td>
-                      <td>
+                      </div>
+
+                      {/* Action buttons with touch-friendly padding */}
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResetPassUser(u);
+                            setQuickNewPassword("");
+                            setQuickError("");
+                            setQuickShowPassword(false);
+                          }}
+                          className="btn btn-sm"
+                          style={{
+                            background: "#eff6ff",
+                            color: "#2563eb",
+                            border: "1px solid #bfdbfe",
+                            padding: "6px 8px",
+                            borderRadius: 8,
+                          }}
+                          title={`Đổi mật khẩu cho ${u.hoTen}`}
+                        >
+                          <Key size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(u)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: "6px 8px", borderRadius: 8 }}
+                          title="Chỉnh sửa thông tin & phân quyền"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        {!u.isSuperAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteUser(u)}
+                            className="btn btn-sm"
+                            style={{
+                              background: "#fee2e2",
+                              color: "#dc2626",
+                              border: "1px solid #fca5a5",
+                              padding: "6px 8px",
+                              borderRadius: 8,
+                            }}
+                            title="Xóa người dùng"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Password display row */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        background: "#f8fafc",
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                        fontSize: "0.82rem",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Key size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+                        <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 600 }}>Mật khẩu:</span>
                         <span
                           style={{
-                            background: "#f0f9ff",
-                            color: "#0369a1",
-                            border: "1px solid #bae6fd",
-                            padding: "3px 8px",
-                            borderRadius: 6,
-                            fontSize: "0.78rem",
+                            fontFamily: "monospace",
                             fontWeight: 700,
+                            letterSpacing: showPasswordIds[u.id] ? "0.5px" : "2px",
+                            color: showPasswordIds[u.id] ? "#0f172a" : "#94a3b8",
                           }}
                         >
-                          {u.assignedLop ? `Lớp ${u.assignedLop}` : "Toàn trường"}
+                          {showPasswordIds[u.id] ? u.plainPassword || "********" : "••••••••"}
                         </span>
-                      </td>
-                      <td>
-                        <span className="badge badge-secondary" style={{ fontWeight: 600 }}>
-                          {u.roleLabel || "Thành viên"}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowPasswordIds((prev) => ({
+                              ...prev,
+                              [u.id]: !prev[u.id],
+                            }))
+                          }
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: 3,
+                            color: "var(--text-muted)",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                          title={showPasswordIds[u.id] ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                        >
+                          {showPasswordIds[u.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                        {u.plainPassword && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(u.plainPassword || "");
+                              setCopiedId(u.id);
+                              setTimeout(() => setCopiedId(null), 2000);
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: 3,
+                              color: copiedId === u.id ? "var(--success)" : "var(--text-muted)",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                            title="Sao chép mật khẩu"
+                          >
+                            {copiedId === u.id ? <Check size={14} /> : <Copy size={14} />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Permissions tags */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+                      <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600, marginRight: 2 }}>
+                        Quyền:
+                      </span>
+                      {u.isSuperAdmin ? (
+                        <span
+                          style={{
+                            background: "#fef2f2",
+                            color: "#b91c1c",
+                            border: "1px solid #fecaca",
+                            fontSize: "0.7rem",
+                            fontWeight: 800,
+                            padding: "2px 6px",
+                            borderRadius: 4,
+                          }}
+                        >
+                          Toàn quyền tối cao
                         </span>
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxWidth: 320 }}>
-                          {u.isSuperAdmin ? (
+                      ) : u.permissions && u.permissions.length > 0 ? (
+                        u.permissions.slice(0, 4).map((p) => {
+                          const mod = MODULES.find((m) => m.key === p.module);
+                          const isFull = p.level === "toan_quyen";
+                          return (
                             <span
+                              key={p.module}
                               style={{
-                                background: "#fef2f2",
-                                color: "#b91c1c",
-                                border: "1px solid #fecaca",
-                                fontSize: "0.72rem",
-                                fontWeight: 800,
+                                background: isFull ? "#dcfce7" : "#f1f5f9",
+                                color: isFull ? "#15803d" : "#475569",
+                                border: `1px solid ${isFull ? "#bbf7d0" : "#e2e8f0"}`,
+                                fontSize: "0.7rem",
+                                fontWeight: 700,
                                 padding: "2px 6px",
                                 borderRadius: 4,
                               }}
                             >
-                              Toàn quyền tối cao
+                              {mod?.label.split(" ")[0] || p.module}: {isFull ? "Toàn quyền" : "Xem"}
                             </span>
-                          ) : u.permissions && u.permissions.length > 0 ? (
-                            u.permissions.slice(0, 3).map((p) => {
-                              const mod = MODULES.find((m) => m.key === p.module);
-                              const isFull = p.level === "toan_quyen";
-                              return (
-                                <span
-                                  key={p.module}
-                                  style={{
-                                    background: isFull ? "#dcfce7" : "#f1f5f9",
-                                    color: isFull ? "#15803d" : "#475569",
-                                    border: `1px solid ${isFull ? "#bbf7d0" : "#e2e8f0"}`,
-                                    fontSize: "0.7rem",
-                                    fontWeight: 700,
-                                    padding: "2px 6px",
-                                    borderRadius: 4,
-                                  }}
-                                >
-                                  {mod?.label.split(" ")[0] || p.module}: {isFull ? "Toàn quyền" : "Xem"}
-                                </span>
-                              );
-                            })
-                          ) : (
-                            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Chưa phân quyền</span>
-                          )}
-                          {u.permissions && u.permissions.length > 3 && (
-                            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", alignSelf: "center" }}>
-                              +{u.permissions.length - 3} mục khác
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        <div style={{ display: "inline-flex", gap: 6 }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setResetPassUser(u);
-                              setQuickNewPassword("");
-                              setQuickError("");
-                              setQuickShowPassword(false);
-                            }}
-                            className="btn btn-sm"
-                            style={{
-                              background: "#eff6ff",
-                              color: "#2563eb",
-                              border: "1px solid #bfdbfe",
-                              padding: "4px 8px",
-                            }}
-                            title={`Đổi mật khẩu cho ${u.hoTen} (@${u.username})`}
-                          >
-                            <Key size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openEdit(u)}
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: "4px 8px" }}
-                            title="Chỉnh sửa thông tin & phân quyền"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          {!u.isSuperAdmin && (
-                            <button
-                              type="button"
-                              onClick={() => setDeleteUser(u)}
-                              className="btn btn-sm"
-                              style={{
-                                background: "#fee2e2",
-                                color: "#dc2626",
-                                border: "1px solid #fca5a5",
-                                padding: "4px 8px",
-                              }}
-                              title="Xóa người dùng"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-
-            </table>
-          </div>
+                          );
+                        })
+                      ) : (
+                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Chưa phân quyền</span>
+                      )}
+                      {u.permissions && u.permissions.length > 4 && (
+                        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                          +{u.permissions.length - 4} mục khác
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
         )}
       </div>
 
@@ -1009,6 +1252,7 @@ export default function AdminNguoiDungPage() {
         modalOpen &&
         createPortal(
           <div
+            className="user-mgmt-modal-container"
             style={{
               position: "fixed",
               top: 0,
@@ -1019,7 +1263,7 @@ export default function AdminNguoiDungPage() {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              padding: "20px 16px",
+              padding: "16px 10px",
               background: "rgba(15, 23, 42, 0.7)",
               backdropFilter: "blur(8px)",
               animation: "fadeIn 0.15s ease",
@@ -1030,6 +1274,7 @@ export default function AdminNguoiDungPage() {
           >
             {/* Expanded Modal Box */}
             <div
+              className="user-mgmt-modal-box"
               style={{
                 position: "relative",
                 background: "#ffffff",
@@ -1037,7 +1282,7 @@ export default function AdminNguoiDungPage() {
                 boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.4)",
                 width: "100%",
                 maxWidth: 960,
-                maxHeight: "calc(100vh - 40px)",
+                maxHeight: "calc(100dvh - 20px)",
                 margin: "auto",
                 display: "flex",
                 flexDirection: "column",
@@ -1048,8 +1293,9 @@ export default function AdminNguoiDungPage() {
             >
               {/* Header */}
               <div
+                className="user-mgmt-modal-header"
                 style={{
-                  padding: "20px 28px",
+                  padding: "18px 24px",
                   borderBottom: "1px solid var(--border)",
                   background: "linear-gradient(to right, #f8fafc, #f1f5f9)",
                   display: "flex",
@@ -1069,15 +1315,16 @@ export default function AdminNguoiDungPage() {
                       alignItems: "center",
                       justifyContent: "center",
                       boxShadow: "0 4px 10px rgba(16,90,188,0.25)",
+                      flexShrink: 0,
                     }}
                   >
                     <UserCog size={24} />
                   </div>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "#0f172a" }}>
+                    <h2 style={{ margin: 0, fontSize: "1.18rem", fontWeight: 800, color: "#0f172a" }}>
                       {editingUser ? `Cập nhật tài khoản: ${editingUser.username}` : "Tạo tài khoản & Phân quyền mới"}
                     </h2>
-                    <p style={{ margin: "2px 0 0", fontSize: "0.825rem", color: "var(--text-muted)" }}>
+                    <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "var(--text-muted)" }}>
                       Thiết lập thông tin đăng nhập và ma trận phân quyền chi tiết từng module
                     </p>
                   </div>
@@ -1095,6 +1342,7 @@ export default function AdminNguoiDungPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     transition: "all 0.15s ease",
+                    flexShrink: 0,
                   }}
                   aria-label="Đóng"
                 >
@@ -1103,7 +1351,7 @@ export default function AdminNguoiDungPage() {
               </div>
 
               {/* Scrollable Body */}
-              <div style={{ padding: "24px 28px", overflowY: "auto", flex: 1 }}>
+              <div className="user-mgmt-modal-body" style={{ padding: "20px 22px", overflowY: "auto", flex: 1, WebkitOverflowScrolling: "touch" }}>
                 {/* SECTION 1: ACCOUNT DETAILS */}
                 <div style={{ marginBottom: 24 }}>
                   <div
@@ -1122,7 +1370,7 @@ export default function AdminNguoiDungPage() {
                     <User size={16} /> 1. Thông tin đăng nhập & hồ sơ
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
                     <div>
                       <label className="label">Tên đăng nhập *</label>
                       <input
@@ -1135,13 +1383,13 @@ export default function AdminNguoiDungPage() {
                       />
                     </div>
                     <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, flexWrap: "wrap", gap: 4 }}>
                         <label className="label" style={{ margin: 0 }}>
                           Mật khẩu {editingUser ? "(Bỏ trống nếu giữ nguyên)" : "*"}
                         </label>
                         {editingUser?.plainPassword && (
                           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                            Mật khẩu hiện tại: <strong style={{ color: "var(--primary)" }}>{editingUser.plainPassword}</strong>
+                            MK: <strong style={{ color: "var(--primary)" }}>{editingUser.plainPassword}</strong>
                           </span>
                         )}
                       </div>
@@ -1315,7 +1563,9 @@ export default function AdminNguoiDungPage() {
                     <Layers size={16} /> 3. Ma trận phân quyền chi tiết
                   </div>
 
+                  {/* Desktop Matrix Table (>= 769px) */}
                   <div
+                    className="hide-on-mobile"
                     style={{
                       border: "1px solid var(--border)",
                       borderRadius: 14,
@@ -1403,81 +1653,228 @@ export default function AdminNguoiDungPage() {
                                   <option value="theo_to">👥 Theo tổ</option>
                                 </select>
                               </td>
-                                <td>
-                                  {current.scope === "theo_to" && current.level !== "khong_co_quyen" ? (
-                                    <div>
-                                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                                        {[1, 2, 3, 4].map((toNum) => {
-                                          const selected = current.scopeToIds.includes(toNum);
-                                          return (
-                                            <button
-                                              key={toNum}
-                                              type="button"
-                                              onClick={() => {
-                                                const nextIds = selected
-                                                  ? current.scopeToIds.filter((id) => id !== toNum)
-                                                  : [...current.scopeToIds, toNum];
-                                                setPermMatrix((prev) => ({
-                                                  ...prev,
-                                                  [m.key]: { ...current, scopeToIds: nextIds },
-                                                }));
-                                              }}
-                                              style={{
-                                                padding: "4px 8px",
-                                                borderRadius: 6,
-                                                border: selected ? "1px solid var(--primary)" : "1px solid var(--border)",
-                                                background: selected ? "var(--primary)" : "#f8fafc",
-                                                color: selected ? "white" : "#64748b",
-                                                fontWeight: 700,
-                                                fontSize: "0.75rem",
-                                                cursor: "pointer",
-                                              }}
-                                            >
-                                              T{toNum}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                      {current.scopeToIds.length === 0 && (
-                                        <div style={{ color: "#ef4444", fontSize: "0.7rem", fontWeight: 700, marginTop: 4, display: "flex", alignItems: "center", gap: 3 }}>
-                                          <AlertCircle size={11} /> Bắt buộc chọn tổ!
-                                        </div>
-                                      )}
+                              <td>
+                                {current.scope === "theo_to" && current.level !== "khong_co_quyen" ? (
+                                  <div>
+                                    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                                      {[1, 2, 3, 4].map((toNum) => {
+                                        const selected = current.scopeToIds.includes(toNum);
+                                        return (
+                                          <button
+                                            key={toNum}
+                                            type="button"
+                                            onClick={() => {
+                                              const nextIds = selected
+                                                ? current.scopeToIds.filter((id) => id !== toNum)
+                                                : [...current.scopeToIds, toNum];
+                                              setPermMatrix((prev) => ({
+                                                ...prev,
+                                                [m.key]: { ...current, scopeToIds: nextIds },
+                                              }));
+                                            }}
+                                            style={{
+                                              padding: "4px 8px",
+                                              borderRadius: 6,
+                                              border: selected ? "1px solid var(--primary)" : "1px solid var(--border)",
+                                              background: selected ? "var(--primary)" : "#f8fafc",
+                                              color: selected ? "white" : "#64748b",
+                                              fontWeight: 700,
+                                              fontSize: "0.75rem",
+                                              cursor: "pointer",
+                                            }}
+                                          >
+                                            T{toNum}
+                                          </button>
+                                        );
+                                      })}
                                     </div>
-                                  ) : (
-                                    <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>—</span>
-                                  )}
-                                </td>
+                                    {current.scopeToIds.length === 0 && (
+                                      <div style={{ color: "#ef4444", fontSize: "0.7rem", fontWeight: 700, marginTop: 4, display: "flex", alignItems: "center", gap: 3 }}>
+                                        <AlertCircle size={11} /> Bắt buộc chọn tổ!
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>—</span>
+                                )}
+                              </td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Mobile Matrix Cards (< 769px) */}
+                  <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {MODULES.map((m) => {
+                      const current = permMatrix[m.key] || {
+                        level: "khong_co_quyen",
+                        scope: "toan_lop",
+                        scopeToIds: [],
+                      };
+                      return (
+                        <div
+                          key={m.key}
+                          style={{
+                            background: "#f8fafc",
+                            border: "1px solid var(--border)",
+                            borderRadius: 12,
+                            padding: "12px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 8,
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#0f172a" }}>{m.label}</div>
+                            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 2 }}>{m.desc}</div>
+                          </div>
+
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                            <div>
+                              <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 3 }}>
+                                Mức quyền
+                              </label>
+                              <select
+                                className="select"
+                                style={{
+                                  height: 36,
+                                  fontSize: "0.82rem",
+                                  fontWeight: 600,
+                                  width: "100%",
+                                  borderColor:
+                                    current.level === "toan_quyen"
+                                      ? "#86efac"
+                                      : current.level === "chi_xem"
+                                      ? "#93c5fd"
+                                      : "var(--border)",
+                                  background:
+                                    current.level === "toan_quyen"
+                                      ? "#f0fdf4"
+                                      : current.level === "chi_xem"
+                                      ? "#eff6ff"
+                                      : "white",
+                                  color:
+                                    current.level === "toan_quyen"
+                                      ? "#15803d"
+                                      : current.level === "chi_xem"
+                                      ? "#1d4ed8"
+                                      : "var(--text-muted)",
+                                }}
+                                value={current.level}
+                                onChange={(e) => {
+                                  const lvl = e.target.value;
+                                  setPermMatrix((prev) => ({
+                                    ...prev,
+                                    [m.key]: { ...current, level: lvl },
+                                  }));
+                                }}
+                              >
+                                <option value="khong_co_quyen">🚫 Không quyền</option>
+                                <option value="chi_xem">👁️ Chỉ xem</option>
+                                <option value="toan_quyen">⚡ Toàn quyền</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 3 }}>
+                                Phạm vi
+                              </label>
+                              <select
+                                className="select"
+                                style={{ height: 36, fontSize: "0.82rem", width: "100%" }}
+                                value={current.scope}
+                                disabled={current.level === "khong_co_quyen"}
+                                onChange={(e) => {
+                                  const scp = e.target.value;
+                                  setPermMatrix((prev) => ({
+                                    ...prev,
+                                    [m.key]: { ...current, scope: scp },
+                                  }));
+                                }}
+                              >
+                                <option value="toan_lop">🏫 Toàn lớp</option>
+                                <option value="theo_to">👥 Theo tổ</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {current.scope === "theo_to" && current.level !== "khong_co_quyen" && (
+                            <div style={{ paddingTop: 6, borderTop: "1px dashed var(--border)" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)" }}>
+                                  Chọn tổ phụ trách:
+                                </span>
+                                {current.scopeToIds.length === 0 && (
+                                  <span style={{ color: "#ef4444", fontSize: "0.7rem", fontWeight: 700 }}>
+                                    Bắt buộc chọn ít nhất 1 tổ!
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                                {[1, 2, 3, 4].map((toNum) => {
+                                  const selected = current.scopeToIds.includes(toNum);
+                                  return (
+                                    <button
+                                      key={toNum}
+                                      type="button"
+                                      onClick={() => {
+                                        const nextIds = selected
+                                          ? current.scopeToIds.filter((id) => id !== toNum)
+                                          : [...current.scopeToIds, toNum];
+                                        setPermMatrix((prev) => ({
+                                          ...prev,
+                                          [m.key]: { ...current, scopeToIds: nextIds },
+                                        }));
+                                      }}
+                                      style={{
+                                        height: 34,
+                                        borderRadius: 8,
+                                        border: selected ? "1px solid var(--primary)" : "1px solid var(--border)",
+                                        background: selected ? "var(--primary)" : "white",
+                                        color: selected ? "white" : "#64748b",
+                                        fontWeight: 700,
+                                        fontSize: "0.8rem",
+                                        cursor: "pointer",
+                                      }}
+                                    >
+                                      Tổ {toNum}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
               {/* Sticky Footer */}
               <div
+                className="user-mgmt-modal-footer"
                 style={{
-                  padding: "18px 28px",
+                  padding: "14px 22px",
                   borderTop: "1px solid var(--border)",
                   background: "#f8fafc",
                   display: "flex",
                   justifyContent: "flex-end",
-                  gap: 12,
+                  gap: 10,
                 }}
               >
                 <button
                   className="btn btn-secondary"
-                  style={{ minWidth: 100, height: 42 }}
+                  style={{ minWidth: 90, height: 42, flex: "1 1 auto" }}
                   onClick={() => setModalOpen(false)}
                 >
                   Hủy bỏ
                 </button>
                 <button
                   className="btn btn-primary"
-                  style={{ minWidth: 220, height: 42, fontSize: "0.95rem", fontWeight: 700 }}
+                  style={{ minWidth: 180, height: 42, fontSize: "0.92rem", fontWeight: 700, flex: "2 1 auto" }}
                   onClick={handleSave}
                   disabled={saving}
                 >
@@ -1504,6 +1901,7 @@ export default function AdminNguoiDungPage() {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
+              padding: "16px 12px",
               background: "rgba(15, 23, 42, 0.65)",
               backdropFilter: "blur(6px)",
             }}
@@ -1514,9 +1912,9 @@ export default function AdminNguoiDungPage() {
                 background: "white",
                 borderRadius: 18,
                 boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.4)",
-                padding: "28px 32px",
+                padding: "24px 20px",
                 width: "100%",
-                maxWidth: 420,
+                maxWidth: "min(420px, calc(100vw - 24px))",
                 animation: "fadeIn 0.15s ease",
                 border: "1px solid var(--border)",
               }}
@@ -1605,7 +2003,7 @@ export default function AdminNguoiDungPage() {
               alignItems: "center",
               justifyContent: "center",
               zIndex: 999999,
-              padding: "20px 16px",
+              padding: "16px 10px",
               overflowY: "auto",
             }}
             onClick={() => setResetPassUser(null)}
@@ -1614,10 +2012,10 @@ export default function AdminNguoiDungPage() {
               className="card"
               style={{
                 width: "100%",
-                maxWidth: 460,
-                maxHeight: "calc(100vh - 40px)",
+                maxWidth: "min(460px, calc(100vw - 20px))",
+                maxHeight: "calc(100dvh - 24px)",
                 margin: "auto",
-                padding: "24px 26px",
+                padding: "20px 18px",
                 borderRadius: 18,
                 boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
                 background: "#ffffff",
@@ -1822,7 +2220,7 @@ export default function AdminNguoiDungPage() {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              padding: "20px 16px",
+              padding: "16px 10px",
               background: "rgba(15, 23, 42, 0.7)",
               backdropFilter: "blur(8px)",
               animation: "fadeIn 0.15s ease",
@@ -1838,10 +2236,12 @@ export default function AdminNguoiDungPage() {
                 borderRadius: 20,
                 boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.4)",
                 width: "100%",
-                maxWidth: 460,
-                padding: "26px 24px",
+                maxWidth: "min(460px, calc(100vw - 20px))",
+                maxHeight: "calc(100dvh - 24px)",
+                padding: "20px 18px",
                 border: "1px solid var(--border)",
                 animation: "slideUp 0.18s ease-out",
+                overflowY: "auto",
               }}
             >
               {/* Header */}
@@ -1857,12 +2257,13 @@ export default function AdminNguoiDungPage() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      flexShrink: 0,
                     }}
                   >
                     <Key size={22} />
                   </div>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
+                    <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
                       Đổi Mật Khẩu Tài Khoản Của Tôi
                     </h3>
                     <p style={{ margin: "2px 0 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
@@ -1882,6 +2283,7 @@ export default function AdminNguoiDungPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     cursor: "pointer",
+                    flexShrink: 0,
                   }}
                 >
                   <X size={16} />
