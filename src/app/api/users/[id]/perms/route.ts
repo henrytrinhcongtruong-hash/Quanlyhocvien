@@ -91,6 +91,18 @@ export async function PUT(
       return NextResponse.json({ error: "Dữ liệu không hợp lệ" }, { status: 400 });
     }
 
+    // Validate scope theo_to
+    for (const p of permissions) {
+      if (p.scope === "theo_to" && p.level && p.level !== "khong_co_quyen") {
+        if (!Array.isArray(p.scopeToIds) || p.scopeToIds.length === 0) {
+          return NextResponse.json(
+            { error: `Module "${p.module}" có phạm vi "Theo tổ" nhưng chưa chọn tổ nào! Vui lòng chọn ít nhất 1 tổ.` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     const userId = Number(id);
 
     // Xóa permissions cũ và tạo lại (upsert per module)

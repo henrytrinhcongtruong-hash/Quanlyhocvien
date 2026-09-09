@@ -7,11 +7,12 @@ import {
   Users, Plus, Search, Filter, Edit2, Trash2, Upload,
   Download, ChevronLeft, ChevronRight, X, Save, AlertCircle,
   User, CheckCircle, School, ArrowUpDown, ArrowUpAZ, ArrowDownAZ,
-  FileSpreadsheet, FileUp,
+  FileSpreadsheet, FileUp, Lock,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { compareVietnameseNames } from "@/lib/utils";
 import { compressImage } from "@/lib/imageUtils";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 // ==================
 // TYPES
@@ -52,6 +53,8 @@ export default function HocSinhPage() {
   const searchParams = useSearchParams();
   const urlLop = searchParams.get("lop");
   const { data: session } = useSession();
+  const { canEdit, loading: permsLoading } = useUserPermissions();
+  const canManageStudents = canEdit("hoc_sinh");
 
   const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
   const assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
@@ -448,6 +451,30 @@ export default function HocSinhPage() {
         </div>
       )}
 
+      {/* Read-only banner */}
+      {!canManageStudents && !permsLoading && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "10px 16px",
+            borderRadius: 12,
+            background: "#eff6ff",
+            border: "1px solid #bfdbfe",
+            marginBottom: 16,
+            color: "#1d4ed8",
+            fontSize: "0.85rem",
+            fontWeight: 600,
+          }}
+        >
+          <Lock size={15} color="#2563eb" style={{ flexShrink: 0 }} />
+          <span>
+            Chế độ chỉ xem: Bạn đang xem danh sách hồ sơ học sinh. Quyền thêm mới, chỉnh sửa hoặc import thuộc về Giáo Viên Chủ Nhiệm hoặc Admin.
+          </span>
+        </div>
+      )}
+
       {/* Page header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22, flexWrap: "wrap", gap: 12 }}>
         <div>
@@ -459,26 +486,30 @@ export default function HocSinhPage() {
           </p>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={openImportModal}
-            disabled={importing}
-            id="btn-import-excel"
-          >
-            <Upload size={14} />
-            <span className="hide-on-mobile">Import Excel</span>
-            <span className="hide-on-desktop">Import</span>
-          </button>
+          {canManageStudents && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={openImportModal}
+              disabled={importing}
+              id="btn-import-excel"
+            >
+              <Upload size={14} />
+              <span className="hide-on-mobile">Import Excel</span>
+              <span className="hide-on-desktop">Import</span>
+            </button>
+          )}
           <button className="btn btn-secondary btn-sm" onClick={handleExport}>
             <Download size={14} />
             Export
           </button>
-          <button className="btn btn-primary btn-sm" onClick={openAdd}>
-            <Plus size={14} />
-            <span className="hide-on-mobile">Thêm học sinh</span>
-            <span className="hide-on-desktop">Thêm HS</span>
-          </button>
-          {filterLop !== "ALL" && (
+          {canManageStudents && (
+            <button className="btn btn-primary btn-sm" onClick={openAdd}>
+              <Plus size={14} />
+              <span className="hide-on-mobile">Thêm học sinh</span>
+              <span className="hide-on-desktop">Thêm HS</span>
+            </button>
+          )}
+          {canManageStudents && filterLop !== "ALL" && (
             <button
               className="btn btn-sm"
               style={{
@@ -719,22 +750,28 @@ export default function HocSinhPage() {
                         {s.ghiChu || "—"}
                       </td>
                       <td>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button
-                            onClick={() => openEdit(s)}
-                            style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--primary)", display: "flex", alignItems: "center" }}
-                            title="Sửa"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteId(s.id)}
-                            style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--danger)", display: "flex", alignItems: "center" }}
-                            title="Xóa"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+                        {canManageStudents ? (
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button
+                              onClick={() => openEdit(s)}
+                              style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--primary)", display: "flex", alignItems: "center" }}
+                              title="Sửa"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteId(s.id)}
+                              style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--danger)", display: "flex", alignItems: "center" }}
+                              title="Xóa"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                            <Lock size={11} /> Chỉ xem
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -820,39 +857,47 @@ export default function HocSinhPage() {
                   </div>
 
                   {/* Actions */}
-                  <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                    <button
-                      onClick={() => openEdit(s)}
-                      style={{
-                        background: "var(--primary-light)",
-                        border: "1px solid var(--primary-border)",
-                        borderRadius: 8,
-                        padding: "6px 8px",
-                        cursor: "pointer",
-                        color: "var(--primary)",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                      title="Sửa"
-                    >
-                      <Edit2 size={13} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteId(s.id)}
-                      style={{
-                        background: "#fee2e2",
-                        border: "1px solid #fca5a5",
-                        borderRadius: 8,
-                        padding: "6px 8px",
-                        cursor: "pointer",
-                        color: "#dc2626",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                      title="Xóa"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                  <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
+                    {canManageStudents ? (
+                      <>
+                        <button
+                          onClick={() => openEdit(s)}
+                          style={{
+                            background: "var(--primary-light)",
+                            border: "1px solid var(--primary-border)",
+                            borderRadius: 8,
+                            padding: "6px 8px",
+                            cursor: "pointer",
+                            color: "var(--primary)",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                          title="Sửa"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteId(s.id)}
+                          style={{
+                            background: "#fee2e2",
+                            border: "1px solid #fca5a5",
+                            borderRadius: 8,
+                            padding: "6px 8px",
+                            cursor: "pointer",
+                            color: "#dc2626",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                          title="Xóa"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                        <Lock size={10} /> Chỉ xem
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}

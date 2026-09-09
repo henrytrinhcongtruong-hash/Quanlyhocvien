@@ -7,9 +7,11 @@ import {
   BookOpen, Calendar as CalendarIcon, CheckCircle, XCircle, Clock,
   Upload, Download, Plus, Trash2, Filter, AlertCircle, Save,
   Search, Users, X, School, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, Check,
+  Shield, Lock, Eye,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { compareVietnameseNames } from "@/lib/utils";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 // Hook detect mobile screen
 function useIsMobile(breakpoint = 768) {
@@ -48,6 +50,8 @@ export default function DiemDanhAdminPage() {
   const urlLop = searchParams.get("lop");
   const isMobile = useIsMobile();
   const { data: session } = useSession();
+  const { user, canEdit, canView, isScopeTheoTo, loading: permsLoading } = useUserPermissions();
+  const { isTheoTo, scopeToIds } = isScopeTheoTo("diem_danh");
 
   const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
   const assignedLop = (session as { assignedLop?: string })?.assignedLop || "11AT3";
@@ -56,6 +60,15 @@ export default function DiemDanhAdminPage() {
     return new Date().toISOString().split("T")[0];
   });
   const [selectedTo, setSelectedTo] = useState(0);
+
+  // Auto select assigned Tổ on first load if user is Tổ trưởng
+  const initializedTo = useRef(false);
+  useEffect(() => {
+    if (!initializedTo.current && isTheoTo && scopeToIds.length > 0) {
+      setSelectedTo(scopeToIds[0]);
+      initializedTo.current = true;
+    }
+  }, [isTheoTo, scopeToIds]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "CO_MAT" | "VANG_CO_PHEP" | "VANG_KHONG_PHEP" | "DI_TRE">("ALL");
   const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">(() => {
@@ -127,6 +140,18 @@ export default function DiemDanhAdminPage() {
 
   // Fast toggle attendance for a student — OPTIMISTIC UI (instant, no reload)
   async function handleToggleStatus(studentId: number, loai: string) {
+    const student = students.find(s => s.id === studentId);
+    const studentTo = student?.to;
+
+    if (!canEdit("diem_danh", studentTo)) {
+      if (isTheoTo) {
+        showToast(`Bạn là Tổ trưởng Tổ ${scopeToIds.join(", ")}, không thể điểm danh học sinh Tổ ${studentTo || ""}`, "error");
+      } else {
+        showToast("Tài khoản của bạn chỉ có quyền xem điểm danh", "error");
+      }
+      return;
+    }
+
     const existing = records.find(r => r.studentId === studentId && r.loai === loai);
     if (existing) {
       // Optimistic: remove from local state immediately
@@ -142,7 +167,6 @@ export default function DiemDanhAdminPage() {
       }
     } else {
       // Optimistic: add a temporary record to local state immediately
-      const student = students.find(s => s.id === studentId);
       const tempId = -(Date.now()); // negative temp ID
       const tempRecord: AttendanceRecord = {
         id: tempId,
@@ -187,6 +211,12 @@ export default function DiemDanhAdminPage() {
       showToast("Vui lòng chọn học sinh", "error");
       return;
     }
+    const student = students.find(s => s.id === Number(manualStudentId));
+    if (!canEdit("diem_danh", student?.to)) {
+      showToast("Bạn không có quyền điểm danh cho học sinh này", "error");
+      return;
+    }
+
     const res = await fetch("/api/attendance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -212,6 +242,11 @@ export default function DiemDanhAdminPage() {
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!canEdit("diem_danh")) {
+      showToast("Bạn không có quyền import điểm danh", "error");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     setImporting(true);
     const formData = new FormData();
     formData.append("file", file);
@@ -308,6 +343,70 @@ export default function DiemDanhAdminPage() {
         </div>
       )}
 
+      {/* Permission / Scope Banner */}
+      {isTheoTo && scopeToIds.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 8,
+            padding: "10px 16px",
+            borderRadius: 12,
+            background: "linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%)",
+            border: "1px solid #c7d2fe",
+            marginBottom: 16,
+            color: "#3730a3",
+            fontSize: "0.85rem",
+            boxShadow: "0 1px 3px rgba(99, 102, 241, 0.08)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Shield size={16} color="#4f46e5" style={{ flexShrink: 0 }} />
+            <span>
+              Tài khoản <strong>{user?.roleLabel || "Tổ Trưởng"}</strong> ({user?.hoTen}): Được cấp quyền điểm danh dành riêng cho <strong>Tổ {scopeToIds.join(", ")}</strong> ({user?.assignedLop || assignedLop})
+            </span>
+          </div>
+          <span
+            style={{
+              fontSize: "0.75rem",
+              background: "white",
+              padding: "3px 10px",
+              borderRadius: 999,
+              border: "1px solid #c7d2fe",
+              color: "#4f46e5",
+              fontWeight: 800,
+            }}
+          >
+            Tổ {scopeToIds.join(", ")}
+          </span>
+        </div>
+      )}
+
+      {!canEdit("diem_danh") && !permsLoading && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "10px 16px",
+            borderRadius: 12,
+            background: "#fffbeb",
+            border: "1px solid #fde047",
+            marginBottom: 16,
+            color: "#92400e",
+            fontSize: "0.85rem",
+            fontWeight: 600,
+          }}
+        >
+          <Eye size={16} color="#d97706" style={{ flexShrink: 0 }} />
+          <span>
+            Chế độ chỉ xem: Bạn đang xem dữ liệu điểm danh. Tài khoản của bạn không có quyền ghi nhận hoặc chỉnh sửa.
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ display: "flex", alignItems: isMobile ? "stretch" : "flex-start", justifyContent: "space-between", marginBottom: isMobile ? 14 : 20, flexWrap: "wrap", gap: isMobile ? 8 : 12, flexDirection: isMobile ? "column" : "row" }}>
         <div>
@@ -322,16 +421,20 @@ export default function DiemDanhAdminPage() {
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: "none" }} />
-          <button className="btn btn-secondary btn-sm" onClick={() => fileRef.current?.click()} disabled={importing} style={isMobile ? { flex: 1, fontSize: "0.75rem", padding: "6px 8px" } : undefined}>
-            <Upload size={14} />
-            {importing ? "Import..." : "Import"}
-          </button>
+          {canEdit("diem_danh") && (
+            <button className="btn btn-secondary btn-sm" onClick={() => fileRef.current?.click()} disabled={importing} style={isMobile ? { flex: 1, fontSize: "0.75rem", padding: "6px 8px" } : undefined}>
+              <Upload size={14} />
+              {importing ? "Import..." : "Import"}
+            </button>
+          )}
           <button className="btn btn-secondary btn-sm" onClick={() => window.open("/api/attendance/export", "_blank")} style={isMobile ? { flex: 1, fontSize: "0.75rem", padding: "6px 8px" } : undefined}>
             <Download size={14} /> Export
           </button>
-          <button className="btn btn-primary btn-sm" onClick={() => setModalOpen(true)} style={isMobile ? { flex: 1, fontSize: "0.75rem", padding: "6px 8px" } : undefined}>
-            <Plus size={14} /> Ghi nhận
-          </button>
+          {canEdit("diem_danh") && (
+            <button className="btn btn-primary btn-sm" onClick={() => setModalOpen(true)} style={isMobile ? { flex: 1, fontSize: "0.75rem", padding: "6px 8px" } : undefined}>
+              <Plus size={14} /> Ghi nhận
+            </button>
+          )}
         </div>
       </div>
 
@@ -365,12 +468,16 @@ export default function DiemDanhAdminPage() {
 
             <select
               className="select"
-              style={{ width: isMobile ? undefined : 120, flex: isMobile ? 1 : undefined, minHeight: 36 }}
+              style={{ width: isMobile ? undefined : 145, flex: isMobile ? 1 : undefined, minHeight: 36 }}
               value={selectedTo}
               onChange={(e) => setSelectedTo(Number(e.target.value))}
             >
               <option value={0}>Tất cả tổ</option>
-              {[1, 2, 3, 4].map(t => <option key={t} value={t}>Tổ {t}</option>)}
+              {[1, 2, 3, 4].map(t => (
+                <option key={t} value={t}>
+                  Tổ {t} {isTheoTo && scopeToIds.includes(t) ? "★ (Tổ bạn)" : ""}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -569,6 +676,12 @@ export default function DiemDanhAdminPage() {
               const isVangCoPhep = studentRecords.some(r => r.loai === "Vắng có phép");
               const isVangKhongPhep = studentRecords.some(r => r.loai === "Vắng không phép");
               const isDiTre = studentRecords.some(r => r.loai === "Đi trễ");
+              const canEditThisStudent = canEdit("diem_danh", s.to);
+              const disabledTooltip = !canEditThisStudent
+                ? isTheoTo
+                  ? `Học sinh thuộc Tổ ${s.to}. Bạn chỉ có quyền điểm danh học sinh Tổ ${scopeToIds.join(", ")}.`
+                  : "Tài khoản của bạn chỉ có quyền xem điểm danh."
+                : undefined;
 
               return (
                 <div
@@ -617,32 +730,64 @@ export default function DiemDanhAdminPage() {
                       )}
                     </div>
 
-                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
+                      {!canEditThisStudent && (
+                        <span
+                          title={disabledTooltip}
+                          style={{
+                            fontSize: "0.68rem",
+                            color: "#94a3b8",
+                            background: "#f1f5f9",
+                            padding: "2px 5px",
+                            borderRadius: 4,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 2,
+                            fontWeight: 600,
+                          }}
+                        >
+                          <Lock size={10} />
+                        </span>
+                      )}
                       <button
+                        disabled={!canEditThisStudent}
+                        title={disabledTooltip}
                         onClick={() => handleToggleStatus(s.id, "Vắng có phép")}
                         className={`btn btn-sm ${isVangCoPhep ? "btn-primary" : "btn-secondary"}`}
                         style={{
                           fontSize: "0.68rem", padding: "3px 8px", minHeight: 28,
                           background: isVangCoPhep ? "var(--warning)" : undefined,
                           color: isVangCoPhep ? "black" : undefined,
+                          opacity: canEditThisStudent ? 1 : 0.45,
+                          cursor: canEditThisStudent ? "pointer" : "not-allowed",
                         }}
                       >
                         Phép
                       </button>
                       <button
+                        disabled={!canEditThisStudent}
+                        title={disabledTooltip}
                         onClick={() => handleToggleStatus(s.id, "Vắng không phép")}
                         className={`btn btn-sm ${isVangKhongPhep ? "btn-danger" : "btn-secondary"}`}
-                        style={{ fontSize: "0.68rem", padding: "3px 8px", minHeight: 28 }}
+                        style={{
+                          fontSize: "0.68rem", padding: "3px 8px", minHeight: 28,
+                          opacity: canEditThisStudent ? 1 : 0.45,
+                          cursor: canEditThisStudent ? "pointer" : "not-allowed",
+                        }}
                       >
                         K.P
                       </button>
                       <button
+                        disabled={!canEditThisStudent}
+                        title={disabledTooltip}
                         onClick={() => handleToggleStatus(s.id, "Đi trễ")}
                         className={`btn btn-sm ${isDiTre ? "btn-primary" : "btn-secondary"}`}
                         style={{
                           fontSize: "0.68rem", padding: "3px 8px", minHeight: 28,
                           background: isDiTre ? "var(--info)" : undefined,
                           color: isDiTre ? "white" : undefined,
+                          opacity: canEditThisStudent ? 1 : 0.45,
+                          cursor: canEditThisStudent ? "pointer" : "not-allowed",
                         }}
                       >
                         Trễ
@@ -695,6 +840,12 @@ export default function DiemDanhAdminPage() {
                   const isVangCoPhep = studentRecords.some(r => r.loai === "Vắng có phép");
                   const isVangKhongPhep = studentRecords.some(r => r.loai === "Vắng không phép");
                   const isDiTre = studentRecords.some(r => r.loai === "Đi trễ");
+                  const canEditThisStudent = canEdit("diem_danh", s.to);
+                  const disabledTooltip = !canEditThisStudent
+                    ? isTheoTo
+                      ? `Học sinh thuộc Tổ ${s.to}. Bạn chỉ có quyền điểm danh học sinh Tổ ${scopeToIds.join(", ")}.`
+                      : "Tài khoản của bạn chỉ có quyền xem điểm danh."
+                    : undefined;
 
                   return (
                     <tr key={s.id}>
@@ -734,32 +885,66 @@ export default function DiemDanhAdminPage() {
                         )}
                       </td>
                       <td style={{ textAlign: "right" }}>
-                        <div style={{ display: "inline-flex", gap: 4 }}>
+                        <div style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+                          {!canEditThisStudent && (
+                            <span
+                              title={disabledTooltip}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                fontSize: "0.72rem",
+                                color: "#64748b",
+                                marginRight: 4,
+                                background: "#f1f5f9",
+                                border: "1px solid #e2e8f0",
+                                padding: "2px 8px",
+                                borderRadius: 6,
+                                fontWeight: 600,
+                              }}
+                            >
+                              <Lock size={11} color="#94a3b8" /> Chỉ xem
+                            </span>
+                          )}
                           <button
+                            disabled={!canEditThisStudent}
+                            title={disabledTooltip}
                             onClick={() => handleToggleStatus(s.id, "Vắng có phép")}
                             className={`btn btn-sm ${isVangCoPhep ? "btn-primary" : "btn-secondary"}`}
                             style={{
                               fontSize: "0.75rem", padding: "3px 7px",
                               background: isVangCoPhep ? "var(--warning)" : undefined,
                               color: isVangCoPhep ? "black" : undefined,
+                              opacity: canEditThisStudent ? 1 : 0.45,
+                              cursor: canEditThisStudent ? "pointer" : "not-allowed",
                             }}
                           >
                             Có phép
                           </button>
                           <button
+                            disabled={!canEditThisStudent}
+                            title={disabledTooltip}
                             onClick={() => handleToggleStatus(s.id, "Vắng không phép")}
                             className={`btn btn-sm ${isVangKhongPhep ? "btn-danger" : "btn-secondary"}`}
-                            style={{ fontSize: "0.75rem", padding: "3px 7px" }}
+                            style={{
+                              fontSize: "0.75rem", padding: "3px 7px",
+                              opacity: canEditThisStudent ? 1 : 0.45,
+                              cursor: canEditThisStudent ? "pointer" : "not-allowed",
+                            }}
                           >
                             Không phép
                           </button>
                           <button
+                            disabled={!canEditThisStudent}
+                            title={disabledTooltip}
                             onClick={() => handleToggleStatus(s.id, "Đi trễ")}
                             className={`btn btn-sm ${isDiTre ? "btn-primary" : "btn-secondary"}`}
                             style={{
                               fontSize: "0.75rem", padding: "3px 7px",
                               background: isDiTre ? "var(--info)" : undefined,
                               color: isDiTre ? "white" : undefined,
+                              opacity: canEditThisStudent ? 1 : 0.45,
+                              cursor: canEditThisStudent ? "pointer" : "not-allowed",
                             }}
                           >
                             Đi trễ
@@ -828,7 +1013,7 @@ export default function DiemDanhAdminPage() {
                 >
                   <option value="">-- Chọn học sinh --</option>
                   {classList.map(c => {
-                    const classStudents = students.filter(s => s.lop === c);
+                    const classStudents = students.filter(s => s.lop === c && (!isTheoTo || scopeToIds.includes(s.to)));
                     if (classStudents.length === 0) return null;
                     return (
                       <optgroup key={c} label={`Lớp ${c}`}>

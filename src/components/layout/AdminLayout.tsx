@@ -30,6 +30,7 @@ import {
   History,
   TrendingUp,
 } from "lucide-react";
+import { useUserPermissions, Module } from "@/hooks/useUserPermissions";
 
 // Nav items với icon và label
 const NAV_BASE = [
@@ -57,6 +58,7 @@ export default function AdminLayout({
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const router = useRouter();
+  const { canView } = useUserPermissions();
 
   const sessionIsSuperAdmin = (session as { isSuperAdmin?: boolean })?.isSuperAdmin;
   const realIsSuperAdmin = typeof sessionIsSuperAdmin === "boolean" ? sessionIsSuperAdmin : isSuperAdmin;
@@ -143,7 +145,7 @@ export default function AdminLayout({
     }
   };
 
-  const navItems = canManageUsers
+  const baseItems = canManageUsers
     ? [
         ...NAV_BASE,
         { href: "/admin/nguoi-dung", icon: UserCog, label: "Người dùng", module: "nguoi_dung" },
@@ -151,6 +153,18 @@ export default function AdminLayout({
         { href: "/admin/lich-su-hoat-dong", icon: History, label: "Lịch sử hoạt động", module: "lich_su_hoat_dong" },
       ]
     : NAV_BASE;
+
+  const navItems = baseItems.filter((item) => {
+    if (realIsSuperAdmin) return true;
+    if (!item.module) return true;
+    if (item.module === "nguoi_dung" || item.module === "quan_ly_link" || item.module === "lich_su_hoat_dong") {
+      return canManageUsers;
+    }
+    if (item.href === "/admin/bao-cao/thu-chi") {
+      return canView("quy");
+    }
+    return canView(item.module as Module);
+  });
 
   // Sync selectedClass from URL or localStorage for SuperAdmin
   useEffect(() => {

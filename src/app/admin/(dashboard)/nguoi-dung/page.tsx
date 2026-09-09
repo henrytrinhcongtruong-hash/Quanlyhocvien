@@ -364,7 +364,7 @@ export default function AdminNguoiDungPage() {
     loadData();
   }, []);
 
-  function applyTemplate(templateKey: TemplateKey) {
+  function applyTemplate(templateKey: TemplateKey, targetTo = 1) {
     const t = PERMISSION_TEMPLATES[templateKey];
     const newMatrix: Record<string, { level: string; scope: string; scopeToIds: number[] }> = {};
 
@@ -374,7 +374,7 @@ export default function AdminNguoiDungPage() {
         newMatrix[m.key] = {
           level: def.level,
           scope: def.scope,
-          scopeToIds: def.scope === "theo_to" ? [1] : [],
+          scopeToIds: def.scope === "theo_to" ? [targetTo] : [],
         };
       }
     }
@@ -442,6 +442,18 @@ export default function AdminNguoiDungPage() {
     if (!form.hoTen.trim()) {
       showToast("Vui lòng nhập họ và tên", "error");
       return;
+    }
+
+    // Validate that modules with scope="theo_to" have at least 1 selected tổ
+    for (const [moduleKey, val] of Object.entries(permMatrix)) {
+      if (val.scope === "theo_to" && val.level !== "khong_co_quyen" && val.scopeToIds.length === 0) {
+        const mod = MODULES.find((m) => m.key === moduleKey);
+        showToast(
+          `Mục "${mod?.label || moduleKey}" chọn phạm vi "Theo tổ" nhưng chưa chọn tổ nào. Vui lòng chọn ít nhất 1 tổ!`,
+          "error"
+        );
+        return;
+      }
     }
 
     setSaving(true);
@@ -1220,35 +1232,66 @@ export default function AdminNguoiDungPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
                     {(Object.keys(PERMISSION_TEMPLATES) as TemplateKey[]).map((k) => {
                       const t = PERMISSION_TEMPLATES[k];
+                      const isToTruong = k === "to_truong";
                       return (
-                        <button
+                        <div
                           key={k}
-                          type="button"
-                          onClick={() => applyTemplate(k)}
                           style={{
                             background: "#f8fafc",
                             border: "1px solid var(--border)",
                             borderRadius: 12,
                             padding: "10px 14px",
-                            textAlign: "left",
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
                             display: "flex",
                             flexDirection: "column",
-                            gap: 4,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = "var(--primary)";
-                            e.currentTarget.style.background = "#eff6ff";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = "var(--border)";
-                            e.currentTarget.style.background = "#f8fafc";
+                            justifyContent: "space-between",
+                            gap: 8,
                           }}
                         >
-                          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1e293b" }}>{t.label}</div>
-                          <div style={{ fontSize: "0.725rem", color: "#64748b", lineHeight: 1.3 }}>{t.desc}</div>
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => applyTemplate(k)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              textAlign: "left",
+                              cursor: "pointer",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 4,
+                              width: "100%",
+                            }}
+                          >
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1e293b" }}>{t.label}</div>
+                            <div style={{ fontSize: "0.725rem", color: "#64748b", lineHeight: 1.3 }}>{t.desc}</div>
+                          </button>
+
+                          {isToTruong && (
+                            <div style={{ display: "flex", gap: 4, alignItems: "center", paddingTop: 4, borderTop: "1px dashed var(--border)" }}>
+                              <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", marginRight: 2 }}>Chọn tổ:</span>
+                              {[1, 2, 3, 4].map((tNum) => (
+                                <button
+                                  key={tNum}
+                                  type="button"
+                                  onClick={() => applyTemplate("to_truong", tNum)}
+                                  style={{
+                                    padding: "3px 7px",
+                                    borderRadius: 6,
+                                    border: "1px solid #c7d2fe",
+                                    background: "#e0e7ff",
+                                    color: "#3730a3",
+                                    fontWeight: 700,
+                                    fontSize: "0.72rem",
+                                    cursor: "pointer",
+                                  }}
+                                  title={`Áp dụng mẫu Tổ Trưởng cho Tổ ${tNum}`}
+                                >
+                                  T{tNum}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -1360,44 +1403,51 @@ export default function AdminNguoiDungPage() {
                                   <option value="theo_to">👥 Theo tổ</option>
                                 </select>
                               </td>
-                              <td>
-                                {current.scope === "theo_to" && current.level !== "khong_co_quyen" ? (
-                                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                                    {[1, 2, 3, 4].map((toNum) => {
-                                      const selected = current.scopeToIds.includes(toNum);
-                                      return (
-                                        <button
-                                          key={toNum}
-                                          type="button"
-                                          onClick={() => {
-                                            const nextIds = selected
-                                              ? current.scopeToIds.filter((id) => id !== toNum)
-                                              : [...current.scopeToIds, toNum];
-                                            setPermMatrix((prev) => ({
-                                              ...prev,
-                                              [m.key]: { ...current, scopeToIds: nextIds },
-                                            }));
-                                          }}
-                                          style={{
-                                            padding: "4px 8px",
-                                            borderRadius: 6,
-                                            border: selected ? "1px solid var(--primary)" : "1px solid var(--border)",
-                                            background: selected ? "var(--primary)" : "#f8fafc",
-                                            color: selected ? "white" : "#64748b",
-                                            fontWeight: 700,
-                                            fontSize: "0.75rem",
-                                            cursor: "pointer",
-                                          }}
-                                        >
-                                          T{toNum}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                ) : (
-                                  <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>—</span>
-                                )}
-                              </td>
+                                <td>
+                                  {current.scope === "theo_to" && current.level !== "khong_co_quyen" ? (
+                                    <div>
+                                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                                        {[1, 2, 3, 4].map((toNum) => {
+                                          const selected = current.scopeToIds.includes(toNum);
+                                          return (
+                                            <button
+                                              key={toNum}
+                                              type="button"
+                                              onClick={() => {
+                                                const nextIds = selected
+                                                  ? current.scopeToIds.filter((id) => id !== toNum)
+                                                  : [...current.scopeToIds, toNum];
+                                                setPermMatrix((prev) => ({
+                                                  ...prev,
+                                                  [m.key]: { ...current, scopeToIds: nextIds },
+                                                }));
+                                              }}
+                                              style={{
+                                                padding: "4px 8px",
+                                                borderRadius: 6,
+                                                border: selected ? "1px solid var(--primary)" : "1px solid var(--border)",
+                                                background: selected ? "var(--primary)" : "#f8fafc",
+                                                color: selected ? "white" : "#64748b",
+                                                fontWeight: 700,
+                                                fontSize: "0.75rem",
+                                                cursor: "pointer",
+                                              }}
+                                            >
+                                              T{toNum}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                      {current.scopeToIds.length === 0 && (
+                                        <div style={{ color: "#ef4444", fontSize: "0.7rem", fontWeight: 700, marginTop: 4, display: "flex", alignItems: "center", gap: 3 }}>
+                                          <AlertCircle size={11} /> Bắt buộc chọn tổ!
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>—</span>
+                                  )}
+                                </td>
                             </tr>
                           );
                         })}
