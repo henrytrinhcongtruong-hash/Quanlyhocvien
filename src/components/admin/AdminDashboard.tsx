@@ -28,14 +28,30 @@ import {
   Printer,
   ChevronDown,
   GraduationCap,
+  School,
 } from "lucide-react";
 import { formatVND } from "@/lib/format";
 
-interface AdminDashboardProps {
+export interface ClassSummary {
+  lop: string;
+  totalStudents: number;
+  maleCount: number;
+  femaleCount: number;
+  gvcn: string;
+  lopTruong: string;
+  lopPho: string;
+  feeSummary: { tongThu: number; tongChi: number; conLai: number };
+  seatingSlots: number;
+}
+
+export interface AdminDashboardProps {
   stats: {
     totalStudents: number;
     maleCount: number;
     femaleCount: number;
+    totalClasses?: number;
+    classList?: string[];
+    classSummaries?: ClassSummary[];
     groupCounts: { to1: number; to2: number; to3: number; to4: number };
     leaders: {
       lopTruong: string;
@@ -54,7 +70,7 @@ interface AdminDashboardProps {
     isSuperAdmin: boolean;
     upcomingEvents: Array<{ id: number; tieuDe: string; ngayBatDau: string; loaiSuKien: string; diaDiem: string | null }>;
     upcomingExams: Array<{ id: number; monHoc: string; ngayThi: string; hinhThuc: string; thoiGianLamBai: number }>;
-    currentDuty: { tuan: string; to: number; studentName: string | null } | null;
+    currentDuty: { tuan: string; to: number; studentName: string | null; lop?: string } | null;
     seatingChartSlotsCount: number;
   };
 }
@@ -73,17 +89,17 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
   }, []);
 
   const isAllClass = stats.assignedLop === "ALL";
-  const lopTitle = isAllClass ? "Toàn Trường" : `Lớp ${stats.assignedLop || "12T2"}`;
-  const lopName = isAllClass ? "12T2" : stats.assignedLop || "12T2";
+  const lopTitle = isAllClass ? "Tổng Quan Toàn Trường" : `Lớp ${stats.assignedLop || "12T2"}`;
+  const singleLopDefault = stats.assignedLop && stats.assignedLop !== "ALL" ? stats.assignedLop : "12T2";
 
   // 8 Core Functional Modules
   const coreModules = [
     {
       title: "Sơ đồ lớp học",
-      desc: "56 chỗ • Kéo thả chuột • Xuất chuẩn in A4",
-      href: `/admin/so-do-lop?lop=${lopName}`,
+      desc: isAllClass ? "Sơ đồ vị trí các lớp • Xuất chuẩn in A4" : "56 chỗ • Kéo thả chuột • Xuất chuẩn in A4",
+      href: isAllClass ? "/admin/so-do-lop" : `/admin/so-do-lop?lop=${singleLopDefault}`,
       icon: <LayoutGrid size={22} />,
-      badge: `${stats.seatingChartSlotsCount}/56 Chỗ`,
+      badge: `${stats.seatingChartSlotsCount} Chỗ`,
       badgeColor: "#0284c7",
       color: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
       bgLight: "#f0f9ff",
@@ -91,8 +107,8 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     },
     {
       title: "Danh sách học sinh",
-      desc: `${stats.totalStudents} học sinh • 4 Tổ • Phân quyền cán sự`,
-      href: isAllClass ? "/admin/hoc-sinh" : `/admin/hoc-sinh?lop=${lopName}`,
+      desc: `${stats.totalStudents} học sinh • ${isAllClass ? `${stats.totalClasses || 2} Lớp` : "4 Tổ"} • Phân quyền`,
+      href: isAllClass ? "/admin/hoc-sinh?lop=ALL" : `/admin/hoc-sinh?lop=${singleLopDefault}`,
       icon: <Users size={22} />,
       badge: `${stats.totalStudents} Bạn`,
       badgeColor: "#16a34a",
@@ -102,8 +118,8 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     },
     {
       title: "Sổ thu chi Quỹ lớp",
-      desc: "Thu quỹ, chi tiêu hóa đơn & đối soát",
-      href: isAllClass ? "/admin/quy" : `/admin/quy?lop=${lopName}`,
+      desc: isAllClass ? "Tổng quỹ toàn trường & đối soát chi tiết" : "Thu quỹ, chi tiêu hóa đơn & đối soát",
+      href: isAllClass ? "/admin/quy?lop=ALL" : `/admin/quy?lop=${singleLopDefault}`,
       icon: <Wallet size={22} />,
       badge: stats.feeSummary ? formatVND(stats.feeSummary.conLai) : "0 ₫",
       badgeColor: "#8b5cf6",
@@ -124,8 +140,8 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     },
     {
       title: "Thời khóa biểu",
-      desc: "Lịch học 6 ngày trong tuần & Phòng học",
-      href: `/admin/thoi-khoa-bieu?lop=${lopName}`,
+      desc: isAllClass ? "Lịch học các khối lớp & Phòng học" : "Lịch học 6 ngày trong tuần & Phòng học",
+      href: isAllClass ? `/admin/thoi-khoa-bieu?lop=${singleLopDefault}` : `/admin/thoi-khoa-bieu?lop=${singleLopDefault}`,
       icon: <Calendar size={22} />,
       badge: "6 Ngày",
       badgeColor: "#06b6d4",
@@ -136,7 +152,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     {
       title: "Lịch thi & Kiểm tra",
       desc: "Kế hoạch thi giữa kỳ, học kỳ & kết quả",
-      href: isAllClass ? "/admin/lich-thi" : `/admin/lich-thi?lop=${lopName}`,
+      href: isAllClass ? "/admin/lich-thi?lop=ALL" : `/admin/lich-thi?lop=${singleLopDefault}`,
       icon: <GraduationCap size={22} />,
       badge: "Học kỳ 1",
       badgeColor: "#ec4899",
@@ -146,10 +162,10 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     },
     {
       title: "Lịch trực nhật tuần",
-      desc: "Phân công 4 Tổ luân phiên trực nhật",
-      href: isAllClass ? "/admin/lich-truc" : `/admin/lich-truc?lop=${lopName}`,
+      desc: isAllClass ? "Phân công luân phiên trực nhật các lớp" : "Phân công 4 Tổ luân phiên trực nhật",
+      href: isAllClass ? "/admin/lich-truc?lop=ALL" : `/admin/lich-truc?lop=${singleLopDefault}`,
       icon: <Layers size={22} />,
-      badge: `Tổ ${stats.currentDuty?.to || 1} Trực`,
+      badge: isAllClass ? "Lịch tuần" : `Tổ ${stats.currentDuty?.to || 1} Trực`,
       badgeColor: "#10b981",
       color: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
       bgLight: "#ecfdf5",
@@ -158,7 +174,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     {
       title: "Báo cáo & Xuất Excel",
       desc: "Tổng hợp số liệu, xuất file & in ấn",
-      href: isAllClass ? "/admin/bao-cao" : `/admin/bao-cao?lop=${lopName}`,
+      href: isAllClass ? "/admin/bao-cao?lop=ALL" : `/admin/bao-cao?lop=${singleLopDefault}`,
       icon: <BarChart3 size={22} />,
       badge: "Báo cáo Pro",
       badgeColor: "#6366f1",
@@ -182,7 +198,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
     });
   }
 
-  // 4 Groups Info
+  // 4 Groups Info (Dùng khi xem 1 lớp cụ thể)
   const groups = [
     {
       id: 1,
@@ -275,7 +291,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
                 gap: 5,
               }}
             >
-              <Sparkles size={11} /> BẢNG ĐIỀU KHIỂN TRUNG TÂM
+              <Sparkles size={11} /> {isAllClass ? "BẢNG ĐIỀU KHIỂN TRUNG TÂM • TOÀN TRƯỜNG" : "BẢNG ĐIỀU KHIỂN TRUNG TÂM"}
             </span>
 
             <span
@@ -326,37 +342,75 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
             Hệ Thống Quản Lý — {lopTitle}
           </h1>
 
-          {/* Ban Cán Sự & GVCN — Tách riêng mỗi người 1 hàng thẳng tắp */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              margin: "6px 0 16px",
-              background: "rgba(255, 255, 255, 0.07)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
-              borderRadius: 12,
-              padding: "10px 14px",
-              backdropFilter: "blur(6px)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem" }}>
-              <span style={{ color: "#38bdf8", fontWeight: 700, minWidth: 92 }}>• GVCN:</span>
-              <strong style={{ color: "#ffffff", letterSpacing: "0.2px" }}>{stats.leaders.gvcn}</strong>
-            </div>
+          {/* Thông tin lãnh đạo: Phân tách rõ ràng Toàn Trường vs 1 Lớp cụ thể */}
+          {!isAllClass ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                margin: "6px 0 16px",
+                background: "rgba(255, 255, 255, 0.07)",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                borderRadius: 12,
+                padding: "10px 14px",
+                backdropFilter: "blur(6px)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem" }}>
+                <span style={{ color: "#38bdf8", fontWeight: 700, minWidth: 92 }}>• GVCN:</span>
+                <strong style={{ color: "#ffffff", letterSpacing: "0.2px" }}>{stats.leaders.gvcn}</strong>
+              </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem" }}>
-              <span style={{ color: "#4ade80", fontWeight: 700, minWidth: 92 }}>• Lớp trưởng:</span>
-              <strong style={{ color: "#ffffff", letterSpacing: "0.2px" }}>{stats.leaders.lopTruong}</strong>
-            </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem" }}>
+                <span style={{ color: "#4ade80", fontWeight: 700, minWidth: 92 }}>• Lớp trưởng:</span>
+                <strong style={{ color: "#ffffff", letterSpacing: "0.2px" }}>{stats.leaders.lopTruong}</strong>
+              </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem" }}>
-              <span style={{ color: "#fcd34d", fontWeight: 700, minWidth: 92 }}>• Lớp phó:</span>
-              <strong style={{ color: "#ffffff", letterSpacing: "0.2px" }}>{stats.leaders.lopPho}</strong>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem" }}>
+                <span style={{ color: "#fcd34d", fontWeight: 700, minWidth: 92 }}>• Lớp phó:</span>
+                <strong style={{ color: "#ffffff", letterSpacing: "0.2px" }}>{stats.leaders.lopPho}</strong>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                margin: "6px 0 16px",
+                background: "rgba(255, 255, 255, 0.07)",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                borderRadius: 12,
+                padding: "10px 14px",
+                backdropFilter: "blur(6px)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem", flexWrap: "wrap" }}>
+                <span style={{ color: "#38bdf8", fontWeight: 700 }}>• Quy mô trường:</span>
+                <strong style={{ color: "#ffffff" }}>
+                  {stats.totalClasses || stats.classSummaries?.length || 2} Lớp học ({stats.classList?.join(", ") || "12T2, 12A2"})
+                </strong>
+                <span style={{ color: "rgba(255,255,255,0.4)" }}>|</span>
+                <span style={{ color: "#4ade80", fontWeight: 700 }}>• Tổng học sinh:</span>
+                <strong style={{ color: "#ffffff" }}>
+                  {stats.totalStudents} Bạn ({stats.maleCount} Nam • {stats.femaleCount} Nữ)
+                </strong>
+              </div>
 
-          {/* Grid 4 Thẻ Thông Tin & Nút Thao Tác — Đều Tăm Tắp 100% trên Mọi Thiết Bị */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem", flexWrap: "wrap" }}>
+                <span style={{ color: "#fcd34d", fontWeight: 700 }}>• Ngân quỹ toàn trường:</span>
+                <strong style={{ color: "#ffffff", letterSpacing: "0.2px" }}>
+                  {stats.feeSummary ? formatVND(stats.feeSummary.conLai) : "0 ₫"}
+                </strong>
+                <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.75)" }}>
+                  (Tổng thu: {stats.feeSummary ? formatVND(stats.feeSummary.tongThu) : "0 ₫"} • Tổng chi: {stats.feeSummary ? formatVND(stats.feeSummary.tongChi) : "0 ₫"})
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Grid 4 Thẻ Thông Tin & Nút Thao Tác */}
           <div
             style={{
               display: "grid",
@@ -398,7 +452,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  SĨ SỐ HỌC SINH
+                  {isAllClass ? "TỔNG SĨ SỐ TOÀN TRƯỜNG" : "SĨ SỐ HỌC SINH"}
                 </div>
                 <div style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.92rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {stats.totalStudents} Học sinh <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 500, fontSize: "0.78rem" }}>({stats.maleCount} Nam • {stats.femaleCount} Nữ)</span>
@@ -439,16 +493,16 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  CƠ CẤU PHÂN BỔ
+                  {isAllClass ? "QUY MÔ LỚP HỌC" : "CƠ CẤU PHÂN BỔ"}
                 </div>
                 <div style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.92rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  4 Tổ học tập <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 500, fontSize: "0.78rem" }}>(Tổ 1 đến Tổ 4)</span>
+                  {isAllClass ? `${stats.totalClasses || stats.classSummaries?.length || 2} Lớp học` : "4 Tổ học tập"} <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 500, fontSize: "0.78rem" }}>({isAllClass ? (stats.classList?.join(" • ") || "12T2 • 12A2") : "Tổ 1 đến Tổ 4"})</span>
                 </div>
               </div>
             </div>
 
             {/* 3. Nút Sơ Đồ Lớp */}
-            <Link href={`/admin/so-do-lop?lop=${lopName}`} style={{ textDecoration: "none", width: "100%", display: "block" }}>
+            <Link href={isAllClass ? "/admin/so-do-lop" : `/admin/so-do-lop?lop=${singleLopDefault}`} style={{ textDecoration: "none", width: "100%", display: "block" }}>
               <div
                 style={{
                   background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
@@ -485,7 +539,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
                       SƠ ĐỒ CHỖ NGỒI
                     </div>
                     <div style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.95rem" }}>
-                      Sơ Đồ Lớp Học
+                      {isAllClass ? "Sơ Đồ Các Lớp" : "Sơ Đồ Lớp Học"}
                     </div>
                   </div>
                 </div>
@@ -494,7 +548,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
             </Link>
 
             {/* 4. Nút Quản Lý Học Sinh */}
-            <Link href={isAllClass ? "/admin/hoc-sinh" : `/admin/hoc-sinh?lop=${lopName}`} style={{ textDecoration: "none", width: "100%", display: "block" }}>
+            <Link href={isAllClass ? "/admin/hoc-sinh?lop=ALL" : `/admin/hoc-sinh?lop=${singleLopDefault}`} style={{ textDecoration: "none", width: "100%", display: "block" }}>
               <div
                 style={{
                   background: "rgba(255, 255, 255, 0.12)",
@@ -528,7 +582,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
                   </div>
                   <div>
                     <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase" }}>
-                      DANH SÁCH LỚP
+                      {isAllClass ? "TOÀN TRƯỜNG" : "DANH SÁCH LỚP"}
                     </div>
                     <div style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.95rem" }}>
                       Quản Lý {stats.totalStudents} Học Sinh
@@ -554,7 +608,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
         }}
       >
         {/* Card 1: Học Sinh */}
-        <Link href={`/admin/hoc-sinh?lop=${lopName}`} style={{ textDecoration: "none" }}>
+        <Link href={isAllClass ? "/admin/hoc-sinh?lop=ALL" : `/admin/hoc-sinh?lop=${singleLopDefault}`} style={{ textDecoration: "none" }}>
           <div
             className="card"
             style={{
@@ -579,7 +633,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Sĩ số lớp
+                {isAllClass ? "Sĩ số toàn trường" : `Sĩ số lớp ${singleLopDefault}`}
               </span>
               <div
                 style={{
@@ -612,14 +666,14 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
               <span>👩 Nữ: <strong>{stats.femaleCount}</strong></span>
             </div>
             <div style={{ width: "100%", height: 6, background: "#f1f5f9", borderRadius: 10, overflow: "hidden", display: "flex" }}>
-              <div style={{ width: `${(stats.maleCount / stats.totalStudents) * 100}%`, background: "#0284c7" }} />
-              <div style={{ width: `${(stats.femaleCount / stats.totalStudents) * 100}%`, background: "#ec4899" }} />
+              <div style={{ width: `${stats.totalStudents > 0 ? (stats.maleCount / stats.totalStudents) * 100 : 50}%`, background: "#0284c7" }} />
+              <div style={{ width: `${stats.totalStudents > 0 ? (stats.femaleCount / stats.totalStudents) * 100 : 50}%`, background: "#ec4899" }} />
             </div>
           </div>
         </Link>
 
         {/* Card 2: Sơ Đồ Chỗ Ngồi */}
-        <Link href={`/admin/so-do-lop?lop=${lopName}`} style={{ textDecoration: "none" }}>
+        <Link href={isAllClass ? "/admin/so-do-lop" : `/admin/so-do-lop?lop=${singleLopDefault}`} style={{ textDecoration: "none" }}>
           <div
             className="card"
             style={{
@@ -664,15 +718,15 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
 
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
               <span style={{ fontSize: "2.1rem", fontWeight: 900, color: "#0f172a", lineHeight: 1 }}>
-                55/56
+                {stats.seatingChartSlotsCount}
               </span>
               <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#16a34a" }}>
-                Đã bố trí 7 hàng
+                {isAllClass ? `Chỗ trên ${stats.totalClasses || stats.classSummaries?.length || 2} lớp` : "Đã bố trí 7 hàng"}
               </span>
             </div>
 
             <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", fontWeight: 600, display: "flex", justifyContent: "space-between" }}>
-              <span>2 Dãy • Bàn GV phía dưới</span>
+              <span>{isAllClass ? "Sơ đồ các lớp học" : "2 Dãy • Bàn GV phía dưới"}</span>
               <span style={{ color: "#0284c7", fontWeight: 800 }}>In chuẩn A4 →</span>
             </div>
           </div>
@@ -732,14 +786,14 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
             </div>
 
             <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", fontWeight: 600, display: "flex", justifyContent: "space-between" }}>
-              <span>0 Bản ghi vắng / trễ</span>
+              <span>{stats.totalAttendance} Lượt ghi nhận</span>
               <span style={{ color: "#d97706", fontWeight: 800 }}>Điểm danh →</span>
             </div>
           </div>
         </Link>
 
         {/* Card 4: Quỹ Lớp (Gradient Premium Card) */}
-        <Link href="/admin/quy" style={{ textDecoration: "none" }}>
+        <Link href={isAllClass ? "/admin/quy?lop=ALL" : `/admin/quy?lop=${singleLopDefault}`} style={{ textDecoration: "none" }}>
           <div
             className="card"
             style={{
@@ -763,114 +817,315 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Số dư quỹ lớp khả dụng
+                {isAllClass ? "Tổng số dư quỹ toàn trường" : `Số dư quỹ lớp ${singleLopDefault}`}
               </span>
               <Wallet size={18} color="white" />
             </div>
 
             <div style={{ fontSize: "1.7rem", fontWeight: 900, color: "#ffffff", letterSpacing: "-0.5px", marginBottom: 10 }}>
-              {stats.feeSummary ? formatVND(stats.feeSummary.conLai) : "32.100.000 đ"}
+              {stats.feeSummary ? formatVND(stats.feeSummary.conLai) : "0 ₫"}
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>
-              <span>Thu: <strong style={{ color: "#ffffff" }}>{stats.feeSummary ? formatVND(stats.feeSummary.tongThu) : "45tr"}</strong></span>
-              <span>Chi: <strong style={{ color: "#ffffff" }}>{stats.feeSummary ? formatVND(stats.feeSummary.tongChi) : "12.9tr"}</strong></span>
+              <span>Thu: <strong style={{ color: "#ffffff" }}>{stats.feeSummary ? formatVND(stats.feeSummary.tongThu) : "0 ₫"}</strong></span>
+              <span>Chi: <strong style={{ color: "#ffffff" }}>{stats.feeSummary ? formatVND(stats.feeSummary.tongChi) : "0 ₫"}</strong></span>
             </div>
           </div>
         </Link>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. PHÂN BỔ 4 TỔ HỌC TẬP (4 GROUPS INTERACTIVE SECTION)                    */}
+      {/* 3. CƠ CẤU & DANH SÁCH LỚP HỌC (TOÀN TRƯỜNG vs 4 TỔ 1 LỚP)                 */}
       {/* ========================================================================= */}
       <div style={{ marginBottom: 28 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        {isAllClass ? (
           <div>
-            <h2 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
-              Cơ Cấu & Ban Cán Sự 4 Tổ Lớp {lopName}
-            </h2>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: 0 }}>
-              Phân bổ 55 bạn đều 4 tổ học tập và rèn luyện
-            </p>
-          </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+              <div>
+                <h2 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                  Danh Sách & Cơ Cấu Các Lớp Học Toàn Trường
+                </h2>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: 0 }}>
+                  Quản lý độc lập {stats.totalClasses || stats.classSummaries?.length || 2} lớp học với tổng {stats.totalStudents} học sinh
+                </p>
+              </div>
 
-          <Link href={`/admin/hoc-sinh?lop=${lopName}`} style={{ textDecoration: "none", fontSize: "0.85rem", fontWeight: 800, color: "var(--primary)" }}>
-            Xem danh sách 55 bạn →
-          </Link>
-        </div>
+              <Link href="/admin/hoc-sinh?lop=ALL" style={{ textDecoration: "none", fontSize: "0.85rem", fontWeight: 800, color: "var(--primary)" }}>
+                Xem toàn bộ {stats.totalStudents} học sinh →
+              </Link>
+            </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: 14 }}>
-          {groups.map((g) => (
-            <Link key={g.id} href={`/admin/hoc-sinh?lop=${lopName}&to=${g.id}`} style={{ textDecoration: "none" }}>
-              <div
-                className="card"
-                style={{
-                  padding: "16px 18px",
-                  borderRadius: 16,
-                  border: `1.5px solid ${g.border}`,
-                  background: "#ffffff",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
-                  transition: "all 0.15s ease",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
-                  (e.currentTarget as HTMLElement).style.background = g.bg;
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.transform = "";
-                  (e.currentTarget as HTMLElement).style.background = "#ffffff";
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: 16 }}>
+              {stats.classSummaries && stats.classSummaries.length > 0 ? (
+                stats.classSummaries.map((c, idx) => {
+                  const palette = [
+                    { border: "#38bdf8", badgeBg: "#e0f2fe", badgeColor: "#0284c7", btnGradient: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)" },
+                    { border: "#4ade80", badgeBg: "#dcfce7", badgeColor: "#16a34a", btnGradient: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)" },
+                    { border: "#c084fc", badgeBg: "#f3e8ff", badgeColor: "#9333ea", btnGradient: "linear-gradient(135deg, #9333ea 0%, #7e22ce 100%)" },
+                    { border: "#fcd34d", badgeBg: "#fef3c7", badgeColor: "#d97706", btnGradient: "linear-gradient(135deg, #d97706 0%, #b45309 100%)" },
+                  ][idx % 4];
+
+                  return (
                     <div
+                      key={c.lop}
+                      className="card"
                       style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 8,
-                        background: g.color,
-                        color: "white",
-                        fontWeight: 900,
-                        fontSize: "0.8rem",
+                        padding: "18px 20px",
+                        borderRadius: 18,
+                        border: `1.5px solid ${palette.border}`,
+                        background: "#ffffff",
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
                         display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                        gap: 14,
+                        transition: "all 0.2s ease",
                       }}
                     >
-                      T{g.id}
-                    </div>
-                    <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#0f172a" }}>
-                      {g.name}
-                    </span>
-                  </div>
+                      <div>
+                        {/* Class Header */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div
+                              style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 12,
+                                background: palette.badgeBg,
+                                color: palette.badgeColor,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontWeight: 900,
+                                fontSize: "0.95rem",
+                              }}
+                            >
+                              {c.lop.substring(0, 3)}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 900, fontSize: "1.15rem", color: "#0f172a" }}>
+                                Lớp {c.lop}
+                              </div>
+                              <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                                Niên khóa 2025–2026
+                              </div>
+                            </div>
+                          </div>
 
-                  <span
+                          <span
+                            style={{
+                              fontSize: "0.75rem",
+                              fontWeight: 800,
+                              color: palette.badgeColor,
+                              background: palette.badgeBg,
+                              padding: "4px 10px",
+                              borderRadius: 12,
+                              border: `1px solid ${palette.border}`,
+                            }}
+                          >
+                            {c.totalStudents} Học sinh
+                          </span>
+                        </div>
+
+                        {/* Class Details */}
+                        <div
+                          style={{
+                            background: "#f8fafc",
+                            borderRadius: 12,
+                            padding: "10px 12px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 6,
+                            fontSize: "0.83rem",
+                            border: "1px solid #f1f5f9",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>• GVCN:</span>
+                            <strong style={{ color: "#0f172a" }}>{c.gvcn}</strong>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>• Lớp trưởng:</span>
+                            <strong style={{ color: "#0f172a" }}>{c.lopTruong}</strong>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>• Lớp phó:</span>
+                            <strong style={{ color: "#0f172a" }}>{c.lopPho}</strong>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>• Cơ cấu Nam/Nữ:</span>
+                            <span style={{ color: "#334155", fontWeight: 700 }}>
+                              {c.maleCount} Nam • {c.femaleCount} Nữ
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed #e2e8f0", paddingTop: 5, marginTop: 2 }}>
+                            <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>• Quỹ lớp đã thu:</span>
+                            <strong style={{ color: "#16a34a" }}>{formatVND(c.feeSummary.conLai)}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Links */}
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <Link
+                          href={`/admin?lop=${c.lop}`}
+                          style={{
+                            flex: 1,
+                            background: palette.btnGradient,
+                            color: "white",
+                            padding: "8px 12px",
+                            borderRadius: 10,
+                            textDecoration: "none",
+                            fontWeight: 700,
+                            fontSize: "0.825rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 6,
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                          }}
+                        >
+                          <span>Quản lý Lớp {c.lop}</span>
+                          <ArrowUpRight size={14} />
+                        </Link>
+                        <Link
+                          href={`/admin/hoc-sinh?lop=${c.lop}`}
+                          style={{
+                            background: "#f1f5f9",
+                            color: "#334155",
+                            padding: "8px 12px",
+                            borderRadius: 10,
+                            textDecoration: "none",
+                            fontWeight: 700,
+                            fontSize: "0.825rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <Users size={13} />
+                          <span>DS</span>
+                        </Link>
+                        <Link
+                          href={`/admin/so-do-lop?lop=${c.lop}`}
+                          style={{
+                            background: "#f1f5f9",
+                            color: "#334155",
+                            padding: "8px 12px",
+                            borderRadius: 10,
+                            textDecoration: "none",
+                            fontWeight: 700,
+                            fontSize: "0.825rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <LayoutGrid size={13} />
+                          <span>Sơ đồ</span>
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: 20 }}>
+                  Không có dữ liệu lớp học
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div>
+                <h2 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                  Cơ Cấu & Ban Cán Sự 4 Tổ Lớp {singleLopDefault}
+                </h2>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: 0 }}>
+                  Phân bổ {stats.totalStudents} bạn đều 4 tổ học tập và rèn luyện
+                </p>
+              </div>
+
+              <Link href={`/admin/hoc-sinh?lop=${singleLopDefault}`} style={{ textDecoration: "none", fontSize: "0.85rem", fontWeight: 800, color: "var(--primary)" }}>
+                Xem danh sách {stats.totalStudents} bạn →
+              </Link>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: 14 }}>
+              {groups.map((g) => (
+                <Link key={g.id} href={`/admin/hoc-sinh?lop=${singleLopDefault}&to=${g.id}`} style={{ textDecoration: "none" }}>
+                  <div
+                    className="card"
                     style={{
-                      fontSize: "0.75rem",
-                      fontWeight: 800,
-                      color: g.color,
-                      background: g.bg,
-                      padding: "2px 8px",
-                      borderRadius: 12,
-                      border: `1px solid ${g.border}`,
+                      padding: "16px 18px",
+                      borderRadius: 16,
+                      border: `1.5px solid ${g.border}`,
+                      background: "#ffffff",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                      transition: "all 0.15s ease",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                      (e.currentTarget as HTMLElement).style.background = g.bg;
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.transform = "";
+                      (e.currentTarget as HTMLElement).style.background = "#ffffff";
                     }}
                   >
-                    {g.count} Học sinh
-                  </span>
-                </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 8,
+                            background: g.color,
+                            color: "white",
+                            fontWeight: 900,
+                            fontSize: "0.8rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          T{g.id}
+                        </div>
+                        <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#0f172a" }}>
+                          {g.name}
+                        </span>
+                      </div>
 
-                <div style={{ fontSize: "0.825rem", color: "#334155", fontWeight: 700, marginBottom: 4 }}>
-                  👑 Tổ trưởng: <span style={{ color: g.color }}>{g.leader}</span>
-                </div>
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          color: g.color,
+                          background: g.bg,
+                          padding: "2px 8px",
+                          borderRadius: 12,
+                          border: `1px solid ${g.border}`,
+                        }}
+                      >
+                        {g.count} Học sinh
+                      </span>
+                    </div>
 
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>
-                  {g.members}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+                    <div style={{ fontSize: "0.825rem", color: "#334155", fontWeight: 700, marginBottom: 4 }}>
+                      👑 Tổ trưởng: <span style={{ color: g.color }}>{g.leader}</span>
+                    </div>
+
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>
+                      {g.members}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ========================================================================= */}
@@ -883,7 +1138,9 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
               Trung Tâm Quản Trị & Tiện Ích Lớp Học
             </h2>
             <p style={{ color: "var(--text-muted)", fontSize: "0.825rem", margin: 0 }}>
-              Truy cập nhanh tất cả các tính năng quản lý lớp 12T2
+              {isAllClass
+                ? `Truy cập nhanh tất cả các tính năng quản lý trên ${stats.totalClasses || stats.classSummaries?.length || 2} lớp học toàn trường`
+                : `Truy cập nhanh tất cả các tính năng quản lý lớp ${singleLopDefault}`}
             </p>
           </div>
         </div>
@@ -1063,7 +1320,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
                   🎉 Lễ Khai Giảng Năm Học 2026–2027
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-                  📍 Sân trường • Toàn thể 55 học sinh lớp 12T2
+                  📍 Sân trường • {isAllClass ? `Toàn thể ${stats.totalStudents} học sinh toàn trường` : `Toàn thể ${stats.totalStudents} học sinh lớp ${singleLopDefault}`}
                 </div>
               </div>
             )}
@@ -1101,7 +1358,7 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
                 Nhiệm Vụ Tuần & Hệ Thống
               </h3>
             </div>
-            <Link href="/admin/lich-truc" style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--primary)", textDecoration: "none" }}>
+            <Link href={isAllClass ? "/admin/lich-truc?lop=ALL" : `/admin/lich-truc?lop=${singleLopDefault}`} style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--primary)", textDecoration: "none" }}>
               Lịch trực →
             </Link>
           </div>
@@ -1121,10 +1378,14 @@ export default function AdminDashboard({ stats }: AdminDashboardProps) {
             >
               <div>
                 <div style={{ fontSize: "0.875rem", fontWeight: 800, color: "#065f46" }}>
-                  🧹 Tổ {stats.currentDuty?.to || 1} phụ trách trực nhật tuần này
+                  🧹 {stats.currentDuty?.lop ? `[Lớp ${stats.currentDuty.lop}] ` : ""}Tổ {stats.currentDuty?.to || 1} phụ trách trực nhật tuần này
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "#047857", marginTop: 2 }}>
-                  Tổ trưởng: <strong>{stats.leaders.t1Leader}</strong> theo dõi vệ sinh
+                  {stats.currentDuty?.studentName ? (
+                    <>Người trực: <strong>{stats.currentDuty.studentName}</strong> theo dõi vệ sinh</>
+                  ) : (
+                    <>Phân công trực nhật theo tổ</>
+                  )}
                 </div>
               </div>
               <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#059669", background: "white", padding: "3px 8px", borderRadius: 8 }}>

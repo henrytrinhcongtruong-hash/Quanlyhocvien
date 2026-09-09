@@ -212,18 +212,14 @@ export default function AdminLayout({
     setSelectedClass(lop);
     localStorage.setItem("admin_selected_class", lop);
     const params = new URLSearchParams(searchParams.toString());
-    if (lop === "ALL") {
-      params.delete("lop");
-    } else {
-      params.set("lop", lop);
-    }
+    params.set("lop", lop);
     const queryString = params.toString();
     router.push(`${pathname}${queryString ? `?${queryString}` : ""}`);
   };
 
   // Determine current class to use for public page link
   const currentClassForPublic = realIsSuperAdmin
-    ? (selectedClass && selectedClass !== "ALL" ? selectedClass : "11AT3")
+    ? (selectedClass && selectedClass !== "ALL" ? selectedClass : "12T2")
     : assignedLop;
 
   const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
@@ -286,7 +282,7 @@ export default function AdminLayout({
           const active = item.exact
             ? pathname === item.href
             : pathname.startsWith(item.href);
-          const targetHref = realIsSuperAdmin && selectedClass && selectedClass !== "ALL"
+          const targetHref = realIsSuperAdmin && selectedClass
             ? `${item.href}?lop=${selectedClass}`
             : !realIsSuperAdmin && assignedLop
             ? `${item.href}?lop=${assignedLop}`

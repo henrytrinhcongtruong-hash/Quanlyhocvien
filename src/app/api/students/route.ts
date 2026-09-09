@@ -79,10 +79,11 @@ export async function GET(req: NextRequest) {
 
     const where: Record<string, unknown> = {};
 
-    if (lopParam && lopParam !== "ALL") {
-      where.lop = lopParam;
-    } else if (!isSuperAdmin && assignedLop) {
+    if (!isSuperAdmin) {
+      // Non-SuperAdmin is strictly locked to their assigned class
       where.lop = assignedLop;
+    } else if (lopParam && lopParam !== "ALL") {
+      where.lop = lopParam;
     }
 
     if (toParam && Number(toParam) > 0) {
