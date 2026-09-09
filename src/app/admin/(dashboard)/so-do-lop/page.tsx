@@ -77,34 +77,38 @@ export default function AdminSoDoLopPage() {
   const [clearing, setClearing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
 
-  // Auto-scale states for mobile responsive view
-  const [scale, setScale] = useState(1);
-  const [chartHeight, setChartHeight] = useState(1220);
-  const [viewMode, setViewMode] = useState<"fit" | "zoom">("fit");
+  // Auto-scale states for mobile responsive view (Base width 920px with zero margin discrepancy)
+  const BASE_WIDTH = 920;
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const chartRef = React.useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [chartHeight, setChartHeight] = useState(1240);
+  const [viewMode, setViewMode] = useState<"fit" | "zoom">("fit");
 
   useEffect(() => {
     const updateScale = () => {
-      const screenWidth = window.innerWidth;
-      if (screenWidth < 920) {
-        const availWidth = Math.max(320, screenWidth - 20);
-        const newScale = Math.min(1, availWidth / 880);
+      if (!containerRef.current) return;
+      const measuredWidth = containerRef.current.clientWidth;
+      if (measuredWidth > 0 && measuredWidth < BASE_WIDTH) {
+        const newScale = measuredWidth / BASE_WIDTH;
         setScale(newScale);
       } else {
         setScale(1);
       }
 
       if (chartRef.current) {
-        setChartHeight(chartRef.current.offsetHeight || 1220);
+        setChartHeight(chartRef.current.offsetHeight || 1240);
       }
     };
 
     updateScale();
     window.addEventListener("resize", updateScale);
-    const t = setTimeout(updateScale, 400);
+    const t = setTimeout(updateScale, 300);
+    const t2 = setTimeout(updateScale, 800);
     return () => {
       window.removeEventListener("resize", updateScale);
       clearTimeout(t);
+      clearTimeout(t2);
     };
   }, [slots, loading]);
 
@@ -315,8 +319,10 @@ export default function AdminSoDoLopPage() {
       // Temporarily remove transform on scale-box during capture
       const scaleBox = document.getElementById("seating-chart-scale-box");
       const prevTransform = scaleBox ? scaleBox.style.transform : "";
+      const prevPosition = scaleBox ? scaleBox.style.position : "";
       if (scaleBox) {
         scaleBox.style.transform = "none";
+        scaleBox.style.position = "relative";
       }
 
       const canvas = await html2canvas(element, {
@@ -324,11 +330,12 @@ export default function AdminSoDoLopPage() {
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
-        width: 880,
+        width: 920,
       });
 
       if (scaleBox) {
         scaleBox.style.transform = prevTransform;
+        scaleBox.style.position = prevPosition;
       }
 
       const imgData = canvas.toDataURL("image/png");
@@ -754,12 +761,13 @@ export default function AdminSoDoLopPage() {
           width: "100%",
         }}
       >
-        {/* RECTANGULAR PHOTO CONTAINER (98px x 104px, Bo tròn nhẹ 4 góc) */}
+        {/* RECTANGULAR PHOTO CONTAINER (maxWidth 92px x 98px, Bo tròn nhẹ 4 góc) */}
         <div
           style={{
-            width: 98,
-            height: 104,
-            borderRadius: 14,
+            width: "100%",
+            maxWidth: 92,
+            height: 98,
+            borderRadius: 12,
             background: hasStudent ? toConfig.bg : "#ffffff",
             border: isSelected
               ? "3px solid #0284c7"
@@ -768,18 +776,18 @@ export default function AdminSoDoLopPage() {
               : filterTo !== 0 && isMatchingTo
               ? `3px solid ${toConfig.border}`
               : hasStudent
-              ? `2.5px solid ${toConfig.border}`
+              ? `2px solid ${toConfig.border}`
               : "2px dashed #94a3b8",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
             boxShadow: filterTo !== 0 && isMatchingTo
-              ? `0 0 14px ${toConfig.glow}`
+              ? `0 0 12px ${toConfig.glow}`
               : hasStudent
-              ? `0 3px 8px ${toConfig.glow}`
+              ? `0 2px 6px ${toConfig.glow}`
               : "none",
-            marginBottom: 5,
+            marginBottom: 4,
             position: "relative",
             transition: "all 0.15s ease",
           }}
@@ -804,16 +812,16 @@ export default function AdminSoDoLopPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 900,
-                  fontSize: "1.45rem",
+                  fontSize: "1.35rem",
                   color: toConfig.text,
                 }}
               >
-                {slot.studentName?.substring(0, 2) || <User size={32} color={toConfig.text} />}
+                {slot.studentName?.substring(0, 2) || <User size={28} color={toConfig.text} />}
               </div>
             )
           ) : (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <Plus size={26} color="#94a3b8" />
+              <Plus size={24} color="#94a3b8" />
             </div>
           )}
 
@@ -827,10 +835,10 @@ export default function AdminSoDoLopPage() {
                 left: 0,
                 background: toConfig.badgeBg,
                 color: "white",
-                fontSize: "0.68rem",
+                fontSize: "0.65rem",
                 fontWeight: 900,
-                padding: "2px 7px",
-                borderRadius: "11px 0 9px 0",
+                padding: "1px 6px",
+                borderRadius: "10px 0 8px 0",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
               }}
             >
@@ -847,8 +855,8 @@ export default function AdminSoDoLopPage() {
                 position: "absolute",
                 bottom: 2,
                 right: 2,
-                width: 20,
-                height: 20,
+                width: 18,
+                height: 18,
                 background: "rgba(15,23,42,0.75)",
                 borderRadius: "50%",
                 display: "flex",
@@ -857,7 +865,7 @@ export default function AdminSoDoLopPage() {
                 color: "white",
               }}
             >
-              <Move size={11} />
+              <Move size={10} />
             </div>
           )}
         </div>
@@ -866,9 +874,9 @@ export default function AdminSoDoLopPage() {
         <div
           style={{
             width: "100%",
-            maxWidth: 112,
-            minHeight: 46,
-            borderRadius: 14,
+            maxWidth: 96,
+            minHeight: 42,
+            borderRadius: 10,
             border: isSelected
               ? "2px solid #0284c7"
               : filterTo !== 0 && isMatchingTo
@@ -884,17 +892,18 @@ export default function AdminSoDoLopPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "4px 6px",
+            padding: "3px 4px",
             textAlign: "center",
             boxShadow: hasStudent ? `0 2px 5px ${toConfig.glow}` : "none",
+            boxSizing: "border-box",
           }}
         >
           <span
             style={{
-              fontSize: "0.72rem",
+              fontSize: "0.7rem",
               fontWeight: 900,
               color: hasStudent ? toConfig.text : "#94a3b8",
-              lineHeight: 1.22,
+              lineHeight: 1.2,
               textTransform: "uppercase",
               wordBreak: "break-word",
               display: "block",
@@ -1269,27 +1278,27 @@ export default function AdminSoDoLopPage() {
 
       {/* Main Seating Chart Poster wrapped in responsive container */}
       <div
+        ref={containerRef}
         className={viewMode === "zoom" || scale >= 1 ? "seating-scroll-wrapper" : ""}
         style={{
           width: "100%",
-          height: viewMode === "fit" && scale < 1 ? chartHeight * scale + 16 : "auto",
+          height: viewMode === "fit" && scale < 1 ? Math.ceil(chartHeight * scale) + 6 : "auto",
           overflowX: viewMode === "zoom" || scale >= 1 ? "auto" : "hidden",
           overflowY: "hidden",
-          display: "flex",
-          justifyContent: "center",
           position: "relative",
-          transition: "height 0.15s ease",
         }}
       >
         <div
           id="seating-chart-scale-box"
           style={{
             transform: viewMode === "fit" && scale < 1 ? `scale(${scale})` : "none",
-            transformOrigin: "top center",
-            width: 880,
-            minWidth: 880,
-            maxWidth: 880,
-            flexShrink: 0,
+            transformOrigin: "top left",
+            width: BASE_WIDTH,
+            minWidth: BASE_WIDTH,
+            maxWidth: BASE_WIDTH,
+            position: viewMode === "fit" && scale < 1 ? "absolute" : "relative",
+            left: 0,
+            top: 0,
           }}
         >
           <div
@@ -1302,11 +1311,11 @@ export default function AdminSoDoLopPage() {
               backgroundSize: "22px 22px",
               borderRadius: 22,
               border: "2.5px solid #000000",
-              padding: "24px 22px 20px",
+              padding: "20px 16px 18px",
               boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-              width: 880,
-              minWidth: 880,
-              maxWidth: 880,
+              width: BASE_WIDTH,
+              minWidth: BASE_WIDTH,
+              maxWidth: BASE_WIDTH,
               boxSizing: "border-box",
               margin: "0 auto",
             }}
@@ -1323,21 +1332,22 @@ export default function AdminSoDoLopPage() {
                 background: "#f1f5f9",
                 borderRadius: 12,
                 border: "1.5px solid #cbd5e1",
+                boxSizing: "border-box",
               }}
             >
-              <div style={{ textAlign: "center", fontSize: "0.85rem", fontWeight: 900, color: "#0284c7", letterSpacing: "0.5px" }}>
+              <div style={{ textAlign: "center", fontSize: "0.82rem", fontWeight: 900, color: "#0284c7", letterSpacing: "0.5px" }}>
                 👈 DÃY 1 & DÃY 2 (Cột 1–4)
               </div>
               <div style={{ textAlign: "center", fontSize: "0.68rem", fontWeight: 900, color: "#64748b" }}>
                 LỐI ĐI
               </div>
-              <div style={{ textAlign: "center", fontSize: "0.85rem", fontWeight: 900, color: "#0284c7", letterSpacing: "0.5px" }}>
+              <div style={{ textAlign: "center", fontSize: "0.82rem", fontWeight: 900, color: "#0284c7", letterSpacing: "0.5px" }}>
                 👉 DÃY 3 & DÃY 4 (Cột 5–8)
               </div>
             </div>
 
             {/* Main 7 Rows Grid Layout - Đầy đủ 4 dãy bàn (Dãy 1-2-3-4 = 8 cột ghế) */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
                 const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
                 const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
@@ -1356,8 +1366,8 @@ export default function AdminSoDoLopPage() {
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(4, 1fr)",
-                        gap: 10,
+                        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                        gap: 8,
                       }}
                     >
                       {leftSlots.map((s) => renderSeatCard(s))}
@@ -1380,8 +1390,8 @@ export default function AdminSoDoLopPage() {
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(4, 1fr)",
-                        gap: 10,
+                        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                        gap: 8,
                       }}
                     >
                       {rightSlots.map((s) => renderSeatCard(s))}
