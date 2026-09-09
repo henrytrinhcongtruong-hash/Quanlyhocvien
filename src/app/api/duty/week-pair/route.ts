@@ -6,7 +6,7 @@ import { checkPermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/auditLogger";
 import { THU_NAMES, THU_ORDER } from "@/lib/format";
 
-// POST /api/duty/week-pair - Phân 2 bạn trực nhật nguyên tuần (Thứ 2 -> Thứ 6)
+// POST /api/duty/week-pair - Phân học sinh trực nhật nguyên tuần (Thứ 2 -> Thứ 6) với số lượng tùy chọn
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -22,51 +22,60 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { tuan, studentId1, studentId2, lop, clearPrevious = true } = body;
+    const { tuan, studentIds, studentId1, studentId2, lop, clearPrevious = true } = body;
 
     if (!tuan) {
       return NextResponse.json({ error: "Thiếu thông tin tuần" }, { status: 400 });
     }
 
-    const sId1 = Number(studentId1);
-    const sId2 = Number(studentId2);
-
-    if (!sId1 || !sId2) {
-      return NextResponse.json({ error: "Vui lòng chọn đủ 2 học sinh trực nhật" }, { status: 400 });
+    // Hỗ trợ cả mảng studentIds linh hoạt hoặc 2 ID riêng lẻ (tương thích ngược)
+    let rawIds: number[] = [];
+    if (Array.isArray(studentIds) && studentIds.length > 0) {
+      rawIds = studentIds.map(Number);
+    } else {
+      if (studentId1) rawIds.push(Number(studentId1));
+      if (studentId2) rawIds.push(Number(studentId2));
     }
 
-    if (sId1 === sId2) {
-      return NextResponse.json({ error: "Học sinh 1 và học sinh 2 không được trùng nhau" }, { status: 400 });
+    // Lọc bỏ ID không hợp lệ và trùng lặp
+    const uniqueIds = Array.from(new Set(rawIds.filter((id) => !isNaN(id) && id > 0)));
+
+    if (uniqueIds.length === 0) {
+      return NextResponse.json({ error: "Vui lòng chọn ít nhất 1 học sinh trực nhật" }, { status: 400 });
     }
 
-    // Kiểm tra thông tin 2 học sinh
-    const [st1, st2] = await Promise.all([
-      prisma.student.findUnique({ where: { id: sId1 }, select: { id: true, hoTen: true, tenGoi: true, lop: true, to: true } }),
-      prisma.student.findUnique({ where: { id: sId2 }, select: { id: true, hoTen: true, tenGoi: true, lop: true, to: true } }),
-    ]);
+    // Kiểm tra danh sách học sinh tồn tại trong cơ sở dữ liệu
+    const selectedStudents = await prisma.student.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true, hoTen: true, tenGoi: true, lop: true, to: true },
+    });
 
-    if (!st1 || !st2) {
-      return NextResponse.json({ error: "Không tìm thấy thông tin một trong hai học sinh" }, { status: 404 });
+    if (selectedStudents.length === 0) {
+      return NextResponse.json({ error: "Không tìm thấy thông tin các học sinh đã chọn" }, { status: 404 });
     }
 
     // 1. Xóa lịch cũ nếu được yêu cầu
     if (clearPrevious) {
       const deleteWhere: Record<string, unknown> = { tuan };
-      const targetLop = lop && lop !== "ALL" ? lop : st1.lop;
+      const targetLop = lop && lop !== "ALL" ? lop : selectedStudents[0]?.lop;
       if (targetLop && targetLop !== "ALL") {
         deleteWhere.student = { lop: targetLop };
       }
       await prisma.dutyRoster.deleteMany({ where: deleteWhere });
     }
 
-    // 2. Tạo 10 bản ghi trực nhật cho 5 ngày (Thứ 2 đến Thứ 6)
-    const newRecords = [];
+    // 2. Tạo bản ghi trực nhật cho tất cả các bạn được chọn từ Thứ 2 đến Thứ 6
+    const newRecords: Array<{ tuan: string; thu: string; thuOrder: number; studentId: number }> = [];
     for (const thu of THU_NAMES) {
       const thuOrder = THU_ORDER[thu] || 2;
-      newRecords.push(
-        { tuan, thu, thuOrder, studentId: sId1 },
-        { tuan, thu, thuOrder, studentId: sId2 }
-      );
+      for (const s of selectedStudents) {
+        newRecords.push({
+          tuan,
+          thu,
+          thuOrder,
+          studentId: s.id,
+        });
+      }
     }
 
     await prisma.dutyRoster.createMany({
@@ -74,20 +83,22 @@ export async function POST(req: NextRequest) {
     });
 
     // 3. Ghi audit log
+    const namesList = selectedStudents.map((s) => s.hoTen).join(", ");
     await logActivity({
       userId,
       action: "CREATE",
       target: "DutyRoster",
-      details: `Phân 2 bạn [${st1.hoTen}] và [${st2.hoTen}] trực nguyên tuần ${tuan} (Thứ 2 - Thứ 6)`,
+      details: `Phân ${selectedStudents.length} bạn [${namesList}] trực nguyên tuần ${tuan} (Thứ 2 - Thứ 6)`,
     });
 
     return NextResponse.json({
       success: true,
-      message: `Đã phân công ${st1.hoTen} và ${st2.hoTen} trực cả tuần ${tuan}`,
+      message: `Đã phân công ${selectedStudents.length} bạn (${namesList}) trực cả tuần ${tuan}`,
       count: newRecords.length,
+      studentCount: selectedStudents.length,
     });
   } catch (error) {
-    console.error("Lỗi phân 2 bạn trực cả tuần:", error);
+    console.error("Lỗi phân học sinh trực cả tuần:", error);
     return NextResponse.json({ error: "Lỗi hệ thống khi phân công trực nhật" }, { status: 500 });
   }
 }
