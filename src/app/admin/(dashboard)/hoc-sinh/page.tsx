@@ -7,6 +7,7 @@ import {
   Users, Plus, Search, Filter, Edit2, Trash2, Upload,
   Download, ChevronLeft, ChevronRight, X, Save, AlertCircle,
   User, CheckCircle, School, ArrowUpDown, ArrowUpAZ, ArrowDownAZ,
+  FileSpreadsheet, FileUp,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { compareVietnameseNames } from "@/lib/utils";
@@ -100,9 +101,15 @@ export default function HocSinhPage() {
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
-  // File upload
+  // File upload & Import Modal
   const fileRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importTargetClassMode, setImportTargetClassMode] = useState<"auto" | "existing" | "new">("auto");
+  const [importSelectedClass, setImportSelectedClass] = useState("");
+  const [importNewClassName, setImportNewClassName] = useState("");
+  const [importError, setImportError] = useState("");
 
   function showToast(msg: string, type: "success" | "error" = "success") {
     setToast({ msg, type });
@@ -328,32 +335,81 @@ export default function HocSinhPage() {
     }
   }
 
-  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  function openImportModal() {
+    setImportFile(null);
+    setImportError("");
+    const defaultMode = filterLop !== "ALL" ? "existing" : "auto";
+    setImportTargetClassMode(defaultMode);
+    setImportSelectedClass(filterLop !== "ALL" ? filterLop : (classList[0] || "12T2"));
+    setImportNewClassName("");
+    setImportModalOpen(true);
+  }
+
+  async function handleExecuteImport() {
+    if (!importFile) {
+      setImportError("Vui lòng chọn file Excel để import.");
+      return;
+    }
     setImporting(true);
+    setImportError("");
+
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/students/import", { method: "POST", body: formData });
-      if (res.ok) {
-        const d = await res.json();
-        showToast(`Đã import ${d.count} học sinh thành công.`);
-        fetchStudents();
+      formData.append("file", importFile);
+
+      let targetLop = "";
+      if (importTargetClassMode === "new") {
+        targetLop = importNewClassName.trim().toUpperCase();
+        if (!targetLop) {
+          setImportError("Vui lòng nhập tên lớp mới (ví dụ: 10A1, 11B2...).");
+          setImporting(false);
+          return;
+        }
+      } else if (importTargetClassMode === "existing") {
+        targetLop = importSelectedClass;
+      }
+
+      if (targetLop) {
+        formData.append("lop", targetLop);
+      }
+
+      const res = await fetch("/api/students/import", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success !== false) {
+        showToast(data.message || `Đã import ${data.count} học sinh thành công!`);
+        setImportModalOpen(false);
+
+        // Refresh class list & switch to newly imported class
+        const cRes = await fetch("/api/classes");
+        const cData = await cRes.json();
+        if (cData.data && cData.data.length > 0) {
+          setClassList(cData.data);
+        }
+
+        const finalClass = data.lop || targetLop;
+        if (finalClass && finalClass !== "ALL") {
+          setFilterLop(finalClass);
+        } else {
+          fetchStudents();
+        }
       } else {
-        const errData = await res.json().catch(() => null);
-        const errMsg = errData?.error || "Import thất bại. Kiểm tra lại file Excel.";
-        showToast(errMsg, "error");
+        setImportError(data.error || "Import thất bại. Vui lòng kiểm tra lại file Excel.");
       }
     } catch {
-      showToast("Lỗi kết nối máy chủ khi import.", "error");
+      setImportError("Lỗi kết nối máy chủ khi import.");
+    } finally {
+      setImporting(false);
     }
-    setImporting(false);
-    if (fileRef.current) fileRef.current.value = "";
   }
 
   function handleExport() {
-    window.open("/api/students/export", "_blank");
+    const activeClass = !isSuperAdmin ? assignedLop : filterLop;
+    const param = activeClass && activeClass !== "ALL" ? `?lop=${encodeURIComponent(activeClass)}` : "";
+    window.open(`/api/students/export${param}`, "_blank");
   }
 
   const totalPages = Math.ceil(total / PER_PAGE);
@@ -403,15 +459,15 @@ export default function HocSinhPage() {
           </p>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: "none" }} id="import-excel" />
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => fileRef.current?.click()}
+            onClick={openImportModal}
             disabled={importing}
+            id="btn-import-excel"
           >
             <Upload size={14} />
-            <span className="hide-on-mobile">{importing ? "Đang import..." : "Import Excel"}</span>
-            <span className="hide-on-desktop">{importing ? "..." : "Import"}</span>
+            <span className="hide-on-mobile">Import Excel</span>
+            <span className="hide-on-desktop">Import</span>
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleExport}>
             <Download size={14} />
@@ -1149,6 +1205,312 @@ export default function HocSinhPage() {
                 disabled={deletingClass}
               >
                 {deletingClass ? "Đang xóa dữ liệu..." : `Xác nhận xóa Lớp ${classToDelete}`}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ====== IMPORT EXCEL MODAL ====== */}
+      {importModalOpen && typeof document !== "undefined" && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => !importing && setImportModalOpen(false)}
+        >
+          <div
+            style={{
+              position: "relative",
+              background: "white",
+              borderRadius: 20,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+              padding: "28px 26px",
+              width: "100%",
+              maxWidth: 520,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.2s ease-out",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, background: "rgba(16, 185, 129, 0.12)",
+                  display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981"
+                }}>
+                  <FileSpreadsheet size={24} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "var(--text)" }}>
+                    Import danh sách học sinh
+                  </h3>
+                  <p style={{ margin: "2px 0 0", fontSize: "0.825rem", color: "var(--text-muted)" }}>
+                    Hỗ trợ file Excel (.xlsx, .xls) hoặc .csv
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => !importing && setImportModalOpen(false)}
+                style={{
+                  background: "transparent", border: "none", cursor: "pointer",
+                  color: "var(--text-muted)", padding: 4, borderRadius: 6
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Step 1: Chọn lớp đích */}
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: 8, color: "var(--text)" }}>
+                1. Lớp học áp dụng
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <label style={{
+                  display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem",
+                  padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)",
+                  background: importTargetClassMode === "auto" ? "rgba(59, 130, 246, 0.05)" : "transparent",
+                  cursor: "pointer"
+                }}>
+                  <input
+                    type="radio"
+                    name="importClassMode"
+                    checked={importTargetClassMode === "auto"}
+                    onChange={() => setImportTargetClassMode("auto")}
+                  />
+                  <span><strong>Tự động nhận diện</strong> (từ cột LỚP, tên sheet hoặc tiêu đề file)</span>
+                </label>
+
+                <label style={{
+                  display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem",
+                  padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)",
+                  background: importTargetClassMode === "existing" ? "rgba(59, 130, 246, 0.05)" : "transparent",
+                  cursor: "pointer"
+                }}>
+                  <input
+                    type="radio"
+                    name="importClassMode"
+                    checked={importTargetClassMode === "existing"}
+                    onChange={() => setImportTargetClassMode("existing")}
+                  />
+                  <span>Gán vào lớp có sẵn:</span>
+                  {importTargetClassMode === "existing" && (
+                    <select
+                      className="form-control"
+                      style={{ padding: "4px 8px", fontSize: "0.85rem", width: "auto", marginLeft: "auto" }}
+                      value={importSelectedClass}
+                      onChange={(e) => setImportSelectedClass(e.target.value)}
+                    >
+                      {classList.map((c) => (
+                        <option key={c} value={c}>Lớp {c}</option>
+                      ))}
+                    </select>
+                  )}
+                </label>
+
+                <label style={{
+                  display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem",
+                  padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)",
+                  background: importTargetClassMode === "new" ? "rgba(59, 130, 246, 0.05)" : "transparent",
+                  cursor: "pointer"
+                }}>
+                  <input
+                    type="radio"
+                    name="importClassMode"
+                    checked={importTargetClassMode === "new"}
+                    onChange={() => setImportTargetClassMode("new")}
+                  />
+                  <span>Tạo lớp mới:</span>
+                  {importTargetClassMode === "new" && (
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="VD: 10A1, 11B2..."
+                      style={{ padding: "4px 8px", fontSize: "0.85rem", width: 140, marginLeft: "auto", textTransform: "uppercase" }}
+                      value={importNewClassName}
+                      onChange={(e) => setImportNewClassName(e.target.value.toUpperCase())}
+                      autoFocus
+                    />
+                  )}
+                </label>
+              </div>
+            </div>
+
+            {/* Step 2: Chọn File */}
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: 8, color: "var(--text)" }}>
+                2. Chọn file Excel danh sách
+              </label>
+
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    setImportFile(f);
+                    setImportError("");
+                  }
+                }}
+              />
+
+              {!importFile ? (
+                <div
+                  onClick={() => fileRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const f = e.dataTransfer.files?.[0];
+                    if (f) {
+                      setImportFile(f);
+                      setImportError("");
+                    }
+                  }}
+                  style={{
+                    border: "2px dashed var(--border)",
+                    borderRadius: 14,
+                    padding: "24px 16px",
+                    textAlign: "center",
+                    cursor: "pointer",
+                    background: "var(--bg-card)",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <div style={{
+                    width: 44, height: 44, borderRadius: "50%", background: "var(--primary-light)",
+                    display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px",
+                    color: "var(--primary)"
+                  }}>
+                    <FileUp size={22} />
+                  </div>
+                  <div style={{ fontWeight: 600, fontSize: "0.9rem", marginBottom: 4 }}>
+                    Bấm để chọn file hoặc kéo thả vào đây
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                    Hỗ trợ định dạng .xlsx, .xls, .csv (tối đa 5MB)
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    padding: "12px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "rgba(16, 185, 129, 0.04)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
+                    <CheckCircle size={20} color="#10b981" />
+                    <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{importFile.name}</div>
+                      <div style={{ fontSize: "0.775rem", color: "var(--text-muted)" }}>
+                        {(importFile.size / 1024).toFixed(1)} KB
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: "0.775rem", padding: "4px 8px" }}
+                    onClick={() => {
+                      setImportFile(null);
+                      if (fileRef.current) fileRef.current.value = "";
+                    }}
+                  >
+                    Chọn file khác
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Note & Template download */}
+            <div style={{
+              background: "var(--bg-subtle, #f8fafc)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: "12px 14px",
+              marginBottom: 18,
+              fontSize: "0.8rem",
+              lineHeight: 1.5,
+              color: "var(--text-muted)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+                <span style={{ fontWeight: 600, color: "var(--text)" }}>💡 Gợi ý định dạng:</span>
+                <a
+                  href="/api/students/template"
+                  download
+                  style={{
+                    color: "var(--primary)",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4
+                  }}
+                >
+                  <Download size={13} /> Tải file mẫu chuẩn (.xlsx)
+                </a>
+              </div>
+              <div>
+                Hệ thống tự động tương thích danh sách từ <strong>vnEdu, SMAS</strong>, tự động nhận diện cột Họ tên, ghép Họ và tên nếu tách riêng, và tự động chia đều 4 tổ nếu file chưa có cột Tổ.
+              </div>
+            </div>
+
+            {/* Error message */}
+            {importError && (
+              <div style={{
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 10,
+                padding: "10px 14px",
+                marginBottom: 18,
+                fontSize: "0.825rem",
+                color: "#b91c1c",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+              }}>
+                <AlertCircle size={16} color="#dc2626" style={{ flexShrink: 0, marginTop: 2 }} />
+                <span>{importError}</span>
+              </div>
+            )}
+
+            {/* Footer actions */}
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setImportModalOpen(false)}
+                disabled={importing}
+              >
+                Hủy
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleExecuteImport}
+                disabled={importing || !importFile}
+                style={{ minWidth: 140, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+              >
+                {importing ? "Đang import..." : "Bắt đầu Import"}
               </button>
             </div>
           </div>

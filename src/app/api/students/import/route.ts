@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Định dạng file không được hỗ trợ (chỉ chấp nhận .xlsx, .xls, .csv)" }, { status: 400 });
     }
 
+    const targetLop = (formData.get("lop") as string || "").trim();
+
     let buffer: ArrayBuffer;
     try {
       buffer = await file.arrayBuffer();
@@ -39,7 +41,9 @@ export async function POST(req: NextRequest) {
 
     let importedStudents: ReturnType<typeof parseStudentsFromExcel>;
     try {
-      importedStudents = parseStudentsFromExcel(buffer);
+      importedStudents = parseStudentsFromExcel(buffer, {
+        defaultLop: targetLop || undefined,
+      });
     } catch (parseErr) {
       console.error("Lỗi parse Excel:", parseErr);
       return NextResponse.json({
@@ -48,72 +52,36 @@ export async function POST(req: NextRequest) {
     }
 
     if (importedStudents.length === 0) {
-      // Provide diagnostic info about why no students were found
-      const XLSX = await import("xlsx");
-      const wb = XLSX.read(buffer, { type: "array", cellDates: true });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-
-      let hint = "";
-      if (rows.length === 0) {
-        hint = "File Excel không có dữ liệu (0 dòng).";
-      } else {
-        const firstRowKeys = Object.keys(rows[0]);
-        const hasHoTen = firstRowKeys.some(k =>
-          k === "HỌ VÀ TÊN" || k === "Họ và tên" || k === "hoTen"
-        );
-        const hasTo = firstRowKeys.some(k =>
-          k === "TỔ" || k === "Tổ" || k === "to"
-        );
-
-        if (!hasHoTen) {
-          hint = `Không tìm thấy cột "HỌ VÀ TÊN" hoặc "Họ và tên". Các cột trong file: ${firstRowKeys.join(", ")}. Vui lòng đổi tên cột header cho đúng.`;
-        } else if (!hasTo) {
-          hint = `Không tìm thấy cột "TỔ" hoặc "Tổ". Các cột trong file: ${firstRowKeys.join(", ")}. Mỗi học sinh cần có Tổ (1-4).`;
-        } else {
-          // Headers match but rows got filtered — likely Tổ values are invalid
-          const rawParsed = rows
-            .filter((row) => row["HỌ VÀ TÊN"] || row["Họ và tên"] || row["hoTen"])
-            .map((row) => ({
-              hoTen: String(row["HỌ VÀ TÊN"] || row["Họ và tên"] || row["hoTen"] || "").trim(),
-              to: Number(row["TỔ"] || row["Tổ"] || row["to"] || 0),
-            }));
-
-          const withName = rawParsed.filter(s => s.hoTen.length > 0);
-          const withValidTo = withName.filter(s => s.to >= 1 && s.to <= 4);
-
-          if (withName.length > 0 && withValidTo.length === 0) {
-            const sampleTo = withName.slice(0, 3).map(s => `"${s.hoTen}": Tổ=${s.to}`).join(", ");
-            hint = `Tìm thấy ${withName.length} học sinh nhưng giá trị cột TỔ không hợp lệ (cần từ 1-4). Ví dụ: ${sampleTo}`;
-          } else {
-            hint = `File có ${rows.length} dòng nhưng không có dòng nào hợp lệ. Kiểm tra lại header và dữ liệu.`;
-          }
-        }
-      }
-
       return NextResponse.json({
-        error: `Không tìm thấy học sinh hợp lệ trong file. ${hint}`
+        error: `Không tìm thấy học sinh nào trong file Excel. Vui lòng kiểm tra lại: file cần có cột chứa họ tên học sinh ("Họ và tên", "Họ và chữ đệm", "Tên") và có dữ liệu từ các dòng phía dưới tiêu đề.`
       }, { status: 400 });
     }
 
-
     let insertedCount = 0;
+    let updatedCount = 0;
+    const affectedClasses = new Set<string>();
+
     for (const item of importedStudents) {
+      const studentLop = item.lop || targetLop || "11AT3";
+      affectedClasses.add(studentLop);
+
       // Upsert based on hoTen + lop
       const existing = await prisma.student.findFirst({
-        where: { hoTen: item.hoTen, lop: item.lop },
+        where: { hoTen: item.hoTen, lop: studentLop },
       });
 
       if (existing) {
         await prisma.student.update({
           where: { id: existing.id },
           data: {
-            tenGoi: item.tenGoi || null,
-            ngaySinh: item.ngaySinh,
-            gioiTinh: item.gioiTinh,
+            tenGoi: item.tenGoi || existing.tenGoi,
+            ngaySinh: item.ngaySinh ?? existing.ngaySinh,
+            gioiTinh: item.gioiTinh || existing.gioiTinh,
             to: item.to,
+            ghiChu: item.ghiChu ?? existing.ghiChu,
           },
         });
+        updatedCount++;
       } else {
         await prisma.student.create({
           data: {
@@ -122,14 +90,26 @@ export async function POST(req: NextRequest) {
             ngaySinh: item.ngaySinh,
             gioiTinh: item.gioiTinh,
             to: item.to,
-            lop: item.lop || "11AT3",
+            lop: studentLop,
+            ghiChu: item.ghiChu || null,
           },
         });
+        insertedCount++;
       }
-      insertedCount++;
     }
 
-    return NextResponse.json({ count: insertedCount });
+    const classList = Array.from(affectedClasses);
+    const primaryLop = classList[0] || targetLop || "11AT3";
+
+    return NextResponse.json({
+      success: true,
+      count: insertedCount + updatedCount,
+      insertedCount,
+      updatedCount,
+      lop: primaryLop,
+      classes: classList,
+      message: `Đã import thành công ${insertedCount + updatedCount} học sinh vào lớp ${classList.join(", ")} (${insertedCount} mới, ${updatedCount} cập nhật).`,
+    });
   } catch (e) {
     console.error("Import students error:", e);
     const msg = e instanceof Error ? e.message : "Lỗi không xác định";
