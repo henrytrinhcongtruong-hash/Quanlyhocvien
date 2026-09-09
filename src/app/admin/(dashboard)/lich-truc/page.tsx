@@ -83,8 +83,15 @@ export default function AdminLichTrucPage() {
   const [selectedToNum, setSelectedToNum] = useState<number>(1);
   const [clearPrevious, setClearPrevious] = useState<boolean>(true);
   const [slotsPerDay, setSlotsPerDay] = useState<number>(4);
-  const [activeMobileTab, setActiveMobileTab] = useState<string>("Thứ 2");
+  const [activeMobileTab, setActiveMobileTab] = useState<string>("ALL");
   const [saving, setSaving] = useState(false);
+
+  // Xác định Thứ hiện tại tại Việt Nam để highlight ngày hôm nay
+  const todayThuName = useMemo(() => {
+    const jsDay = new Date().getDay(); // 0: CN, 1: T2, ..., 5: T6
+    if (jsDay >= 1 && jsDay <= 5) return `Thứ ${jsDay + 1}`;
+    return null;
+  }, []);
 
   // Modal State (Phân học sinh trực cả tuần - Tùy chọn số lượng)
   const [weekDutyModalOpen, setWeekDutyModalOpen] = useState(false);
@@ -561,54 +568,112 @@ export default function AdminLichTrucPage() {
         </div>
       </div>
 
-      {/* Mobile Tab Bar (only visible on mobile) */}
+      {/* Mobile Tab Bar (Quick Jump / View filter on mobile) */}
       <div className="mobile-day-tabs hide-on-desktop">
-        {THU_NAMES.map(thu => (
-          <button
-            key={thu}
-            className={`mobile-tab-btn ${activeMobileTab === thu ? "active" : ""}`}
-            onClick={() => setActiveMobileTab(thu)}
-          >
-            {thu}
-          </button>
-        ))}
+        <button
+          type="button"
+          className={`mobile-tab-btn ${activeMobileTab === "ALL" ? "active" : ""}`}
+          onClick={() => setActiveMobileTab("ALL")}
+          style={{ fontWeight: 800 }}
+        >
+          ✨ Xem cả tuần (T2 → T6)
+        </button>
+        {THU_NAMES.map(thu => {
+          const isToday = thu === todayThuName;
+          return (
+            <button
+              key={thu}
+              type="button"
+              className={`mobile-tab-btn ${activeMobileTab === thu ? "active" : ""}`}
+              onClick={() => setActiveMobileTab(thu)}
+            >
+              {thu} {isToday ? "🌟" : ""}
+            </button>
+          );
+        })}
       </div>
 
       {/* Weekly Schedule Grid with Edit and Delete */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14 }}>
         {THU_NAMES.map((thu, i) => {
+          const isHiddenOnMobile = activeMobileTab !== "ALL" && activeMobileTab !== thu;
           const dayGroup = entries.find(e => e.thu === thu);
           const items = dayGroup?.items || [];
+          const isToday = thu === todayThuName;
+
+          const dayHeaderThemes = [
+            { headerBg: "#eff6ff", headerText: "#1d4ed8", border: "#bfdbfe", badge: "#dbeafe" },
+            { headerBg: "#f0fdf4", headerText: "#15803d", border: "#bbf7d0", badge: "#dcfce7" },
+            { headerBg: "#faf5ff", headerText: "#7e22ce", border: "#e9d5ff", badge: "#f3e8ff" },
+            { headerBg: "#fffbeb", headerText: "#b45309", border: "#fde68a", badge: "#fef3c7" },
+            { headerBg: "#fff1f2", headerText: "#be123c", border: "#fecdd3", badge: "#ffe4e6" },
+          ];
+          const theme = dayHeaderThemes[i % dayHeaderThemes.length];
 
           return (
-            <div key={thu} className={`card ${activeMobileTab !== thu ? "hide-on-mobile" : ""}`} style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div
+              key={thu}
+              className={`card ${isHiddenOnMobile ? "hide-on-mobile" : ""}`}
+              style={{
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                border: isToday ? "2px solid #0284c7" : `1px solid ${theme.border}`,
+                boxShadow: isToday ? "0 4px 14px rgba(2, 132, 199, 0.15)" : "none",
+              }}
+            >
               <div
                 style={{
                   padding: "12px 14px",
-                  background: i === 0 ? "var(--primary-light)" : "var(--bg-muted)",
-                  borderBottom: "1px solid var(--border)",
+                  background: isToday ? "#e0f2fe" : theme.headerBg,
+                  borderBottom: `1px solid ${theme.border}`,
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontWeight: 700, fontSize: "0.9rem", color: i === 0 ? "var(--primary)" : "var(--text-primary)" }}>
+                  <span style={{ fontWeight: 800, fontSize: "0.92rem", color: isToday ? "#0369a1" : theme.headerText }}>
                     {thu}
                   </span>
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                    ({items.length} HS)
+                  {isToday && (
+                    <span
+                      style={{
+                        background: "#0284c7",
+                        color: "white",
+                        fontSize: "0.65rem",
+                        fontWeight: 800,
+                        padding: "1px 6px",
+                        borderRadius: 6,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Hôm nay
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      background: theme.badge,
+                      color: theme.headerText,
+                      padding: "1px 6px",
+                      borderRadius: 10,
+                    }}
+                  >
+                    {items.length} HS
                   </span>
                 </div>
                 <button
                   onClick={() => openAdd(thu)}
                   style={{
-                    background: "none", border: "none", cursor: "pointer",
-                    color: "var(--primary)", padding: 4, display: "flex", alignItems: "center",
+                    background: "white", border: `1px solid ${theme.border}`, cursor: "pointer",
+                    color: theme.headerText, padding: "3px 8px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4,
+                    fontSize: "0.75rem", fontWeight: 700,
                   }}
                   title="Thêm học sinh trực"
                 >
-                  <Plus size={15} />
+                  <Plus size={13} /> Thêm
                 </button>
               </div>
 

@@ -1,13 +1,11 @@
 "use client";
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import PublicLayout from "@/components/layout/PublicLayout";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  Users,
-  Sparkles,
   Search,
   X,
   CheckCircle,
@@ -34,6 +32,14 @@ function LichTrucInner() {
   const [entries, setEntries] = useState<DutyEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchStudent, setSearchStudent] = useState("");
+  const [activeDayFilter, setActiveDayFilter] = useState<string>("ALL");
+
+  // Determine current day in Vietnam
+  const todayThuName = useMemo(() => {
+    const jsDay = new Date().getDay(); // 0 is Sun, 1 is Mon...
+    if (jsDay >= 1 && jsDay <= 5) return `Thứ ${jsDay + 1}`;
+    return null;
+  }, []);
 
   useEffect(() => {
     if (urlLop && urlLop !== "ALL") setActiveLop(urlLop);
@@ -72,22 +78,22 @@ function LichTrucInner() {
         style={{
           background: "linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #ea580c 100%)",
           borderRadius: 22,
-          padding: "28px 28px 24px",
+          padding: "26px 24px 22px",
           color: "white",
-          marginBottom: 24,
+          marginBottom: 20,
           boxShadow: "0 10px 30px rgba(217, 119, 6, 0.2)",
           position: "relative",
           overflow: "hidden",
         }}
       >
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.2)", padding: "4px 12px", borderRadius: 20, fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.2)", padding: "4px 12px", borderRadius: 20, fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>
             <CalendarIcon size={14} /> Lịch vệ sinh lớp học
           </div>
-          <h1 style={{ color: "white", fontSize: "1.9rem", fontWeight: 900, margin: "0 0 6px" }}>
+          <h1 style={{ color: "white", fontSize: "1.75rem", fontWeight: 900, margin: "0 0 6px" }}>
             Lịch Trực Nhật Lớp {activeLop}
           </h1>
-          <p style={{ color: "rgba(255,255,255,0.9)", fontSize: "0.9rem", margin: 0 }}>
+          <p style={{ color: "rgba(255,255,255,0.9)", fontSize: "0.88rem", margin: 0 }}>
             Phân công vệ sinh phòng học theo từng ngày trong tuần — Năm học 2025–2026
           </p>
         </div>
@@ -98,31 +104,31 @@ function LichTrucInner() {
         style={{
           background: "white",
           borderRadius: 16,
-          padding: "16px 20px",
+          padding: "14px 18px",
           boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
           border: "1px solid #e2e8f0",
-          marginBottom: 24,
+          marginBottom: 16,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: 16,
+          gap: 12,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <button
             onClick={() => changeWeek(-1)}
             style={{
               display: "flex",
               alignItems: "center",
               gap: 4,
-              padding: "8px 14px",
+              padding: "7px 12px",
               borderRadius: 10,
               background: "#f1f5f9",
               border: "1px solid #cbd5e1",
               color: "#334155",
               fontWeight: 700,
-              fontSize: "0.85rem",
+              fontSize: "0.82rem",
               cursor: "pointer",
             }}
           >
@@ -131,19 +137,19 @@ function LichTrucInner() {
 
           <div
             style={{
-              padding: "8px 18px",
+              padding: "7px 14px",
               background: "#fffbeb",
               border: "1px solid #fde68a",
               borderRadius: 10,
               fontWeight: 800,
               color: "#b45309",
-              fontSize: "0.95rem",
+              fontSize: "0.9rem",
               display: "flex",
               alignItems: "center",
               gap: 6,
             }}
           >
-            <CalendarIcon size={16} /> Tuần: {currentWeek}
+            <CalendarIcon size={15} /> Tuần: {currentWeek}
           </div>
 
           <button
@@ -152,13 +158,13 @@ function LichTrucInner() {
               display: "flex",
               alignItems: "center",
               gap: 4,
-              padding: "8px 14px",
+              padding: "7px 12px",
               borderRadius: 10,
               background: "#f1f5f9",
               border: "1px solid #cbd5e1",
               color: "#334155",
               fontWeight: 700,
-              fontSize: "0.85rem",
+              fontSize: "0.82rem",
               cursor: "pointer",
             }}
           >
@@ -167,8 +173,8 @@ function LichTrucInner() {
         </div>
 
         {/* Search student box */}
-        <div style={{ position: "relative", minWidth: 260 }}>
-          <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+        <div style={{ position: "relative", minWidth: 240, flex: "1 1 240px", maxWidth: 360 }}>
+          <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
           <input
             type="text"
             placeholder="Tìm tên học sinh trong lịch..."
@@ -176,10 +182,10 @@ function LichTrucInner() {
             onChange={(e) => setSearchStudent(e.target.value)}
             style={{
               width: "100%",
-              padding: "8px 32px 8px 34px",
+              padding: "7px 28px 7px 30px",
               borderRadius: 10,
               border: "1px solid #cbd5e1",
-              fontSize: "0.85rem",
+              fontSize: "0.82rem",
               outline: "none",
             }}
           />
@@ -188,7 +194,7 @@ function LichTrucInner() {
               onClick={() => setSearchStudent("")}
               style={{
                 position: "absolute",
-                right: 10,
+                right: 8,
                 top: "50%",
                 transform: "translateY(-50%)",
                 background: "none",
@@ -198,29 +204,90 @@ function LichTrucInner() {
                 padding: 2,
               }}
             >
-              <X size={14} />
+              <X size={13} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Week Grid */}
+      {/* Quick Day Filter on Mobile & Desktop */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          overflowX: "auto",
+          paddingBottom: 6,
+          marginBottom: 16,
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        <button
+          onClick={() => setActiveDayFilter("ALL")}
+          style={{
+            padding: "6px 14px",
+            borderRadius: 20,
+            border: activeDayFilter === "ALL" ? "1px solid #d97706" : "1px solid #e2e8f0",
+            background: activeDayFilter === "ALL" ? "#d97706" : "white",
+            color: activeDayFilter === "ALL" ? "white" : "#475569",
+            fontWeight: 800,
+            fontSize: "0.8rem",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            boxShadow: activeDayFilter === "ALL" ? "0 2px 8px rgba(217, 119, 6, 0.25)" : "none",
+          }}
+        >
+          ✨ Xem cả tuần (T2 → T6)
+        </button>
+
+        {THU_NAMES.map((thu) => {
+          const isToday = thu === todayThuName;
+          const isActive = activeDayFilter === thu;
+          return (
+            <button
+              key={thu}
+              onClick={() => setActiveDayFilter(thu)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 20,
+                border: isActive ? "1px solid #d97706" : isToday ? "1px solid #f59e0b" : "1px solid #e2e8f0",
+                background: isActive ? "#d97706" : isToday ? "#fef3c7" : "white",
+                color: isActive ? "white" : isToday ? "#b45309" : "#475569",
+                fontWeight: isToday || isActive ? 800 : 600,
+                fontSize: "0.8rem",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {thu} {isToday ? "🌟" : ""}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Week Grid / Stream: Full Week Visible on Mobile & Desktop */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 210px), 1fr))",
-          gap: 16,
+          gap: 14,
         }}
       >
         {THU_NAMES.map((thu, idx) => {
+          if (activeDayFilter !== "ALL" && activeDayFilter !== thu) {
+            return null;
+          }
+
           const dayEntry = entries.find((e) => e.thu === thu);
           const studentList = dayEntry?.students || [];
+          const isToday = thu === todayThuName;
+
           const dayColors = [
-            { headerBg: "#f0fdf4", headerText: "#15803d", borderColor: "#bbf7d0", badge: "#dcfce7" },
             { headerBg: "#eff6ff", headerText: "#1d4ed8", borderColor: "#bfdbfe", badge: "#dbeafe" },
-            { headerBg: "#fdf4ff", headerText: "#86198f", borderColor: "#f5d0fe", badge: "#fae8ff" },
+            { headerBg: "#f0fdf4", headerText: "#15803d", borderColor: "#bbf7d0", badge: "#dcfce7" },
+            { headerBg: "#faf5ff", headerText: "#7e22ce", borderColor: "#e9d5ff", badge: "#f3e8ff" },
             { headerBg: "#fffbeb", headerText: "#b45309", borderColor: "#fde68a", badge: "#fef3c7" },
-            { headerBg: "#fef2f2", headerText: "#b91c1c", borderColor: "#fecaca", badge: "#fee2e2" },
+            { headerBg: "#fff1f2", headerText: "#be123c", borderColor: "#fecdd3", badge: "#ffe4e6" },
           ];
           const colorTheme = dayColors[idx % dayColors.length];
 
@@ -230,17 +297,18 @@ function LichTrucInner() {
               style={{
                 background: "white",
                 borderRadius: 16,
-                border: `1.5px solid ${colorTheme.borderColor}`,
+                border: isToday ? "2px solid #0284c7" : `1.5px solid ${colorTheme.borderColor}`,
                 overflow: "hidden",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
+                boxShadow: isToday ? "0 6px 20px rgba(2, 132, 199, 0.15)" : "0 4px 16px rgba(0,0,0,0.04)",
                 display: "flex",
                 flexDirection: "column",
+                transition: "all 0.2s ease",
               }}
             >
               {/* Day Header */}
               <div
                 style={{
-                  background: colorTheme.headerBg,
+                  background: isToday ? "#e0f2fe" : colorTheme.headerBg,
                   padding: "12px 14px",
                   borderBottom: `1px solid ${colorTheme.borderColor}`,
                   display: "flex",
@@ -248,9 +316,27 @@ function LichTrucInner() {
                   justifyContent: "space-between",
                 }}
               >
-                <div style={{ fontWeight: 800, color: colorTheme.headerText, fontSize: "0.95rem" }}>
-                  {thu}
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontWeight: 800, color: isToday ? "#0369a1" : colorTheme.headerText, fontSize: "0.95rem" }}>
+                    {thu}
+                  </span>
+                  {isToday && (
+                    <span
+                      style={{
+                        background: "#0284c7",
+                        color: "white",
+                        fontSize: "0.65rem",
+                        fontWeight: 800,
+                        padding: "1px 6px",
+                        borderRadius: 6,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Hôm nay
+                    </span>
+                  )}
                 </div>
+
                 <span
                   style={{
                     background: colorTheme.badge,

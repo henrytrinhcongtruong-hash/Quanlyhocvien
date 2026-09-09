@@ -128,7 +128,12 @@ export default function AdminThoiKhoaBieuPage() {
   });
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [activeMobileThu, setActiveMobileThu] = useState<number>(2);
+  const [activeMobileThu, setActiveMobileThu] = useState<number | "ALL">("ALL");
+  const [mobileViewMode, setMobileViewMode] = useState<"cards" | "table">("cards");
+
+  // Determine current day in Vietnam
+  const currentJsDay = new Date().getDay();
+  const currentThu = currentJsDay === 0 ? 8 : currentJsDay + 1; // 2=Thứ 2, ..., 6=Thứ 6
 
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -396,127 +401,263 @@ export default function AdminThoiKhoaBieuPage() {
         </div>
       </div>
 
-      {/* Mobile Day Tabs */}
-      <div className="mobile-day-tabs hide-on-desktop">
-        {DAYS.map((d) => (
+      {/* Mobile Toolbar: View Mode Switch & Day Filter */}
+      <div className="hide-on-desktop" style={{ marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--text-primary)" }}>
+            🗓️ Thời khóa biểu tuần:
+          </div>
+          <div style={{ display: "flex", gap: 4, background: "var(--bg-muted)", padding: 3, borderRadius: 10 }}>
+            <button
+              type="button"
+              onClick={() => setMobileViewMode("cards")}
+              style={{
+                padding: "4px 10px",
+                borderRadius: 8,
+                border: "none",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                background: mobileViewMode === "cards" ? "white" : "transparent",
+                color: mobileViewMode === "cards" ? "var(--primary)" : "var(--text-secondary)",
+                boxShadow: mobileViewMode === "cards" ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+              }}
+            >
+              📱 Thẻ cả tuần
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileViewMode("table")}
+              style={{
+                padding: "4px 10px",
+                borderRadius: 8,
+                border: "none",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                background: mobileViewMode === "table" ? "white" : "transparent",
+                color: mobileViewMode === "table" ? "var(--primary)" : "var(--text-secondary)",
+                boxShadow: mobileViewMode === "table" ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+              }}
+            >
+              📊 Bảng ma trận
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Day Pills */}
+        <div className="mobile-day-tabs" style={{ marginBottom: 10 }}>
           <button
-            key={d.thu}
             type="button"
-            className={`mobile-tab-btn ${activeMobileThu === d.thu ? "active" : ""}`}
-            onClick={() => setActiveMobileThu(d.thu)}
+            className={`mobile-tab-btn ${activeMobileThu === "ALL" ? "active" : ""}`}
+            onClick={() => setActiveMobileThu("ALL")}
+            style={{ fontWeight: 800 }}
           >
-            {d.label}
+            ✨ Xem cả tuần (T2 → T6)
           </button>
-        ))}
+          {DAYS.map((d) => {
+            const isToday = d.thu === currentThu;
+            return (
+              <button
+                key={d.thu}
+                type="button"
+                className={`mobile-tab-btn ${activeMobileThu === d.thu ? "active" : ""}`}
+                onClick={() => setActiveMobileThu(d.thu)}
+              >
+                {d.label} {isToday ? "🌟" : ""}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Mobile Schedule Cards for Selected Day */}
-      <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-        {periodsList.map((tietNum) => {
-          const isBreakTime = tietNum === 3;
-          const timeInfo = EVENING_TIMES[tietNum];
-          const item = getPeriodItem(activeMobileThu, tietNum);
-          const color = item?.monHoc ? getSubjectColor(item.monHoc) : null;
+      {/* Mobile Schedule Cards: Full-Week Stream */}
+      {mobileViewMode === "cards" && (
+        <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
+          {DAYS.filter((d) => activeMobileThu === "ALL" || activeMobileThu === d.thu).map((d, dIdx) => {
+            const isToday = d.thu === currentThu;
+            const dayDayThemes = [
+              { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe", badge: "#dbeafe" },
+              { bg: "#f0fdf4", text: "#15803d", border: "#bbf7d0", badge: "#dcfce7" },
+              { bg: "#faf5ff", text: "#7e22ce", border: "#e9d5ff", badge: "#f3e8ff" },
+              { bg: "#fffbeb", text: "#b45309", border: "#fde68a", badge: "#fef3c7" },
+              { bg: "#fff1f2", text: "#be123c", border: "#fecdd3", badge: "#ffe4e6" },
+            ];
+            const theme = dayDayThemes[dIdx % dayDayThemes.length];
 
-          return (
-            <React.Fragment key={tietNum}>
-              {isBreakTime && (
-                <div
-                  style={{
-                    background: "#fef3c7",
-                    border: "1px solid #fde68a",
-                    padding: "8px 14px",
-                    borderRadius: 10,
-                    textAlign: "center",
-                    fontSize: "0.78rem",
-                    fontWeight: 800,
-                    color: "#b45309",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                  }}
-                >
-                  <Coffee size={14} />
-                  <span>GIẢI LAO: 19h20 - 19h35 (15 phút)</span>
-                </div>
-              )}
-
+            return (
               <div
-                className="card"
-                onClick={() => openEditCell(activeMobileThu, tietNum)}
+                key={d.thu}
                 style={{
-                  padding: "12px 14px",
-                  borderRadius: 12,
-                  background: color ? color.bg : "#ffffff",
-                  border: color ? `1.5px solid ${color.border}` : "1px dashed var(--border)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
+                  background: "white",
+                  borderRadius: 16,
+                  border: isToday ? "2px solid #0284c7" : `1.5px solid ${theme.border}`,
+                  boxShadow: isToday ? "0 6px 18px rgba(2, 132, 199, 0.12)" : "0 2px 8px rgba(0,0,0,0.03)",
+                  overflow: "hidden",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 10,
-                      background: "rgba(6, 182, 212, 0.15)",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <span style={{ fontWeight: 900, fontSize: "0.95rem", color: "#0891b2", lineHeight: 1 }}>
-                      T{tietNum}
-                    </span>
-                    <span style={{ fontSize: "0.6rem", color: "#475569", fontWeight: 700, marginTop: 2 }}>
-                      {timeInfo.time.split(" - ")[0]}
-                    </span>
-                  </div>
-
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: "0.92rem", color: color ? color.text : "var(--text-muted)" }}>
-                      {item?.monHoc || "— Chưa xếp môn —"}
-                    </div>
-                    {item?.giaoVien && (
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 2, fontWeight: 600 }}>
-                        🧑‍🏫 GV: {item.giaoVien}
-                      </div>
-                    )}
-                    <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
-                      ⏱️ {timeInfo.time} ({timeInfo.duration})
-                    </div>
-                  </div>
-                </div>
-
+                {/* Day Header */}
                 <div
                   style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    background: "rgba(6, 182, 212, 0.1)",
+                    padding: "10px 14px",
+                    background: isToday ? "#e0f2fe" : theme.bg,
+                    borderBottom: `1px solid ${theme.border}`,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    color: "#0891b2",
-                    flexShrink: 0,
+                    justifyContent: "space-between",
                   }}
                 >
-                  <Edit2 size={13} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontWeight: 900, fontSize: "0.95rem", color: isToday ? "#0369a1" : theme.text }}>
+                      {d.label}
+                    </span>
+                    {isToday && (
+                      <span
+                        style={{
+                          background: "#0284c7",
+                          color: "white",
+                          fontSize: "0.65rem",
+                          fontWeight: 800,
+                          padding: "1px 6px",
+                          borderRadius: 6,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Hôm nay
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    style={{
+                      background: theme.badge,
+                      color: theme.text,
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: 10,
+                    }}
+                  >
+                    5 tiết học buổi tối
+                  </span>
+                </div>
+
+                {/* Periods List for this Day */}
+                <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  {periodsList.map((tietNum) => {
+                    const isBreakTime = tietNum === 3;
+                    const timeInfo = EVENING_TIMES[tietNum];
+                    const item = getPeriodItem(d.thu, tietNum);
+                    const color = item?.monHoc ? getSubjectColor(item.monHoc) : null;
+
+                    return (
+                      <React.Fragment key={tietNum}>
+                        {isBreakTime && (
+                          <div
+                            style={{
+                              background: "#fef3c7",
+                              border: "1px solid #fde68a",
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              textAlign: "center",
+                              fontSize: "0.75rem",
+                              fontWeight: 800,
+                              color: "#b45309",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <Coffee size={13} />
+                            <span>GIẢI LAO: 19h20 - 19h35 (15 phút)</span>
+                          </div>
+                        )}
+
+                        <div
+                          onClick={() => openEditCell(d.thu, tietNum)}
+                          style={{
+                            padding: "10px 12px",
+                            borderRadius: 10,
+                            background: color ? color.bg : "#f8fafc",
+                            border: color ? `1.5px solid ${color.border}` : "1px dashed var(--border)",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 10,
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: 8,
+                                background: "rgba(6, 182, 212, 0.15)",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                              }}
+                            >
+                              <span style={{ fontWeight: 900, fontSize: "0.9rem", color: "#0891b2", lineHeight: 1 }}>
+                                T{tietNum}
+                              </span>
+                              <span style={{ fontSize: "0.58rem", color: "#475569", fontWeight: 700, marginTop: 1 }}>
+                                {timeInfo.time.split(" - ")[0]}
+                              </span>
+                            </div>
+
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontWeight: 800, fontSize: "0.9rem", color: color ? color.text : "var(--text-muted)" }}>
+                                {item?.monHoc || "— Chưa xếp môn —"}
+                              </div>
+                              {item?.giaoVien && (
+                                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 1, fontWeight: 600 }}>
+                                  🧑‍🏫 GV: {item.giaoVien}
+                                </div>
+                              )}
+                              <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginTop: 1 }}>
+                                ⏱️ {timeInfo.time}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: 6,
+                              background: "rgba(6, 182, 212, 0.1)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#0891b2",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Edit2 size={12} />
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    );
+                  })}
                 </div>
               </div>
-            </React.Fragment>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Main Timetable Table (Pixel Perfect match to User's Excel) */}
-      <div className="card hide-on-mobile" style={{ overflow: "hidden", borderRadius: 16, border: "2px solid #06b6d4" }}>
+      <div className={`card ${mobileViewMode === "cards" ? "hide-on-mobile" : ""}`} style={{ overflow: "hidden", borderRadius: 16, border: "2px solid #06b6d4" }}>
+        {mobileViewMode === "table" && (
+          <div className="hide-on-desktop" style={{ padding: "8px 14px", background: "#e0f2fe", color: "#0369a1", fontSize: "0.75rem", fontWeight: 700, textAlign: "center" }}>
+            👉 Vuốt ngang để xem đủ 5 ngày (Thứ 2 → Thứ 6)
+          </div>
+        )}
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
             <thead>
