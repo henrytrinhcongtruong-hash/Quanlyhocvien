@@ -77,36 +77,36 @@ export default function AdminSoDoLopPage() {
   const [clearing, setClearing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
 
-  // Mobile responsive view states: "left" | "right" | "all"
-  const [isMobile, setIsMobile] = useState(false);
-  const [mobileWing, setMobileWing] = useState<"left" | "right" | "all">("left");
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  // Auto-scale states for mobile responsive view
+  const [scale, setScale] = useState(1);
+  const [chartHeight, setChartHeight] = useState(1220);
+  const [viewMode, setViewMode] = useState<"fit" | "zoom">("fit");
+  const chartRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.touches[0].clientX);
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    const diffX = touchStartX - e.changedTouches[0].clientX;
-    if (Math.abs(diffX) > 45) {
-      if (diffX > 0 && mobileWing === "left") {
-        setMobileWing("right");
-      } else if (diffX < 0 && mobileWing === "right") {
-        setMobileWing("left");
+    const updateScale = () => {
+      const screenWidth = window.innerWidth;
+      if (screenWidth < 920) {
+        const availWidth = Math.max(320, screenWidth - 20);
+        const newScale = Math.min(1, availWidth / 880);
+        setScale(newScale);
+      } else {
+        setScale(1);
       }
-    }
-    setTouchStartX(null);
-  };
+
+      if (chartRef.current) {
+        setChartHeight(chartRef.current.offsetHeight || 1220);
+      }
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    const t = setTimeout(updateScale, 400);
+    return () => {
+      window.removeEventListener("resize", updateScale);
+      clearTimeout(t);
+    };
+  }, [slots, loading]);
 
   // Drag and Drop & Touch Swap state
   const [draggedSlotId, setDraggedSlotId] = useState<string | null>(null);
@@ -312,12 +312,24 @@ export default function AdminSoDoLopPage() {
       const jsPdfModule = await import("jspdf");
       const jsPDF = jsPdfModule.default;
 
+      // Temporarily remove transform on scale-box during capture
+      const scaleBox = document.getElementById("seating-chart-scale-box");
+      const prevTransform = scaleBox ? scaleBox.style.transform : "";
+      if (scaleBox) {
+        scaleBox.style.transform = "none";
+      }
+
       const canvas = await html2canvas(element, {
         scale: 2.5,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
+        width: 880,
       });
+
+      if (scaleBox) {
+        scaleBox.style.transform = prevTransform;
+      }
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
@@ -742,66 +754,35 @@ export default function AdminSoDoLopPage() {
           width: "100%",
         }}
       >
-        {/* RECTANGULAR PHOTO CONTAINER (98px x 104px desktop, responsive 1:1.08 mobile) */}
+        {/* RECTANGULAR PHOTO CONTAINER (98px x 104px, Bo tròn nhẹ 4 góc) */}
         <div
-          className={isMobile && mobileWing !== "all" ? "seating-slot-photo-mobile" : ""}
-          style={
-            isMobile && mobileWing !== "all"
-              ? {
-                  width: "100%",
-                  aspectRatio: "1 / 1.08",
-                  borderRadius: 10,
-                  background: hasStudent ? toConfig.bg : "#ffffff",
-                  border: isSelected
-                    ? "3px solid #0284c7"
-                    : isDragOver
-                    ? "3px dashed #0284c7"
-                    : filterTo !== 0 && isMatchingTo
-                    ? `2.5px solid ${toConfig.border}`
-                    : hasStudent
-                    ? `2px solid ${toConfig.border}`
-                    : "1.5px dashed #94a3b8",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                  boxShadow: filterTo !== 0 && isMatchingTo
-                    ? `0 0 10px ${toConfig.glow}`
-                    : hasStudent
-                    ? `0 2px 6px ${toConfig.glow}`
-                    : "none",
-                  marginBottom: 3,
-                  position: "relative",
-                  transition: "all 0.15s ease",
-                }
-              : {
-                  width: 98,
-                  height: 104,
-                  borderRadius: 14,
-                  background: hasStudent ? toConfig.bg : "#ffffff",
-                  border: isSelected
-                    ? "3px solid #0284c7"
-                    : isDragOver
-                    ? "3px dashed #0284c7"
-                    : filterTo !== 0 && isMatchingTo
-                    ? `3px solid ${toConfig.border}`
-                    : hasStudent
-                    ? `2.5px solid ${toConfig.border}`
-                    : "2px dashed #94a3b8",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                  boxShadow: filterTo !== 0 && isMatchingTo
-                    ? `0 0 14px ${toConfig.glow}`
-                    : hasStudent
-                    ? `0 3px 8px ${toConfig.glow}`
-                    : "none",
-                  marginBottom: 5,
-                  position: "relative",
-                  transition: "all 0.15s ease",
-                }
-          }
+          style={{
+            width: 98,
+            height: 104,
+            borderRadius: 14,
+            background: hasStudent ? toConfig.bg : "#ffffff",
+            border: isSelected
+              ? "3px solid #0284c7"
+              : isDragOver
+              ? "3px dashed #0284c7"
+              : filterTo !== 0 && isMatchingTo
+              ? `3px solid ${toConfig.border}`
+              : hasStudent
+              ? `2.5px solid ${toConfig.border}`
+              : "2px dashed #94a3b8",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            boxShadow: filterTo !== 0 && isMatchingTo
+              ? `0 0 14px ${toConfig.glow}`
+              : hasStudent
+              ? `0 3px 8px ${toConfig.glow}`
+              : "none",
+            marginBottom: 5,
+            position: "relative",
+            transition: "all 0.15s ease",
+          }}
         >
           {hasStudent ? (
             slot.studentPhoto ? (
@@ -823,16 +804,16 @@ export default function AdminSoDoLopPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 900,
-                  fontSize: isMobile && mobileWing !== "all" ? "1.1rem" : "1.45rem",
+                  fontSize: "1.45rem",
                   color: toConfig.text,
                 }}
               >
-                {slot.studentName?.substring(0, 2) || <User size={isMobile && mobileWing !== "all" ? 22 : 32} color={toConfig.text} />}
+                {slot.studentName?.substring(0, 2) || <User size={32} color={toConfig.text} />}
               </div>
             )
           ) : (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <Plus size={isMobile && mobileWing !== "all" ? 20 : 26} color="#94a3b8" />
+              <Plus size={26} color="#94a3b8" />
             </div>
           )}
 
@@ -846,10 +827,10 @@ export default function AdminSoDoLopPage() {
                 left: 0,
                 background: toConfig.badgeBg,
                 color: "white",
-                fontSize: isMobile && mobileWing !== "all" ? "0.6rem" : "0.68rem",
+                fontSize: "0.68rem",
                 fontWeight: 900,
-                padding: isMobile && mobileWing !== "all" ? "1px 5px" : "2px 7px",
-                borderRadius: isMobile && mobileWing !== "all" ? "8px 0 7px 0" : "11px 0 9px 0",
+                padding: "2px 7px",
+                borderRadius: "11px 0 9px 0",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
               }}
             >
@@ -866,8 +847,8 @@ export default function AdminSoDoLopPage() {
                 position: "absolute",
                 bottom: 2,
                 right: 2,
-                width: isMobile && mobileWing !== "all" ? 16 : 20,
-                height: isMobile && mobileWing !== "all" ? 16 : 20,
+                width: 20,
+                height: 20,
                 background: "rgba(15,23,42,0.75)",
                 borderRadius: "50%",
                 display: "flex",
@@ -876,73 +857,44 @@ export default function AdminSoDoLopPage() {
                 color: "white",
               }}
             >
-              <Move size={isMobile && mobileWing !== "all" ? 9 : 11} />
+              <Move size={11} />
             </div>
           )}
         </div>
 
-        {/* Name Capsule Box (Enhanced height & clear 3-line overflow) */}
+        {/* Name Capsule Box (Non-clipped 3 lines allowed) */}
         <div
-          className={isMobile && mobileWing !== "all" ? "seating-slot-name-mobile" : ""}
-          style={
-            isMobile && mobileWing !== "all"
-              ? {
-                  width: "100%",
-                  maxWidth: "100%",
-                  minHeight: 38,
-                  borderRadius: 8,
-                  border: isSelected
-                    ? "2px solid #0284c7"
-                    : filterTo !== 0 && isMatchingTo
-                    ? `1.5px solid ${toConfig.border}`
-                    : hasStudent
-                    ? `1.5px solid ${toConfig.border}`
-                    : "1px dashed #cbd5e1",
-                  background: isSelected
-                    ? "#e0f2fe"
-                    : hasStudent
-                    ? toConfig.bg
-                    : "#f8fafc",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "2px 3px",
-                  textAlign: "center",
-                  boxShadow: hasStudent ? `0 1px 4px ${toConfig.glow}` : "none",
-                }
-              : {
-                  width: "100%",
-                  maxWidth: 112,
-                  minHeight: 46,
-                  borderRadius: 14,
-                  border: isSelected
-                    ? "2px solid #0284c7"
-                    : filterTo !== 0 && isMatchingTo
-                    ? `2px solid ${toConfig.border}`
-                    : hasStudent
-                    ? `2px solid ${toConfig.border}`
-                    : "1px dashed #cbd5e1",
-                  background: isSelected
-                    ? "#e0f2fe"
-                    : hasStudent
-                    ? toConfig.bg
-                    : "#f8fafc",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "4px 6px",
-                  textAlign: "center",
-                  boxShadow: hasStudent ? `0 2px 5px ${toConfig.glow}` : "none",
-                }
-          }
+          style={{
+            width: "100%",
+            maxWidth: 112,
+            minHeight: 46,
+            borderRadius: 14,
+            border: isSelected
+              ? "2px solid #0284c7"
+              : filterTo !== 0 && isMatchingTo
+              ? `2px solid ${toConfig.border}`
+              : hasStudent
+              ? `2px solid ${toConfig.border}`
+              : "1px dashed #cbd5e1",
+            background: isSelected
+              ? "#e0f2fe"
+              : hasStudent
+              ? toConfig.bg
+              : "#f8fafc",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "4px 6px",
+            textAlign: "center",
+            boxShadow: hasStudent ? `0 2px 5px ${toConfig.glow}` : "none",
+          }}
         >
           <span
-            className={isMobile && mobileWing !== "all" ? "seating-slot-name-text-mobile" : ""}
             style={{
-              fontSize: isMobile && mobileWing !== "all" ? "0.62rem" : "0.72rem",
+              fontSize: "0.72rem",
               fontWeight: 900,
               color: hasStudent ? toConfig.text : "#94a3b8",
-              lineHeight: 1.15,
+              lineHeight: 1.22,
               textTransform: "uppercase",
               wordBreak: "break-word",
               display: "block",
@@ -1235,27 +1187,36 @@ export default function AdminSoDoLopPage() {
         </div>
       </div>
 
-      {/* Mobile Wing Switcher Toolbar */}
-      <div
-        className="no-print"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          marginBottom: 12,
-          background: "#ffffff",
-          padding: "10px 14px",
-          borderRadius: 14,
-          border: "1.5px solid #e2e8f0",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+      {/* Mobile View Mode Toolbar (Vừa màn hình vs Phóng to) */}
+      {scale < 1 && (
+        <div
+          className="no-print"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: 14,
+            background: "#ffffff",
+            padding: "10px 14px",
+            borderRadius: 14,
+            border: "1.5px solid #e2e8f0",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
-              📱 Chế độ xem:
+            <LayoutGrid size={16} color="#0284c7" />
+            <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#0f172a" }}>
+              Hiển thị: <strong>Đầy đủ 4 dãy bàn (56 chỗ)</strong>
             </span>
+            {selectedSlotForSwap && (
+              <span style={{ color: "#0284c7", fontWeight: 800, fontSize: "0.78rem", marginLeft: 8 }}>
+                • Đang chọn 1 ô, chạm ô thứ 2 để đổi chỗ!
+              </span>
+            )}
           </div>
+
           <div
             style={{
               display: "flex",
@@ -1263,460 +1224,330 @@ export default function AdminSoDoLopPage() {
               padding: 3,
               borderRadius: 10,
               gap: 4,
-              flex: 1,
-              maxWidth: 380,
             }}
           >
             <button
               type="button"
-              onClick={() => setMobileWing("left")}
+              onClick={() => setViewMode("fit")}
               style={{
-                flex: 1,
                 border: "none",
-                padding: "6px 8px",
+                padding: "6px 12px",
                 borderRadius: 8,
                 fontSize: "0.78rem",
-                fontWeight: mobileWing === "left" ? 800 : 600,
-                background: mobileWing === "left" ? "#ffffff" : "transparent",
-                color: mobileWing === "left" ? "#0284c7" : "#64748b",
-                boxShadow: mobileWing === "left" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                fontWeight: viewMode === "fit" ? 800 : 600,
+                background: viewMode === "fit" ? "#ffffff" : "transparent",
+                color: viewMode === "fit" ? "#0284c7" : "#64748b",
+                boxShadow: viewMode === "fit" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
-                whiteSpace: "nowrap",
               }}
             >
-              👈 Dãy Trái (1–4)
+              📱 Vừa màn hình
             </button>
 
             <button
               type="button"
-              onClick={() => setMobileWing("right")}
+              onClick={() => setViewMode("zoom")}
               style={{
-                flex: 1,
                 border: "none",
-                padding: "6px 8px",
+                padding: "6px 12px",
                 borderRadius: 8,
                 fontSize: "0.78rem",
-                fontWeight: mobileWing === "right" ? 800 : 600,
-                background: mobileWing === "right" ? "#ffffff" : "transparent",
-                color: mobileWing === "right" ? "#0284c7" : "#64748b",
-                boxShadow: mobileWing === "right" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                fontWeight: viewMode === "zoom" ? 800 : 600,
+                background: viewMode === "zoom" ? "#ffffff" : "transparent",
+                color: viewMode === "zoom" ? "#0284c7" : "#64748b",
+                boxShadow: viewMode === "zoom" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
-                whiteSpace: "nowrap",
               }}
             >
-              👉 Dãy Phải (5–8)
+              🔍 Phóng to 100%
             </button>
+          </div>
+        </div>
+      )}
 
-            <button
-              type="button"
-              onClick={() => setMobileWing("all")}
+      {/* Main Seating Chart Poster wrapped in responsive container */}
+      <div
+        className={viewMode === "zoom" || scale >= 1 ? "seating-scroll-wrapper" : ""}
+        style={{
+          width: "100%",
+          height: viewMode === "fit" && scale < 1 ? chartHeight * scale + 16 : "auto",
+          overflowX: viewMode === "zoom" || scale >= 1 ? "auto" : "hidden",
+          overflowY: "hidden",
+          display: "flex",
+          justifyContent: "center",
+          position: "relative",
+          transition: "height 0.15s ease",
+        }}
+      >
+        <div
+          id="seating-chart-scale-box"
+          style={{
+            transform: viewMode === "fit" && scale < 1 ? `scale(${scale})` : "none",
+            transformOrigin: "top center",
+            width: 880,
+            minWidth: 880,
+            maxWidth: 880,
+            flexShrink: 0,
+          }}
+        >
+          <div
+            ref={chartRef}
+            id="seating-chart-print-area"
+            className="card"
+            style={{
+              background: "#ffffff",
+              backgroundImage: "radial-gradient(#e2e8f0 1.2px, transparent 1.2px)",
+              backgroundSize: "22px 22px",
+              borderRadius: 22,
+              border: "2.5px solid #000000",
+              padding: "24px 22px 20px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+              width: 880,
+              minWidth: 880,
+              maxWidth: 880,
+              boxSizing: "border-box",
+              margin: "0 auto",
+            }}
+          >
+            {/* Header 4 Dãy Bàn rõ ràng */}
+            <div
               style={{
-                border: "none",
-                padding: "6px 8px",
-                borderRadius: 8,
-                fontSize: "0.75rem",
-                fontWeight: mobileWing === "all" ? 800 : 600,
-                background: mobileWing === "all" ? "#ffffff" : "transparent",
-                color: mobileWing === "all" ? "#0f172a" : "#64748b",
-                boxShadow: mobileWing === "all" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-                whiteSpace: "nowrap",
+                display: "grid",
+                gridTemplateColumns: "1fr 34px 1fr",
+                alignItems: "center",
+                gap: 12,
+                marginBottom: 12,
+                padding: "6px 12px",
+                background: "#f1f5f9",
+                borderRadius: 12,
+                border: "1.5px solid #cbd5e1",
               }}
-              title="Xem cả 2 dãy cùng lúc (kéo ngang)"
             >
-              🔭 Cả 2 Dãy
-            </button>
-          </div>
-        </div>
+              <div style={{ textAlign: "center", fontSize: "0.85rem", fontWeight: 900, color: "#0284c7", letterSpacing: "0.5px" }}>
+                👈 DÃY 1 & DÃY 2 (Cột 1–4)
+              </div>
+              <div style={{ textAlign: "center", fontSize: "0.68rem", fontWeight: 900, color: "#64748b" }}>
+                LỐI ĐI
+              </div>
+              <div style={{ textAlign: "center", fontSize: "0.85rem", fontWeight: 900, color: "#0284c7", letterSpacing: "0.5px" }}>
+                👉 DÃY 3 & DÃY 4 (Cột 5–8)
+              </div>
+            </div>
 
-        {/* Quick Touch / Swipe Hint Banner */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "#f0f9ff",
-            padding: "7px 10px",
-            borderRadius: 8,
-            fontSize: "0.75rem",
-            color: "#0369a1",
-            border: "1px solid #bae6fd",
-            gap: 6,
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Move size={14} />
-            <span>
-              {mobileWing === "left" && (
-                <>
-                  Đang xem <strong>Dãy Trái (Cột 1–4)</strong> • Vuốt sang trái ⬅️ để sang Dãy Phải. Chạm ô để sửa/đổi chỗ!
-                </>
-              )}
-              {mobileWing === "right" && (
-                <>
-                  Đang xem <strong>Dãy Phải (Cột 5–8)</strong> • Vuốt sang phải ➡️ để về Dãy Trái. Chạm ô để sửa/đổi chỗ!
-                </>
-              )}
-              {mobileWing === "all" && (
-                <>
-                  Đang xem <strong>Toàn cảnh cả 2 dãy</strong> • Vuốt sang ngang ↔️ để duyệt các dãy. Chạm ô để sửa/đổi chỗ!
-                </>
-              )}
-            </span>
-          </div>
+            {/* Main 7 Rows Grid Layout - Đầy đủ 4 dãy bàn (Dãy 1-2-3-4 = 8 cột ghế) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
+                const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
+                const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
 
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {selectedSlotForSwap && (
-              <span style={{ color: "#0284c7", fontWeight: 800, whiteSpace: "nowrap" }}>
-                Đang chọn 1 ô • Chạm ô 2 để đổi!
-              </span>
-            )}
-            {mobileWing !== "all" && (
-              <button
-                type="button"
-                onClick={() => setMobileWing(mobileWing === "left" ? "right" : "left")}
-                style={{
-                  border: "1px solid #0284c7",
-                  background: "#ffffff",
-                  color: "#0284c7",
-                  borderRadius: 6,
-                  padding: "3px 8px",
-                  fontWeight: 800,
-                  fontSize: "0.72rem",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {mobileWing === "left" ? "Sang Dãy Phải 👉" : "👈 Về Dãy Trái"}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Seating Chart Poster wrapped in responsive horizontal scroller */}
-      <div className={isMobile && mobileWing !== "all" ? "seating-scroll-wrapper-mobile" : "seating-scroll-wrapper"}>
-        <div
-          id="seating-chart-print-area"
-          className={isMobile && mobileWing !== "all" ? "card seating-chart-container-mobile" : "card"}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          style={{
-            background: "#ffffff",
-            backgroundImage: "radial-gradient(#e2e8f0 1.2px, transparent 1.2px)",
-            backgroundSize: "22px 22px",
-            borderRadius: isMobile && mobileWing !== "all" ? 14 : 22,
-            border: "2.5px solid #000000",
-            padding: isMobile && mobileWing !== "all" ? "16px 8px 14px" : "24px 22px 20px",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-            position: "relative",
-            minWidth: isMobile && mobileWing !== "all" ? "unset" : 880,
-            maxWidth: isMobile && mobileWing !== "all" ? "100%" : 960,
-            width: isMobile && mobileWing !== "all" ? "100%" : "auto",
-            margin: "0 auto",
-          }}
-        >
-
-          {/* Main 7 Rows Grid Layout */}
-          <div style={{ display: "flex", flexDirection: "column", gap: isMobile && mobileWing !== "all" ? 8 : 14 }}>
-            {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
-              const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
-              const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
-
-              // Mobile 1-Wing View: Left Wing
-              if (isMobile && mobileWing === "left") {
                 return (
                   <div
                     key={`row-${rowNum}`}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "1fr 28px",
+                      gridTemplateColumns: "1fr 34px 1fr",
                       alignItems: "center",
-                      gap: 6,
+                      gap: 12,
                     }}
                   >
-                    {/* Dãy Trái (4 cột bàn) */}
+                    {/* Dãy 1 & Dãy 2 (4 cột bàn) */}
                     <div
                       style={{
                         display: "grid",
                         gridTemplateColumns: "repeat(4, 1fr)",
-                        gap: 4,
+                        gap: 10,
                       }}
                     >
                       {leftSlots.map((s) => renderSeatCard(s))}
                     </div>
 
-                    {/* Hàng indicator */}
+                    {/* Lối đi chính ở giữa */}
                     <div
                       style={{
                         textAlign: "center",
-                        fontSize: "0.7rem",
+                        fontSize: "0.72rem",
                         fontWeight: 900,
-                        color: "#64748b",
-                        background: "#f1f5f9",
-                        padding: "4px 0",
-                        borderRadius: 6,
-                      }}
-                    >
-                      H{rowNum}
-                    </div>
-                  </div>
-                );
-              }
-
-              // Mobile 1-Wing View: Right Wing
-              if (isMobile && mobileWing === "right") {
-                return (
-                  <div
-                    key={`row-${rowNum}`}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "28px 1fr",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
-                    {/* Hàng indicator */}
-                    <div
-                      style={{
-                        textAlign: "center",
-                        fontSize: "0.7rem",
-                        fontWeight: 900,
-                        color: "#64748b",
-                        background: "#f1f5f9",
-                        padding: "4px 0",
-                        borderRadius: 6,
+                        color: "#94a3b8",
+                        letterSpacing: "1px",
                       }}
                     >
                       H{rowNum}
                     </div>
 
-                    {/* Dãy Phải (4 cột bàn) */}
+                    {/* Dãy 3 & Dãy 4 (4 cột bàn) */}
                     <div
                       style={{
                         display: "grid",
                         gridTemplateColumns: "repeat(4, 1fr)",
-                        gap: 4,
+                        gap: 10,
                       }}
                     >
                       {rightSlots.map((s) => renderSeatCard(s))}
                     </div>
                   </div>
                 );
-              }
+              })}
+            </div>
 
-              // Standard / Desktop / All Wings View
-              return (
-                <div
-                  key={`row-${rowNum}`}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 34px 1fr",
-                    alignItems: "center",
-                    gap: 12,
-                  }}
-                >
-                  {/* Dãy Trái (4 cột bàn) */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(4, 1fr)",
-                      gap: 10,
-                    }}
-                  >
-                    {leftSlots.map((s) => renderSeatCard(s))}
-                  </div>
-
-                  {/* Lối đi chính ở giữa */}
-                  <div
-                    style={{
-                      textAlign: "center",
-                      fontSize: "0.72rem",
-                      fontWeight: 900,
-                      color: "#94a3b8",
-                      letterSpacing: "1px",
-                    }}
-                  >
-                    H{rowNum}
-                  </div>
-
-                  {/* Dãy Phải (4 cột bàn đều 7 hàng) */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(4, 1fr)",
-                      gap: 10,
-                    }}
-                  >
-                    {rightSlots.map((s) => renderSeatCard(s))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* ========================================================= */}
-          {/* TEACHER'S DESK (ONLY "TEACHER'S DESK" TEXT)               */}
-          {/* ========================================================= */}
-          <div
-            style={{
-              marginTop: isMobile && mobileWing !== "all" ? 14 : 18,
-              display: "flex",
-              justifyContent: isMobile && mobileWing === "left" ? "flex-start" : "flex-end",
-              paddingRight: isMobile && mobileWing === "left" ? 0 : 16,
-              paddingLeft: isMobile && mobileWing === "left" ? 4 : 0,
-            }}
-          >
+            {/* ========================================================= */}
+            {/* TEACHER'S DESK (ONLY "TEACHER'S DESK" TEXT)               */}
+            {/* ========================================================= */}
             <div
               style={{
-                width: isMobile && mobileWing !== "all" ? "100%" : 320,
-                maxWidth: 320,
-                background: "#ffffff",
-                border: "2.5px solid #1e293b",
-                borderRadius: isMobile && mobileWing !== "all" ? 12 : 18,
-                padding: isMobile && mobileWing !== "all" ? "8px 12px" : "12px 20px",
-                textAlign: "center",
+                marginTop: 18,
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 10px rgba(0,0,0,0.06)",
+                justifyContent: "flex-end",
+                paddingRight: 16,
               }}
             >
               <div
                 style={{
-                  fontSize: isMobile && mobileWing !== "all" ? "0.95rem" : "1.2rem",
-                  fontWeight: 900,
-                  color: "#1e293b",
-                  letterSpacing: "2px",
+                  width: 320,
+                  maxWidth: 320,
+                  background: "#ffffff",
+                  border: "2.5px solid #1e293b",
+                  borderRadius: 18,
+                  padding: "12px 20px",
+                  textAlign: "center",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.06)",
                 }}
               >
-                TEACHER'S DESK
-              </div>
-            </div>
-          </div>
-
-          {/* ========================================================= */}
-          {/* FOOTER SECTION: TITLE, CLASS, TEACHER, SLOGAN             */}
-          {/* ========================================================= */}
-          <div
-            style={{
-              marginTop: isMobile && mobileWing !== "all" ? 16 : 20,
-              paddingTop: isMobile && mobileWing !== "all" ? 12 : 16,
-              borderTop: "2.5px solid #000000",
-              display: "flex",
-              flexDirection: isMobile && mobileWing !== "all" ? "column" : "row",
-              justifyContent: "space-between",
-              alignItems: isMobile && mobileWing !== "all" ? "flex-start" : "flex-end",
-              flexWrap: "wrap",
-              gap: 14,
-            }}
-          >
-            {/* Bottom Left Title */}
-            <div style={{ flex: 1, minWidth: isMobile ? "100%" : 280 }}>
-              <div
-                style={{
-                  fontSize: isMobile && mobileWing !== "all" ? "1.2rem" : "1.6rem",
-                  fontWeight: 900,
-                  color: "#000000",
-                  letterSpacing: "-0.5px",
-                  lineHeight: 1.1,
-                }}
-              >
-                {title}
-              </div>
-              {slogan && (
-                <div style={{ fontSize: isMobile ? "0.75rem" : "0.825rem", color: "#475569", fontStyle: "italic", marginTop: 4 }}>
-                  "{slogan}"
+                <div
+                  style={{
+                    fontSize: "1.2rem",
+                    fontWeight: 900,
+                    color: "#1e293b",
+                    letterSpacing: "2px",
+                  }}
+                >
+                  TEACHER'S DESK
                 </div>
-              )}
-              {/* Chú thích màu sắc 4 Tổ */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#000000", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  Chú thích:
-                </span>
-                {[
-                  { to: 1, name: "Tổ 1", bg: "#e0f2fe", text: "#0369a1", border: "#38bdf8" },
-                  { to: 2, name: "Tổ 2", bg: "#dcfce7", text: "#15803d", border: "#4ade80" },
-                  { to: 3, name: "Tổ 3", bg: "#fef3c7", text: "#b45309", border: "#fcd34d" },
-                  { to: 4, name: "Tổ 4", bg: "#f3e8ff", text: "#7e22ce", border: "#c084fc" },
-                ].map((t) => (
-                  <div
-                    key={t.to}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 5,
-                      padding: "2px 8px",
-                      borderRadius: 6,
-                      background: t.bg,
-                      border: `1.5px solid ${t.border}`,
-                      color: t.text,
-                      fontSize: "0.74rem",
-                      fontWeight: 800,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 7,
-                        height: 7,
-                        borderRadius: "50%",
-                        background: t.text,
-                      }}
-                    />
-                    {t.name}
-                  </div>
-                ))}
               </div>
             </div>
 
-            {/* Bottom Right Badges (Class & Teacher) */}
-            <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, width: isMobile ? "100%" : "auto", minWidth: isMobile ? "100%" : 220 }}>
-              {/* Class Box */}
-              <div
-                style={{
-                  flex: 1,
-                  border: "2.5px solid #000000",
-                  borderRadius: 14,
-                  padding: "6px 14px",
-                  fontSize: "0.85rem",
-                  fontWeight: 900,
-                  color: "#000000",
-                  background: "#ffffff",
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                <span>Class:</span>
-                <span style={{ color: "#0284c7" }}>{selectedLop}</span>
+            {/* ========================================================= */}
+            {/* FOOTER SECTION: TITLE, CLASS, TEACHER, SLOGAN             */}
+            {/* ========================================================= */}
+            <div
+              style={{
+                marginTop: 20,
+                paddingTop: 16,
+                borderTop: "2.5px solid #000000",
+                display: "flex",
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "flex-end",
+                flexWrap: "wrap",
+                gap: 14,
+              }}
+            >
+              {/* Bottom Left Title */}
+              <div style={{ flex: 1, minWidth: 280 }}>
+                <div
+                  style={{
+                    fontSize: "1.6rem",
+                    fontWeight: 900,
+                    color: "#000000",
+                    letterSpacing: "-0.5px",
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {title}
+                </div>
+                {slogan && (
+                  <div style={{ fontSize: "0.825rem", color: "#475569", fontStyle: "italic", marginTop: 4 }}>
+                    "{slogan}"
+                  </div>
+                )}
+                {/* Chú thích màu sắc 4 Tổ */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#000000", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Chú thích:
+                  </span>
+                  {[
+                    { to: 1, name: "Tổ 1", bg: "#e0f2fe", text: "#0369a1", border: "#38bdf8" },
+                    { to: 2, name: "Tổ 2", bg: "#dcfce7", text: "#15803d", border: "#4ade80" },
+                    { to: 3, name: "Tổ 3", bg: "#fef3c7", text: "#b45309", border: "#fcd34d" },
+                    { to: 4, name: "Tổ 4", bg: "#f3e8ff", text: "#7e22ce", border: "#c084fc" },
+                  ].map((t) => (
+                    <div
+                      key={t.to}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        padding: "2px 8px",
+                        borderRadius: 6,
+                        background: t.bg,
+                        border: `1.5px solid ${t.border}`,
+                        color: t.text,
+                        fontSize: "0.74rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          background: t.text,
+                        }}
+                      />
+                      {t.name}
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {/* Teacher Box */}
-              <div
-                style={{
-                  flex: 1,
-                  border: "2.5px solid #000000",
-                  borderRadius: 14,
-                  padding: "6px 14px",
-                  fontSize: "0.85rem",
-                  fontWeight: 900,
-                  color: "#000000",
-                  background: "#ffffff",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 8,
-                }}
-              >
-                <span>Teacher:</span>
-                <span style={{ color: "#0284c7" }}>{gvcn}</span>
+              {/* Bottom Right Badges (Class & Teacher) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 220 }}>
+                {/* Class Box */}
+                <div
+                  style={{
+                    border: "2.5px solid #000000",
+                    borderRadius: 14,
+                    padding: "6px 14px",
+                    fontSize: "0.85rem",
+                    fontWeight: 900,
+                    color: "#000000",
+                    background: "#ffffff",
+                    display: "flex",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span>Class:</span>
+                  <span style={{ color: "#0284c7" }}>{selectedLop}</span>
+                </div>
+
+                {/* Teacher Box */}
+                <div
+                  style={{
+                    border: "2.5px solid #000000",
+                    borderRadius: 14,
+                    padding: "6px 14px",
+                    fontSize: "0.85rem",
+                    fontWeight: 900,
+                    color: "#000000",
+                    background: "#ffffff",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                  }}
+                >
+                  <span>Teacher:</span>
+                  <span style={{ color: "#0284c7" }}>{gvcn}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
 
       {/* ========================================================= */}
       {/* EDIT SLOT MODAL WITH TO FILTER                            */}
