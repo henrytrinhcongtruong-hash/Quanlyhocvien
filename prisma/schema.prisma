@@ -28,6 +28,7 @@ model Student {
   feeCollections FeeCollection[]
   attendances    Attendance[]
   dutyRosters    DutyRoster[]
+  dutyPenalties  DutyPenalty[]
   eventMembers   EventMember[]
 
   @@index([to])
@@ -114,6 +115,28 @@ model DutyRoster {
 
   @@index([tuan])
   @@index([studentId])
+}
+
+// =========================================
+// DANH SÁCH VI PHẠM & PHẠT QUÉT LỚP
+// =========================================
+model DutyPenalty {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  lop       String   @default("11AT3")
+  lyDo      String   // Lý do vi phạm (Đi trễ, Nói chuyện, Không làm bài...)
+  ngay      DateTime @default(now())
+  ghiChu    String?
+  trangThai String   @default("Chưa quét") // "Chưa quét" | "Đã hoàn thành"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([lop])
+  @@index([ngay])
+  @@index([trangThai])
 }
 
 // =========================================

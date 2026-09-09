@@ -13,6 +13,8 @@ import {
   CheckCircle,
   Clock,
   MapPin,
+  AlertTriangle,
+  Flame,
 } from "lucide-react";
 import { getCurrentISOWeek, THU_NAMES } from "@/lib/format";
 
@@ -20,6 +22,24 @@ interface DutyEntry {
   thu: string;
   thuOrder: number;
   students: string[];
+}
+
+interface DutyPenalty {
+  id: number;
+  studentId: number;
+  lop: string;
+  lyDo: string;
+  ngay: string;
+  ghiChu: string | null;
+  trangThai: string;
+  student: {
+    id: number;
+    hoTen: string;
+    tenGoi: string | null;
+    to: number;
+    lop: string;
+    avatar: string | null;
+  };
 }
 
 function LichTrucInner() {
@@ -34,6 +54,8 @@ function LichTrucInner() {
 
   const [currentWeek, setCurrentWeek] = useState(getCurrentISOWeek());
   const [entries, setEntries] = useState<DutyEntry[]>([]);
+  const [penalties, setPenalties] = useState<DutyPenalty[]>([]);
+  const [violationCounts, setViolationCounts] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [searchStudent, setSearchStudent] = useState("");
 
@@ -44,10 +66,14 @@ function LichTrucInner() {
   useEffect(() => {
     setLoading(true);
     const lopQuery = activeLop && activeLop !== "ALL" ? `&lop=${activeLop}` : "";
-    fetch(`/api/duty?week=${currentWeek}${lopQuery}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setEntries(d.entries || []);
+    Promise.all([
+      fetch(`/api/duty?week=${currentWeek}${lopQuery}`).then((r) => r.json()),
+      fetch(`/api/duty/penalties${lopQuery}`).then((r) => r.json()),
+    ])
+      .then(([dutyData, penaltyData]) => {
+        setEntries(dutyData.entries || []);
+        setPenalties(penaltyData.penalties || []);
+        setViolationCounts(penaltyData.violationCounts || {});
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -252,6 +278,161 @@ function LichTrucInner() {
           );
         })}
       </div>
+
+      {/* Danh Sách Vi Phạm & Phạt Quét Lớp */}
+      {penalties.length > 0 && (
+        <div
+          style={{
+            marginTop: 32,
+            background: "white",
+            borderRadius: 20,
+            padding: "24px 26px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                style={{
+                  background: "#fee2e2",
+                  color: "#b91c1c",
+                  padding: "4px 10px",
+                  borderRadius: 8,
+                  fontWeight: 800,
+                  fontSize: "0.78rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  border: "1px solid #fecaca",
+                }}
+              >
+                <AlertTriangle size={13} /> SỔ KỶ LUẬT
+              </span>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "#1e293b" }}>
+                Danh Sách Phạt Quét Lớp
+              </h3>
+            </div>
+            <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+              Học sinh có tên từ <strong style={{ color: "#dc2626" }}>3 lần trở lên</strong> sẽ được ưu tiên xếp lên đầu danh sách và tô màu đỏ nhạt
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 12 }}>
+            {[...penalties]
+              .sort((a, b) => {
+                const countA = violationCounts[a.studentId] || 0;
+                const countB = violationCounts[b.studentId] || 0;
+                const isWarnA = countA >= 3;
+                const isWarnB = countB >= 3;
+                if (isWarnA && !isWarnB) return -1;
+                if (!isWarnA && isWarnB) return 1;
+                if (countA !== countB) return countB - countA;
+                return new Date(b.ngay).getTime() - new Date(a.ngay).getTime();
+              })
+              .map((item) => {
+                const count = violationCounts[item.studentId] || 1;
+                const isWarn = count >= 3;
+                const isPending = item.trangThai === "Chưa quét";
+
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      padding: "14px 16px",
+                      borderRadius: 14,
+                      background: isWarn ? "#fef2f2" : "#f8fafc",
+                      border: isWarn ? "1.5px solid #fca5a5" : "1px solid #e2e8f0",
+                      boxShadow: isWarn ? "0 4px 14px rgba(239, 68, 68, 0.1)" : "none",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
+                            background: isWarn ? "#fee2e2" : "#e0f2fe",
+                            color: isWarn ? "#dc2626" : "#0369a1",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontWeight: 800,
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {item.student.hoTen.charAt(0)}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: "0.9rem", color: isWarn ? "#991b1b" : "#1e293b" }}>
+                            {item.student.hoTen}
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                            Tổ {item.student.to} • Lớp {item.student.lop}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isWarn ? (
+                        <span
+                          style={{
+                            background: "#dc2626",
+                            color: "white",
+                            padding: "2px 8px",
+                            borderRadius: 6,
+                            fontSize: "0.68rem",
+                            fontWeight: 800,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 3,
+                          }}
+                        >
+                          <Flame size={11} /> 🚨 Vi phạm {count} lần
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            background: "#f1f5f9",
+                            color: "#475569",
+                            padding: "2px 7px",
+                            borderRadius: 6,
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Lần thứ {count}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ fontSize: "0.82rem", color: isWarn ? "#7f1d1d" : "#334155", fontWeight: 600 }}>
+                      ⚠️ {item.lyDo}
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>
+                      <span>{new Date(item.ngay).toLocaleDateString("vi-VN")}</span>
+                      <span
+                        style={{
+                          padding: "2px 8px",
+                          borderRadius: 8,
+                          fontWeight: 700,
+                          background: isPending ? "#fef3c7" : "#dcfce7",
+                          color: isPending ? "#92400e" : "#166534",
+                        }}
+                      >
+                        {isPending ? "Chưa quét" : "Đã hoàn thành"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
