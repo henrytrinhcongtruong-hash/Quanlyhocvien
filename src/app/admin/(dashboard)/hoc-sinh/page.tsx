@@ -44,6 +44,8 @@ const EMPTY_FORM: FormData = {
   hoTen: "", tenGoi: "", ngaySinh: "", gioiTinh: "Nam", to: "1", lop: "12T2", ghiChu: "", avatar: null,
 };
 
+const PER_PAGE = 30;
+
 // ==================
 // MAIN PAGE
 // ==================
@@ -59,7 +61,6 @@ export default function HocSinhPage() {
 
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState<number | "ALL">("ALL");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">(() => {
@@ -187,7 +188,7 @@ export default function HocSinhPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, filterTo, filterLop, perPage]);
+  }, [search, filterTo, filterLop]);
 
   useEffect(() => {
     fetchStudents();
@@ -421,13 +422,12 @@ export default function HocSinhPage() {
     return [...filteredStudents].sort((a, b) => compareVietnameseNames(a.hoTen, b.hoTen, sortOrder));
   }, [filteredStudents, sortOrder]);
 
-  const totalPages = perPage === "ALL" ? 1 : Math.max(1, Math.ceil(sortedStudents.length / perPage));
+  const totalPages = Math.max(1, Math.ceil(sortedStudents.length / PER_PAGE));
 
   const pagedStudents = React.useMemo(() => {
-    if (perPage === "ALL" || sortedStudents.length <= perPage) return sortedStudents;
-    const start = (page - 1) * perPage;
-    return sortedStudents.slice(start, start + perPage);
-  }, [sortedStudents, page, perPage]);
+    const start = (page - 1) * PER_PAGE;
+    return sortedStudents.slice(start, start + PER_PAGE);
+  }, [sortedStudents, page]);
 
   return (
     <div className="animate-fade-in">
@@ -704,7 +704,7 @@ export default function HocSinhPage() {
                 </thead>
                 <tbody>
                   {pagedStudents.map((s, idx) => {
-                    const rowNum = perPage === "ALL" ? idx + 1 : (page - 1) * perPage + idx + 1;
+                    const rowNum = (page - 1) * PER_PAGE + idx + 1;
                     return (
                       <tr key={s.id}>
                         <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
@@ -793,7 +793,7 @@ export default function HocSinhPage() {
             {/* Mobile Cards View (No horizontal scroll needed!) */}
             <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 8px" }}>
               {pagedStudents.map((s, idx) => {
-                const rowNum = perPage === "ALL" ? idx + 1 : (page - 1) * perPage + idx + 1;
+                const rowNum = (page - 1) * PER_PAGE + idx + 1;
                 return (
                   <div
                     key={s.id}
@@ -931,30 +931,10 @@ export default function HocSinhPage() {
             gap: 10,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.85rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
-            <span>
-              {perPage === "ALL" || totalPages <= 1
-                ? `Tổng số: ${sortedStudents.length} học sinh`
-                : `Đang xem ${(page - 1) * Number(perPage) + 1}–${Math.min(page * Number(perPage), sortedStudents.length)} / ${sortedStudents.length} học sinh`}
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: "0.8rem" }}>Hiển thị:</span>
-              <select
-                className="select"
-                style={{ padding: "3px 8px", fontSize: "0.8rem", height: 28 }}
-                value={perPage}
-                onChange={(e) => {
-                  const val = e.target.value === "ALL" ? "ALL" : Number(e.target.value);
-                  setPerPage(val);
-                  setPage(1);
-                }}
-              >
-                <option value="ALL">Toàn bộ lớp (1 trang)</option>
-                <option value={20}>20 / trang</option>
-                <option value={40}>40 / trang</option>
-                <option value={60}>60 / trang</option>
-              </select>
-            </div>
+          <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+            {totalPages <= 1
+              ? `Tổng số: ${sortedStudents.length} học sinh`
+              : `Đang xem ${(page - 1) * PER_PAGE + 1}–${Math.min(page * PER_PAGE, sortedStudents.length)} / ${sortedStudents.length} học sinh (30 HS / trang)`}
           </div>
 
           {totalPages > 1 && (
