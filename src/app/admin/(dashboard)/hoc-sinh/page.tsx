@@ -44,8 +44,6 @@ const EMPTY_FORM: FormData = {
   hoTen: "", tenGoi: "", ngaySinh: "", gioiTinh: "Nam", to: "1", lop: "12T2", ghiChu: "", avatar: null,
 };
 
-const PER_PAGE = 20;
-
 // ==================
 // MAIN PAGE
 // ==================
@@ -59,9 +57,9 @@ export default function HocSinhPage() {
   const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
   const assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
 
-  const [students, setStudents] = useState<Student[]>([]);
-  const [total, setTotal] = useState(0);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState<number | "ALL">("ALL");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">(() => {
@@ -168,45 +166,33 @@ export default function HocSinhPage() {
   }, [urlLop, isSuperAdmin, assignedLop]);
 
   // ==================
-  // FETCH — parallel classes + students
+  // FETCH — students of active class
   // ==================
   const fetchStudents = async () => {
     setLoading(true);
     const activeClass = !isSuperAdmin ? assignedLop : filterLop;
-    const params = new URLSearchParams({
-      page: String(page),
-      perPage: String(PER_PAGE),
-    });
-    if (search) params.set("search", search);
-    if (filterTo > 0) params.set("to", String(filterTo));
+    const params = new URLSearchParams();
     if (activeClass && activeClass !== "ALL") params.set("lop", activeClass);
 
     try {
-      const [studentRes, classRes] = await Promise.all([
-        fetch(`/api/students?${params}`),
-        fetch("/api/classes"),
-      ]);
-      const [data, classData] = await Promise.all([
-        studentRes.json(), classRes.json(),
-      ]);
-      setStudents(data.data || []);
-      setTotal(data.total || 0);
-      if (classData.data && classData.data.length > 0) setClassList(classData.data);
+      const res = await fetch(`/api/students?${params.toString()}`);
+      const data = await res.json();
+      setAllStudents(data.data || []);
     } catch {
-      setStudents([]);
-      setTotal(0);
+      setAllStudents([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     setPage(1);
-  }, [search, filterTo, filterLop]);
+  }, [search, filterTo, filterLop, perPage]);
 
   useEffect(() => {
     fetchStudents();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, filterTo, filterLop]);
+  }, [filterLop, assignedLop, isSuperAdmin]);
 
   // ==================
   // MODAL
@@ -297,10 +283,10 @@ export default function HocSinhPage() {
       if (res.ok) {
         const savedStudent: Student = await res.json();
         if (editing) {
-          setStudents((prev) => prev.map((s) => (s.id === editing.id ? savedStudent : s)));
+          setAllStudents((prev) => prev.map((s) => (s.id === editing.id ? savedStudent : s)));
           showToast("Đã cập nhật học sinh.");
         } else {
-          setStudents((prev) => [savedStudent, ...prev]);
+          setAllStudents((prev) => [savedStudent, ...prev]);
           showToast("Đã thêm học sinh mới.");
         }
         setModalOpen(false);
@@ -321,7 +307,7 @@ export default function HocSinhPage() {
     setDeleting(true);
 
     // Optimistic UI: Remove from list in 0ms!
-    setStudents((prev) => prev.filter((s) => s.id !== targetId));
+    setAllStudents((prev) => prev.filter((s) => s.id !== targetId));
     setDeleteId(null);
     setDeleting(false);
     showToast("Đã xóa học sinh.");
@@ -415,13 +401,33 @@ export default function HocSinhPage() {
     window.open(`/api/students/export${param}`, "_blank");
   }
 
-  const totalPages = Math.ceil(total / PER_PAGE);
-  const byTo = [1, 2, 3, 4].map((t) => students.filter((s) => s.to === t).length);
+  const byTo = [1, 2, 3, 4].map((t) => allStudents.filter((s) => s.to === t).length);
+
+  const filteredStudents = React.useMemo(() => {
+    return allStudents.filter((s) => {
+      if (filterTo > 0 && s.to !== filterTo) return false;
+      if (search.trim()) {
+        const query = search.toLowerCase().trim();
+        const matchName = s.hoTen.toLowerCase().includes(query);
+        const matchNick = s.tenGoi?.toLowerCase().includes(query);
+        if (!matchName && !matchNick) return false;
+      }
+      return true;
+    });
+  }, [allStudents, filterTo, search]);
 
   const sortedStudents = React.useMemo(() => {
-    if (sortOrder === "default") return students;
-    return [...students].sort((a, b) => compareVietnameseNames(a.hoTen, b.hoTen, sortOrder));
-  }, [students, sortOrder]);
+    if (sortOrder === "default") return filteredStudents;
+    return [...filteredStudents].sort((a, b) => compareVietnameseNames(a.hoTen, b.hoTen, sortOrder));
+  }, [filteredStudents, sortOrder]);
+
+  const totalPages = perPage === "ALL" ? 1 : Math.max(1, Math.ceil(sortedStudents.length / perPage));
+
+  const pagedStudents = React.useMemo(() => {
+    if (perPage === "ALL" || sortedStudents.length <= perPage) return sortedStudents;
+    const start = (page - 1) * perPage;
+    return sortedStudents.slice(start, start + perPage);
+  }, [sortedStudents, page, perPage]);
 
   return (
     <div className="animate-fade-in">
@@ -482,7 +488,9 @@ export default function HocSinhPage() {
             Quản lý học sinh {filterLop !== "ALL" ? `— Lớp ${filterLop}` : "Toàn trường"}
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
-            {total} học sinh • 4 tổ
+            {filteredStudents.length === allStudents.length
+              ? `${allStudents.length} học sinh • 4 tổ`
+              : `${filteredStudents.length} / ${allStudents.length} học sinh • 4 tổ`}
           </p>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
@@ -695,11 +703,13 @@ export default function HocSinhPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedStudents.map((s, idx) => (
-                    <tr key={s.id}>
-                      <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
-                        {(page - 1) * PER_PAGE + idx + 1}
-                      </td>
+                  {pagedStudents.map((s, idx) => {
+                    const rowNum = perPage === "ALL" ? idx + 1 : (page - 1) * perPage + idx + 1;
+                    return (
+                      <tr key={s.id}>
+                        <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
+                          {rowNum}
+                        </td>
                       <td style={{ fontWeight: 700, color: "var(--text-primary)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div
@@ -774,31 +784,34 @@ export default function HocSinhPage() {
                         )}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
+                  );
+                })}
+              </tbody>
               </table>
             </div>
 
             {/* Mobile Cards View (No horizontal scroll needed!) */}
             <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 8px" }}>
-              {sortedStudents.map((s, idx) => (
-                <div
-                  key={s.id}
-                  style={{
-                    padding: "10px 12px",
-                    borderRadius: 12,
-                    background: "#ffffff",
-                    border: "1px solid var(--border)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, width: 22 }}>
-                      {(page - 1) * PER_PAGE + idx + 1}
-                    </div>
+              {pagedStudents.map((s, idx) => {
+                const rowNum = perPage === "ALL" ? idx + 1 : (page - 1) * perPage + idx + 1;
+                return (
+                  <div
+                    key={s.id}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 12,
+                      background: "#ffffff",
+                      border: "1px solid var(--border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, width: 22 }}>
+                        {rowNum}
+                      </div>
                     {/* Avatar */}
                     <div
                       style={{
@@ -900,30 +913,74 @@ export default function HocSinhPage() {
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </>
-        )}
+              );
+            })}
+          </div>
+        </>
+      )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderTop: "1px solid var(--border)" }}>
-            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-              {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, total)} / {total}
+        {/* Pagination & Footer */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 16px",
+            borderTop: "1px solid var(--border)",
+            flexWrap: "wrap",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.85rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
+            <span>
+              {perPage === "ALL" || totalPages <= 1
+                ? `Tổng số: ${sortedStudents.length} học sinh`
+                : `Đang xem ${(page - 1) * Number(perPage) + 1}–${Math.min(page * Number(perPage), sortedStudents.length)} / ${sortedStudents.length} học sinh`}
             </span>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => setPage(page - 1)} disabled={page === 1}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: "0.8rem" }}>Hiển thị:</span>
+              <select
+                className="select"
+                style={{ padding: "3px 8px", fontSize: "0.8rem", height: 28 }}
+                value={perPage}
+                onChange={(e) => {
+                  const val = e.target.value === "ALL" ? "ALL" : Number(e.target.value);
+                  setPerPage(val);
+                  setPage(1);
+                }}
+              >
+                <option value="ALL">Toàn bộ lớp (1 trang)</option>
+                <option value={20}>20 / trang</option>
+                <option value={40}>40 / trang</option>
+                <option value={60}>60 / trang</option>
+              </select>
+            </div>
+          </div>
+
+          {totalPages > 1 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                title="Trang trước"
+              >
                 <ChevronLeft size={14} />
               </button>
-              <span style={{ padding: "5px 12px", fontSize: "0.85rem", fontWeight: 600 }}>
+              <span style={{ padding: "4px 10px", fontSize: "0.85rem", fontWeight: 600 }}>
                 {page} / {totalPages}
               </span>
-              <button className="btn btn-secondary btn-sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                title="Trang sau"
+              >
                 <ChevronRight size={14} />
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ====== ADD/EDIT MODAL ====== */}
