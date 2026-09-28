@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function GET() {
   try {
@@ -89,6 +90,19 @@ export async function DELETE(req: NextRequest) {
     await prisma.user.updateMany({
       where: { assignedLop: lop },
       data: { assignedLop: fallbackClass },
+    });
+
+    logActivity({
+      userId: session.user?.id ? Number(session.user.id) : null,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Admin",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Admin Tổng",
+      userLop: lop,
+      action: "DELETE_CLASS",
+      target: "Class",
+      targetId: lop,
+      details: `Xóa vĩnh viễn toàn bộ lớp ${lop} (${students.length} học sinh và toàn bộ dữ liệu liên quan)`,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json({

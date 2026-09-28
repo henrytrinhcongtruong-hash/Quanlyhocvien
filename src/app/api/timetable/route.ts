@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logActivity } from "@/lib/auditLogger";
 
 // Khung giờ học Buổi Tối chuẩn Trung tâm GDNN - GDTX TP. Thủ Đức (Bắt đầu 18:00)
 export const EVENING_TIMES: Record<number, string> = {
@@ -133,6 +134,19 @@ export async function POST(req: NextRequest) {
           tiet: currentTiet,
         },
       });
+
+      logActivity({
+        userId: session?.user?.id ? Number(session.user.id) : null,
+        userName: session?.user?.name || "Thành viên",
+        userRole: (session?.user as { roleLabel?: string })?.roleLabel || "Ban cán sự",
+        userLop: currentLop,
+        action: "UPDATE",
+        target: "Timetable",
+        details: `Để trống tiết học Lớp ${currentLop} (${currentHocKy}): Thứ ${currentThu} Tiết ${currentTiet}`,
+        req,
+        status: "SUCCESS",
+      });
+
       return NextResponse.json({ success: true, message: "Đã để trống tiết học" });
     }
 
@@ -167,6 +181,19 @@ export async function POST(req: NextRequest) {
         phongHoc: null,
         ghiChu: ghiChu?.trim() || null,
       },
+    });
+
+    logActivity({
+      userId: session?.user?.id ? Number(session.user.id) : null,
+      userName: session?.user?.name || "Thành viên",
+      userRole: (session?.user as { roleLabel?: string })?.roleLabel || "Ban cán sự",
+      userLop: currentLop,
+      action: "UPDATE",
+      target: "Timetable",
+      details: `Cập nhật TKB Lớp ${currentLop} (${currentHocKy}): Thứ ${currentThu} Tiết ${currentTiet} là môn "${monHoc.trim()}"${giaoVien ? ` (GV: ${giaoVien.trim()})` : ""}`,
+      newValue: period,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json({ success: true, data: period });

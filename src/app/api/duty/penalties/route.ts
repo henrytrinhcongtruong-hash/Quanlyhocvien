@@ -130,11 +130,18 @@ export async function POST(req: NextRequest) {
       where: { studentId: Number(studentId) },
     });
 
-    await logActivity({
+    logActivity({
       userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: student.lop,
       action: "CREATE",
       target: "DutyPenalty",
+      targetId: newPenalty.id,
       details: `Ghi nhận vi phạm phạt quét lớp: ${student.hoTen} (${student.lop}) - Lý do: ${lyDo} (Lần thứ ${currentViolations})`,
+      newValue: newPenalty,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json(
@@ -196,11 +203,18 @@ export async function PUT(req: NextRequest) {
       },
     });
 
-    await logActivity({
+    logActivity({
       userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: updated.student.lop,
       action: "UPDATE",
       target: "DutyPenalty",
-      details: `Cập nhật trạng thái vi phạm ID ${id}: ${updated.student.hoTen} -> ${trangThai || "Cập nhật thông tin"}`,
+      targetId: updated.id,
+      details: `Cập nhật trạng thái vi phạm của ${updated.student.hoTen} -> ${trangThai || "Cập nhật thông tin"}`,
+      newValue: updated,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json(updated);
@@ -237,11 +251,18 @@ export async function DELETE(req: NextRequest) {
       include: { student: { select: { hoTen: true } } },
     });
 
-    await logActivity({
+    logActivity({
       userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: (session as { assignedLop?: string })?.assignedLop,
       action: "DELETE",
       target: "DutyPenalty",
+      targetId: Number(id),
       details: `Xóa bản ghi vi phạm ID ${id} của học sinh ${deleted.student.hoTen}`,
+      previousValue: deleted,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json({ success: true, message: "Đã xóa bản ghi vi phạm" });

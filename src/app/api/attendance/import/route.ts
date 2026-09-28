@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
 import { parseAttendanceFromExcel } from "@/lib/excel";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,6 +61,18 @@ export async function POST(req: NextRequest) {
         count++;
       }
     }
+
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Giáo viên",
+      userLop: (session as { assignedLop?: string })?.assignedLop,
+      action: "IMPORT",
+      target: "Attendance",
+      details: `Import thành công ${count} lượt điểm danh từ file Excel "${file.name}"`,
+      req,
+      status: "SUCCESS",
+    });
 
     return NextResponse.json({ count });
   } catch (e) {

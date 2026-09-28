@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { SeatSlotData, generateEmptySlots } from "@/lib/seatingTypes";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function GET(req: NextRequest) {
   try {
@@ -160,6 +161,19 @@ export async function POST(req: NextRequest) {
         );
       }
     }
+
+    logActivity({
+      userId: session?.user?.id ? Number(session.user.id) : null,
+      userName: session?.user?.name || (session?.user as { username?: string })?.username || "Thành viên",
+      userRole: (session?.user as { roleLabel?: string })?.roleLabel || "Ban cán sự",
+      userLop: currentLop,
+      action: "UPDATE",
+      target: "SeatingChart",
+      targetId: updated.id,
+      details: `Cập nhật sơ đồ lớp ${currentLop} (${currentMonth})`,
+      req,
+      status: "SUCCESS",
+    });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {

@@ -84,11 +84,17 @@ export async function POST(req: NextRequest) {
 
     // 3. Ghi audit log
     const namesList = selectedStudents.map((s) => s.hoTen).join(", ");
-    await logActivity({
+    logActivity({
       userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: selectedStudents[0]?.lop || (session as { assignedLop?: string })?.assignedLop,
       action: "CREATE",
       target: "DutyRoster",
       details: `Phân ${selectedStudents.length} bạn [${namesList}] trực nguyên tuần ${tuan} (Thứ 2 - Thứ 6)`,
+      newValue: { tuan, studentCount: selectedStudents.length, students: namesList },
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json({

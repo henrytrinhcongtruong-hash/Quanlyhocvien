@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateEmptySlots } from "@/lib/seatingTypes";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +40,18 @@ export async function POST(req: NextRequest) {
         },
       });
     }
+
+    logActivity({
+      userId: session?.user?.id ? Number(session.user.id) : null,
+      userName: session?.user?.name || (session?.user as { username?: string })?.username || "Thành viên",
+      userRole: (session?.user as { roleLabel?: string })?.roleLabel || "Ban cán sự",
+      userLop: lop,
+      action: "UPDATE",
+      target: "SeatingChart",
+      details: `Làm trống toàn bộ sơ đồ 56 chỗ ngồi Lớp ${lop} (${month})`,
+      req,
+      status: "SUCCESS",
+    });
 
     return NextResponse.json({ success: true, message: "Đã làm trống toàn bộ sơ đồ 56 chỗ ngồi" });
   } catch (error) {

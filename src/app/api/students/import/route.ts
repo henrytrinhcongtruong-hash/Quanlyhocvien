@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
 import { parseStudentsFromExcel } from "@/lib/excel";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -100,6 +101,19 @@ export async function POST(req: NextRequest) {
 
     const classList = Array.from(affectedClasses);
     const primaryLop = classList[0] || targetLop || "11AT3";
+
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: primaryLop,
+      action: "IMPORT",
+      target: "Student",
+      details: `Import file Excel danh sách học sinh: ${insertedCount + updatedCount} học sinh (${insertedCount} thêm mới, ${updatedCount} cập nhật) vào lớp ${classList.join(", ")}`,
+      newValue: { insertedCount, updatedCount, classes: classList },
+      req,
+      status: "SUCCESS",
+    });
 
     return NextResponse.json({
       success: true,

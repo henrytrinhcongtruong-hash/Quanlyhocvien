@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logActivity } from "@/lib/auditLogger";
 
 const DEFAULT_TIMETABLE_EVENING = [
   // Thứ 2
@@ -66,6 +67,18 @@ export async function POST(req: NextRequest) {
         hocKy,
         ghiChu: item.ghiChu || null,
       })),
+    });
+
+    logActivity({
+      userId: session?.user?.id ? Number(session.user.id) : null,
+      userName: session?.user?.name || "Thành viên",
+      userRole: (session?.user as { roleLabel?: string })?.roleLabel || "Ban cán sự",
+      userLop: lop,
+      action: "UPDATE",
+      target: "Timetable",
+      details: `Đặt lại thời khóa biểu buổi tối chuẩn cho Lớp ${lop} (${hocKy})`,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json({ success: true, message: `Đã nạp thời khóa biểu buổi tối chuẩn cho lớp ${lop}` });

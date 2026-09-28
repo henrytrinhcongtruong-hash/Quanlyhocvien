@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function PUT(
   req: NextRequest,
@@ -35,6 +36,20 @@ export async function PUT(
       },
     });
 
+    logActivity({
+      userId: session.user?.id ? Number(session.user.id) : null,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: updated.lop,
+      action: "UPDATE",
+      target: "ExamSchedule",
+      targetId: updated.id,
+      details: `Cập nhật lịch thi môn "${updated.monHoc}" (${updated.tenKyThi}) - Lớp ${updated.lop}`,
+      newValue: updated,
+      req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("Update exam error:", error);
@@ -55,8 +70,27 @@ export async function DELETE(
     const { id } = await params;
     const examId = Number(id);
 
+    const targetExam = await prisma.examSchedule.findUnique({ where: { id: examId } });
+    if (!targetExam) {
+      return NextResponse.json({ error: "Lịch thi không tồn tại" }, { status: 404 });
+    }
+
     await prisma.examSchedule.delete({
       where: { id: examId },
+    });
+
+    logActivity({
+      userId: session.user?.id ? Number(session.user.id) : null,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: targetExam.lop,
+      action: "DELETE",
+      target: "ExamSchedule",
+      targetId: examId,
+      details: `Xóa lịch thi môn "${targetExam.monHoc}" (${targetExam.tenKyThi}) - Lớp ${targetExam.lop}`,
+      previousValue: targetExam,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json({ success: true, message: "Đã xóa lịch thi thành công" });
@@ -65,3 +99,4 @@ export async function DELETE(
     return NextResponse.json({ error: "Lỗi khi xóa lịch thi" }, { status: 500 });
   }
 }
+

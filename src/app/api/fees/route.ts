@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function GET(req: NextRequest) {
   try {
@@ -98,6 +99,25 @@ export async function POST(req: NextRequest) {
         ngayDong: ngayDong ? new Date(ngayDong) : null,
         ghiChu: ghiChu?.trim() || null,
       },
+    });
+
+    const student = await prisma.student.findUnique({
+      where: { id: Number(studentId) },
+      select: { hoTen: true, to: true, lop: true },
+    });
+
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thủ quỹ",
+      userLop: student?.lop || (session as { assignedLop?: string })?.assignedLop,
+      action: "UPDATE",
+      target: "FeeCollection",
+      targetId: fee.id,
+      details: `Cập nhật đóng quỹ học sinh "${student?.hoTen || studentId}" (${kyThu}): ${trangThai || "Chưa Đóng"} - ${Number(soTien).toLocaleString("vi-VN")} đ (${hinhThucDong || "Tiền Mặt"})${ghiChu ? ` - Ghi chú: ${ghiChu}` : ""}`,
+      newValue: fee,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json(fee, { status: 201 });

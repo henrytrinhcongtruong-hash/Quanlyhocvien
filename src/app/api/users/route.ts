@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { requireSuperAdmin } from "@/lib/permissions";
 import bcrypt from "bcryptjs";
+import { logActivity } from "@/lib/auditLogger";
 
 async function checkUserManagementAccess(req: NextRequest) {
   try {
@@ -170,6 +171,21 @@ export async function POST(req: NextRequest) {
     });
 
     const { passwordHash: _, ...safeUser } = user;
+
+    logActivity({
+      userId: access.session?.user?.id ? Number(access.session.user.id) : null,
+      userName: access.session?.user?.name || (access.session?.user as { username?: string })?.username || "Admin",
+      userRole: (access.session?.user as { roleLabel?: string })?.roleLabel || (access.isSuperAdmin ? "Admin Tổng" : "GVCN"),
+      userLop: access.assignedLop,
+      action: "CREATE",
+      target: "User",
+      targetId: user.id,
+      details: `Tạo tài khoản mới "${user.hoTen}" (username: ${user.username}, vai trò: ${user.roleLabel || "Chưa gán"}, lớp: ${user.assignedLop})`,
+      newValue: safeUser,
+      req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json(safeUser, { status: 201 });
   } catch (e) {
     console.error("POST user error:", e);

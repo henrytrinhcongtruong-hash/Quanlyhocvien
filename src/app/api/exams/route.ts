@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logActivity } from "@/lib/auditLogger";
 
 const SAMPLE_EXAMS = [
   {
@@ -194,6 +195,20 @@ export async function POST(req: NextRequest) {
         lop: lop.trim(),
         ghiChu: ghiChu?.trim() || null,
       },
+    });
+
+    logActivity({
+      userId: session.user?.id ? Number(session.user.id) : null,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: exam.lop,
+      action: "CREATE",
+      target: "ExamSchedule",
+      targetId: exam.id,
+      details: `Thêm lịch thi môn "${exam.monHoc}" (${exam.tenKyThi}) - Lớp ${exam.lop}`,
+      newValue: exam,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json({ success: true, data: exam });
