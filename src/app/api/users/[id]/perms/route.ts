@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { requireSuperAdmin } from "@/lib/permissions";
+import { logActivity } from "@/lib/auditLogger";
 
 async function checkUserManagementAccess(req: NextRequest) {
   try {
@@ -74,7 +75,7 @@ export async function PUT(
 
     const targetUser = await prisma.user.findUnique({
       where: { id: Number(id) },
-      select: { assignedLop: true, isSuperAdmin: true },
+      select: { assignedLop: true, isSuperAdmin: true, hoTen: true, username: true },
     });
     if (!targetUser) return NextResponse.json({ error: "Không tìm thấy người dùng" }, { status: 404 });
 
@@ -89,6 +90,18 @@ export async function PUT(
 
     if (!Array.isArray(permissions)) {
       return NextResponse.json({ error: "Dữ liệu không hợp lệ" }, { status: 400 });
+    }
+
+    // Validate scope theo_to
+    for (const p of permissions) {
+      if (p.scope === "theo_to" && p.level && p.level !== "khong_co_quyen") {
+        if (!Array.isArray(p.scopeToIds) || p.scopeToIds.length === 0) {
+          return NextResponse.json(
+            { error: `Module "${p.module}" có phạm vi "Theo tổ" nhưng chưa chọn tổ nào! Vui lòng chọn ít nhất 1 tổ.` },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     const userId = Number(id);
@@ -118,6 +131,21 @@ export async function PUT(
     });
 
     const updated = await prisma.userPermission.findMany({ where: { userId } });
+
+    logActivity({
+      userId: access.session?.user?.id ? Number(access.session.user.id) : null,
+      userName: access.session?.user?.name || (access.session?.user as { username?: string })?.username || "Admin",
+      userRole: (access.session?.user as { roleLabel?: string })?.roleLabel || (access.isSuperAdmin ? "Admin Tổng" : "GVCN"),
+      userLop: targetUser.assignedLop || access.assignedLop,
+      action: "UPDATE_PERMISSIONS",
+      target: "UserPermission",
+      targetId: userId,
+      details: `Cập nhật phân quyền cho tài khoản "${targetUser.hoTen}" (${targetUser.username}): ${permissions.length} module`,
+      newValue: permissions,
+      req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Update permissions error:", error);

@@ -23,6 +23,7 @@ import {
   User,
   Sparkles,
   ShieldAlert,
+  FileQuestion,
 } from "lucide-react";
 
 const NAV_BASE = [
@@ -30,6 +31,7 @@ const NAV_BASE = [
   { href: "/so-do-lop", icon: LayoutGrid, label: "Sơ đồ lớp" },
   { href: "/thoi-khoa-bieu", icon: CalendarDays, label: "Thời khóa biểu" },
   { href: "/lich-thi", icon: GraduationCap, label: "Lịch thi" },
+  { href: "/on-thi", icon: FileQuestion, label: "Ôn thi" },
   { href: "/quy-lop", icon: Wallet, label: "Quỹ lớp" },
   { href: "/lich-truc", icon: Calendar, label: "Trực nhật" },
   { href: "/su-kien", icon: Star, label: "Sự kiện" },

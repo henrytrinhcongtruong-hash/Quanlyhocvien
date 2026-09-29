@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
 import { parseStudentsFromExcel } from "@/lib/excel";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,30 +30,59 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Định dạng file không được hỗ trợ (chỉ chấp nhận .xlsx, .xls, .csv)" }, { status: 400 });
     }
 
-    const buffer = await file.arrayBuffer();
-    const importedStudents = parseStudentsFromExcel(buffer);
+    const targetLop = (formData.get("lop") as string || "").trim();
+
+    let buffer: ArrayBuffer;
+    try {
+      buffer = await file.arrayBuffer();
+    } catch (bufErr) {
+      console.error("Lỗi đọc buffer từ file:", bufErr);
+      return NextResponse.json({ error: "Không thể đọc nội dung file. File có thể bị hỏng." }, { status: 400 });
+    }
+
+    let importedStudents: ReturnType<typeof parseStudentsFromExcel>;
+    try {
+      importedStudents = parseStudentsFromExcel(buffer, {
+        defaultLop: targetLop || undefined,
+      });
+    } catch (parseErr) {
+      console.error("Lỗi parse Excel:", parseErr);
+      return NextResponse.json({
+        error: `Lỗi đọc file Excel: ${parseErr instanceof Error ? parseErr.message : "File không đúng định dạng hoặc bị hỏng"}`
+      }, { status: 400 });
+    }
 
     if (importedStudents.length === 0) {
-      return NextResponse.json({ error: "Không tìm thấy học sinh hợp lệ trong file" }, { status: 400 });
+      return NextResponse.json({
+        error: `Không tìm thấy học sinh nào trong file Excel. Vui lòng kiểm tra lại: file cần có cột chứa họ tên học sinh ("Họ và tên", "Họ và chữ đệm", "Tên") và có dữ liệu từ các dòng phía dưới tiêu đề.`
+      }, { status: 400 });
     }
 
     let insertedCount = 0;
+    let updatedCount = 0;
+    const affectedClasses = new Set<string>();
+
     for (const item of importedStudents) {
+      const studentLop = item.lop || targetLop || "11AT3";
+      affectedClasses.add(studentLop);
+
       // Upsert based on hoTen + lop
       const existing = await prisma.student.findFirst({
-        where: { hoTen: item.hoTen, lop: item.lop },
+        where: { hoTen: item.hoTen, lop: studentLop },
       });
 
       if (existing) {
         await prisma.student.update({
           where: { id: existing.id },
           data: {
-            tenGoi: item.tenGoi || null,
-            ngaySinh: item.ngaySinh,
-            gioiTinh: item.gioiTinh,
+            tenGoi: item.tenGoi || existing.tenGoi,
+            ngaySinh: item.ngaySinh ?? existing.ngaySinh,
+            gioiTinh: item.gioiTinh || existing.gioiTinh,
             to: item.to,
+            ghiChu: item.ghiChu ?? existing.ghiChu,
           },
         });
+        updatedCount++;
       } else {
         await prisma.student.create({
           data: {
@@ -61,16 +91,42 @@ export async function POST(req: NextRequest) {
             ngaySinh: item.ngaySinh,
             gioiTinh: item.gioiTinh,
             to: item.to,
-            lop: item.lop || "11AT3",
+            lop: studentLop,
+            ghiChu: item.ghiChu || null,
           },
         });
+        insertedCount++;
       }
-      insertedCount++;
     }
 
-    return NextResponse.json({ count: insertedCount });
+    const classList = Array.from(affectedClasses);
+    const primaryLop = classList[0] || targetLop || "11AT3";
+
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: primaryLop,
+      action: "IMPORT",
+      target: "Student",
+      details: `Import file Excel danh sách học sinh: ${insertedCount + updatedCount} học sinh (${insertedCount} thêm mới, ${updatedCount} cập nhật) vào lớp ${classList.join(", ")}`,
+      newValue: { insertedCount, updatedCount, classes: classList },
+      req,
+      status: "SUCCESS",
+    });
+
+    return NextResponse.json({
+      success: true,
+      count: insertedCount + updatedCount,
+      insertedCount,
+      updatedCount,
+      lop: primaryLop,
+      classes: classList,
+      message: `Đã import thành công ${insertedCount + updatedCount} học sinh vào lớp ${classList.join(", ")} (${insertedCount} mới, ${updatedCount} cập nhật).`,
+    });
   } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "Lỗi xử lý file Excel" }, { status: 500 });
+    console.error("Import students error:", e);
+    const msg = e instanceof Error ? e.message : "Lỗi không xác định";
+    return NextResponse.json({ error: `Lỗi xử lý file Excel: ${msg}` }, { status: 500 });
   }
 }

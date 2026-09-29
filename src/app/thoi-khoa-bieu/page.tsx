@@ -5,12 +5,9 @@ import PublicLayout from "@/components/layout/PublicLayout";
 import {
   CalendarDays,
   Clock,
-  User,
-  BookOpen,
   Sparkles,
   Moon,
   Coffee,
-  CheckCircle2,
 } from "lucide-react";
 
 interface TimetableItem {
@@ -76,6 +73,8 @@ function PublicThoiKhoaBieuContent() {
   const [loading, setLoading] = useState(true);
   const [selectedHocKy, setSelectedHocKy] = useState("HK1");
   const [viewTab, setViewTab] = useState<"week" | "today">("week");
+  const [mobileViewMode, setMobileViewMode] = useState<"cards" | "table">("cards");
+  const [activeDayFilter, setActiveDayFilter] = useState<number | "ALL">("ALL");
 
   // Determine current day in Vietnam
   const todayDate = new Date();
@@ -114,8 +113,8 @@ function PublicThoiKhoaBieuContent() {
         style={{
           background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #06b6d4 100%)",
           borderRadius: "var(--radius-xl)",
-          padding: "30px 26px",
-          marginBottom: 22,
+          padding: "26px 24px",
+          marginBottom: 20,
           color: "white",
           position: "relative",
           overflow: "hidden",
@@ -126,23 +125,23 @@ function PublicThoiKhoaBieuContent() {
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
             <div
               style={{
-                width: 46,
-                height: 46,
+                width: 44,
+                height: 44,
                 background: "rgba(255,255,255,0.15)",
-                borderRadius: 14,
+                borderRadius: 12,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 backdropFilter: "blur(6px)",
               }}
             >
-              <Moon size={26} color="#38bdf8" />
+              <Moon size={24} color="#38bdf8" />
             </div>
             <div>
-              <h1 style={{ color: "white", fontSize: "1.45rem", margin: 0 }}>
+              <h1 style={{ color: "white", fontSize: "1.4rem", margin: 0 }}>
                 Thời Khóa Biểu Buổi Tối — Lớp {activeLop}
               </h1>
-              <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.85rem", margin: 0 }}>
+              <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem", margin: 0 }}>
                 Khung giờ học Buổi Tối: <strong>18h00 - 21h35</strong> (Bắt đầu từ ngày 07/09/2025)
               </p>
             </div>
@@ -150,24 +149,24 @@ function PublicThoiKhoaBieuContent() {
         </div>
       </div>
 
-      {/* Today's Schedule Highlight */}
+      {/* Today's Schedule Highlight Banner */}
       {currentThu >= 2 && currentThu <= 6 && todayPeriods.length > 0 && (
         <div
           className="card"
           style={{
-            padding: "18px 22px",
-            marginBottom: 20,
+            padding: "16px 20px",
+            marginBottom: 18,
             background: "linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%)",
-            border: "1px solid #86efac",
+            border: "1.5px solid #86efac",
             borderRadius: 16,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span className="badge badge-success" style={{ fontWeight: 800 }}>
                 🌟 HÔM NAY: {DAYS.find((d) => d.thu === currentThu)?.label}
               </span>
-              <span style={{ fontSize: "0.85rem", color: "#166534", fontWeight: 700 }}>
+              <span style={{ fontSize: "0.82rem", color: "#166534", fontWeight: 700 }}>
                 {todayPeriods.length} tiết học buổi tối
               </span>
             </div>
@@ -207,7 +206,7 @@ function PublicThoiKhoaBieuContent() {
         </div>
       )}
 
-      {/* Toolbar Controls */}
+      {/* Main View Tabs (Week vs Today) */}
       <div
         style={{
           display: "flex",
@@ -336,168 +335,407 @@ function PublicThoiKhoaBieuContent() {
           )}
         </div>
       ) : (
-        /* WEEKLY GRID (MATCHES USER'S EXACT EXCEL DESIGN) */
-        <div className="card" style={{ overflow: "hidden", borderRadius: 16, border: "2px solid #06b6d4" }}>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
-              <thead>
-                <tr style={{ background: "#06b6d4", color: "white" }}>
-                  <th
+        /* WEEK VIEW (MOBILE OPTIMIZED FULL-WEEK + DESKTOP TABLE) */
+        <div>
+          {/* Mobile View Switcher & Day Filters */}
+          <div className="hide-on-desktop" style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--text-primary)" }}>
+                Xem trên di động:
+              </span>
+              <div style={{ display: "flex", gap: 4, background: "var(--bg-muted)", padding: 3, borderRadius: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setMobileViewMode("cards")}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 8,
+                    border: "none",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    background: mobileViewMode === "cards" ? "white" : "transparent",
+                    color: mobileViewMode === "cards" ? "var(--primary)" : "var(--text-secondary)",
+                    boxShadow: mobileViewMode === "cards" ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+                  }}
+                >
+                  📱 Thẻ cả tuần
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileViewMode("table")}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 8,
+                    border: "none",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    background: mobileViewMode === "table" ? "white" : "transparent",
+                    color: mobileViewMode === "table" ? "var(--primary)" : "var(--text-secondary)",
+                    boxShadow: mobileViewMode === "table" ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+                  }}
+                >
+                  📊 Bảng ma trận
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Day Pills */}
+            <div className="mobile-day-tabs" style={{ marginBottom: 10 }}>
+              <button
+                type="button"
+                className={`mobile-tab-btn ${activeDayFilter === "ALL" ? "active" : ""}`}
+                onClick={() => setActiveDayFilter("ALL")}
+                style={{ fontWeight: 800 }}
+              >
+                ✨ Xem cả tuần (T2 → T6)
+              </button>
+              {DAYS.map((d) => {
+                const isToday = d.thu === currentThu;
+                return (
+                  <button
+                    key={d.thu}
+                    type="button"
+                    className={`mobile-tab-btn ${activeDayFilter === d.thu ? "active" : ""}`}
+                    onClick={() => setActiveDayFilter(d.thu)}
+                  >
+                    {d.label} {isToday ? "🌟" : ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mobile Full-Week Cards Stream */}
+          {mobileViewMode === "cards" && (
+            <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
+              {DAYS.filter((d) => activeDayFilter === "ALL" || activeDayFilter === d.thu).map((d, dIdx) => {
+                const isToday = d.thu === currentThu;
+                const dayThemes = [
+                  { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe", badge: "#dbeafe" },
+                  { bg: "#f0fdf4", text: "#15803d", border: "#bbf7d0", badge: "#dcfce7" },
+                  { bg: "#faf5ff", text: "#7e22ce", border: "#e9d5ff", badge: "#f3e8ff" },
+                  { bg: "#fffbeb", text: "#b45309", border: "#fde68a", badge: "#fef3c7" },
+                  { bg: "#fff1f2", text: "#be123c", border: "#fecdd3", badge: "#ffe4e6" },
+                ];
+                const theme = dayThemes[dIdx % dayThemes.length];
+
+                return (
+                  <div
+                    key={d.thu}
                     style={{
-                      width: 140,
-                      padding: "14px 12px",
-                      textAlign: "center",
-                      fontSize: "0.9rem",
-                      fontWeight: 800,
-                      borderRight: "1px solid rgba(255,255,255,0.3)",
+                      background: "white",
+                      borderRadius: 16,
+                      border: isToday ? "2px solid #0284c7" : `1.5px solid ${theme.border}`,
+                      boxShadow: isToday ? "0 6px 18px rgba(2, 132, 199, 0.12)" : "0 2px 8px rgba(0,0,0,0.03)",
+                      overflow: "hidden",
                     }}
                   >
-                    Tiết / Giờ học
-                  </th>
-                  {DAYS.map((d) => {
-                    const isTodayCol = d.thu === currentThu;
-                    return (
-                      <th
-                        key={d.thu}
-                        style={{
-                          padding: "14px 12px",
-                          textAlign: "center",
-                          fontSize: "1.05rem",
-                          fontWeight: 800,
-                          borderRight: "1px solid rgba(255,255,255,0.3)",
-                          background: isTodayCol ? "#0891b2" : "transparent",
-                          width: "17%",
-                        }}
-                      >
-                        {d.label} {isTodayCol ? "🌟" : ""}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {periodsList.map((tietNum) => {
-                  const isBreakTime = tietNum === 3;
-                  const timeInfo = EVENING_TIMES[tietNum];
-
-                  return (
-                    <React.Fragment key={tietNum}>
-                      {/* Giải lao sau Tiết 2 */}
-                      {isBreakTime && (
-                        <tr style={{ background: "#fef3c7", borderBottom: "1px solid #fde68a" }}>
-                          <td
-                            colSpan={6}
+                    {/* Day Header */}
+                    <div
+                      style={{
+                        padding: "10px 14px",
+                        background: isToday ? "#e0f2fe" : theme.bg,
+                        borderBottom: `1px solid ${theme.border}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontWeight: 900, fontSize: "0.95rem", color: isToday ? "#0369a1" : theme.text }}>
+                          {d.label}
+                        </span>
+                        {isToday && (
+                          <span
                             style={{
-                              padding: "8px 16px",
-                              textAlign: "center",
-                              fontSize: "0.825rem",
+                              background: "#0284c7",
+                              color: "white",
+                              fontSize: "0.65rem",
                               fontWeight: 800,
-                              color: "#b45309",
+                              padding: "1px 6px",
+                              borderRadius: 6,
+                              textTransform: "uppercase",
                             }}
                           >
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                              <Coffee size={15} />
-                              <span>GIẢI LAO: 19h20 - 19h35 (15 phút)</span>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
+                            Hôm nay
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        style={{
+                          background: theme.badge,
+                          color: theme.text,
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: 10,
+                        }}
+                      >
+                        5 tiết học buổi tối
+                      </span>
+                    </div>
 
-                      <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                        {/* Tiết / Giờ */}
-                        <td
+                    {/* Periods List for this Day */}
+                    <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: 8 }}>
+                      {periodsList.map((tietNum) => {
+                        const isBreakTime = tietNum === 3;
+                        const timeInfo = EVENING_TIMES[tietNum];
+                        const item = getPeriodItem(d.thu, tietNum);
+                        const color = item?.monHoc ? getSubjectColor(item.monHoc) : null;
+
+                        return (
+                          <React.Fragment key={tietNum}>
+                            {isBreakTime && (
+                              <div
+                                style={{
+                                  background: "#fef3c7",
+                                  border: "1px solid #fde68a",
+                                  padding: "6px 12px",
+                                  borderRadius: 8,
+                                  textAlign: "center",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 800,
+                                  color: "#b45309",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: 6,
+                                }}
+                              >
+                                <Coffee size={13} />
+                                <span>GIẢI LAO: 19h20 - 19h35 (15 phút)</span>
+                              </div>
+                            )}
+
+                            <div
+                              style={{
+                                padding: "10px 12px",
+                                borderRadius: 10,
+                                background: color ? color.bg : "#f8fafc",
+                                border: color ? `1.5px solid ${color.border}` : "1px dashed var(--border)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 10,
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    width: 38,
+                                    height: 38,
+                                    borderRadius: 8,
+                                    background: "rgba(6, 182, 212, 0.15)",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <span style={{ fontWeight: 900, fontSize: "0.9rem", color: "#0891b2", lineHeight: 1 }}>
+                                    T{tietNum}
+                                  </span>
+                                  <span style={{ fontSize: "0.58rem", color: "#475569", fontWeight: 700, marginTop: 1 }}>
+                                    {timeInfo.time.split(" - ")[0]}
+                                  </span>
+                                </div>
+
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontWeight: 800, fontSize: "0.92rem", color: color ? color.text : "var(--text-muted)" }}>
+                                    {item?.monHoc || "—"}
+                                  </div>
+                                  {item?.giaoVien && (
+                                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 1, fontWeight: 600 }}>
+                                      🧑‍🏫 GV: {item.giaoVien}
+                                    </div>
+                                  )}
+                                  <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginTop: 1 }}>
+                                    ⏱️ {timeInfo.time} ({timeInfo.duration})
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Desktop Matrix Table / Mobile Swipable Table */}
+          <div className={`card ${mobileViewMode === "cards" ? "hide-on-mobile" : ""}`} style={{ overflow: "hidden", borderRadius: 16, border: "2px solid #06b6d4" }}>
+            {mobileViewMode === "table" && (
+              <div className="hide-on-desktop" style={{ padding: "8px 14px", background: "#e0f2fe", color: "#0369a1", fontSize: "0.75rem", fontWeight: 700, textAlign: "center" }}>
+                👉 Vuốt ngang để xem đủ 5 ngày (Thứ 2 → Thứ 6)
+              </div>
+            )}
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
+                <thead>
+                  <tr style={{ background: "#06b6d4", color: "white" }}>
+                    <th
+                      style={{
+                        width: 140,
+                        padding: "14px 12px",
+                        textAlign: "center",
+                        fontSize: "0.9rem",
+                        fontWeight: 800,
+                        borderRight: "1px solid rgba(255,255,255,0.3)",
+                      }}
+                    >
+                      Tiết / Giờ học
+                    </th>
+                    {DAYS.map((d) => {
+                      const isTodayCol = d.thu === currentThu;
+                      return (
+                        <th
+                          key={d.thu}
                           style={{
-                            padding: "12px 10px",
+                            padding: "14px 12px",
                             textAlign: "center",
-                            background: "#06b6d415",
-                            borderRight: "2px solid #06b6d4",
-                            verticalAlign: "middle",
+                            fontSize: "1.05rem",
+                            fontWeight: 800,
+                            borderRight: "1px solid rgba(255,255,255,0.3)",
+                            background: isTodayCol ? "#0891b2" : "transparent",
+                            width: "17%",
                           }}
                         >
-                          <div style={{ fontWeight: 900, fontSize: "1.1rem", color: "#0891b2" }}>
-                            {tietNum}
-                          </div>
-                          <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", marginTop: 2 }}>
-                            {timeInfo.time}
-                          </div>
-                          <div style={{ fontSize: "0.68rem", color: "#64748b" }}>
-                            ({timeInfo.duration})
-                          </div>
-                        </td>
+                          {d.label} {isTodayCol ? "🌟" : ""}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {periodsList.map((tietNum) => {
+                    const isBreakTime = tietNum === 3;
+                    const timeInfo = EVENING_TIMES[tietNum];
 
-                        {/* 5 Days Columns */}
-                        {DAYS.map((d) => {
-                          const item = getPeriodItem(d.thu, tietNum);
-                          const isTodayCol = d.thu === currentThu;
+                    return (
+                      <React.Fragment key={tietNum}>
+                        {/* Giải lao sau Tiết 2 */}
+                        {isBreakTime && (
+                          <tr style={{ background: "#fef3c7", borderBottom: "1px solid #fde68a" }}>
+                            <td
+                              colSpan={6}
+                              style={{
+                                padding: "8px 16px",
+                                textAlign: "center",
+                                fontSize: "0.825rem",
+                                fontWeight: 800,
+                                color: "#b45309",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                                <Coffee size={15} />
+                                <span>GIẢI LAO: 19h20 - 19h35 (15 phút)</span>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
 
-                          if (!item || !item.monHoc) {
+                        <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                          {/* Tiết / Giờ */}
+                          <td
+                            style={{
+                              padding: "12px 10px",
+                              textAlign: "center",
+                              background: "#06b6d415",
+                              borderRight: "2px solid #06b6d4",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            <div style={{ fontWeight: 900, fontSize: "1.1rem", color: "#0891b2" }}>
+                              {tietNum}
+                            </div>
+                            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", marginTop: 2 }}>
+                              {timeInfo.time}
+                            </div>
+                            <div style={{ fontSize: "0.68rem", color: "#64748b" }}>
+                              ({timeInfo.duration})
+                            </div>
+                          </td>
+
+                          {/* 5 Days Columns */}
+                          {DAYS.map((d) => {
+                            const item = getPeriodItem(d.thu, tietNum);
+                            const isTodayCol = d.thu === currentThu;
+
+                            if (!item || !item.monHoc) {
+                              return (
+                                <td
+                                  key={d.thu}
+                                  style={{
+                                    padding: "6px",
+                                    borderRight: "1px solid var(--border)",
+                                    background: isTodayCol ? "#f0fdf420" : "white",
+                                    textAlign: "center",
+                                    color: "var(--text-muted)",
+                                    fontSize: "0.85rem",
+                                  }}
+                                >
+                                  —
+                                </td>
+                              );
+                            }
+
+                            const color = getSubjectColor(item.monHoc);
                             return (
                               <td
                                 key={d.thu}
                                 style={{
-                                  padding: "6px",
+                                  padding: "6px 8px",
                                   borderRight: "1px solid var(--border)",
-                                  background: isTodayCol ? "#f0fdf420" : "white",
-                                  textAlign: "center",
-                                  color: "var(--text-muted)",
-                                  fontSize: "0.85rem",
-                                }}
-                              >
-                                —
-                              </td>
-                            );
-                          }
-
-                          const color = getSubjectColor(item.monHoc);
-                          return (
-                            <td
-                              key={d.thu}
-                              style={{
-                                padding: "6px 8px",
-                                borderRight: "1px solid var(--border)",
-                                background: isTodayCol ? "#f0fdf430" : "white",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  background: color.bg,
-                                  border: `1px solid ${color.border}`,
-                                  borderRadius: 10,
-                                  padding: "10px 12px",
-                                  minHeight: 62,
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                  textAlign: "center",
+                                  background: isTodayCol ? "#f0fdf430" : "white",
+                                  verticalAlign: "middle",
                                 }}
                               >
                                 <div
                                   style={{
-                                    fontWeight: 800,
-                                    fontSize: "0.98rem",
-                                    color: color.text,
-                                    lineHeight: 1.2,
+                                    background: color.bg,
+                                    border: `1px solid ${color.border}`,
+                                    borderRadius: 10,
+                                    padding: "10px 12px",
+                                    minHeight: 62,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    textAlign: "center",
                                   }}
                                 >
-                                  {item.monHoc}
-                                </div>
-                                {item.giaoVien && (
-                                  <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 3, fontWeight: 600 }}>
-                                    🧑‍🏫 {item.giaoVien}
+                                  <div
+                                    style={{
+                                      fontWeight: 800,
+                                      fontSize: "0.98rem",
+                                      color: color.text,
+                                      lineHeight: 1.2,
+                                    }}
+                                  >
+                                    {item.monHoc}
                                   </div>
-                                )}
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+                                  {item.giaoVien && (
+                                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 3, fontWeight: 600 }}>
+                                      🧑‍🏫 {item.giaoVien}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

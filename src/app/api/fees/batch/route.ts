@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
+import { logActivity } from "@/lib/auditLogger";
 
 function parseMoneyAmount(val: string | number): number {
   if (typeof val === "number") return val;
@@ -79,6 +80,19 @@ export async function POST(req: NextRequest) {
       }
       count++;
     }
+
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Admin",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thủ quỹ",
+      userLop: lop,
+      action: "CREATE",
+      target: "FeeCollection",
+      details: `Thiết lập mức thu quỹ "${kyThu}" (${parsedAmount.toLocaleString("vi-VN")} đ) cho ${count} học sinh Lớp ${lop}`,
+      newValue: { lop, kyThu, soTien: parsedAmount, count },
+      req,
+      status: "SUCCESS",
+    });
 
     return NextResponse.json({
       success: true,

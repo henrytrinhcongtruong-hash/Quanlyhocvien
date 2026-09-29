@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function PUT(
   req: NextRequest,
@@ -37,6 +38,20 @@ export async function PUT(
       },
     });
 
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thủ quỹ",
+      userLop: (session as { assignedLop?: string })?.assignedLop,
+      action: "UPDATE",
+      target: "Expense",
+      targetId: expense.id,
+      details: `Cập nhật khoản chi "${expense.danhSachChi}" (${expense.thanhTien.toLocaleString("vi-VN")} đ) - Hạng mục: ${expense.hangMucChi}`,
+      newValue: expense,
+      req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json(expense);
   } catch (e) {
     console.error(e);
@@ -57,7 +72,24 @@ export async function DELETE(
     const { allowed } = await checkPermission(userId, "quy", "toan_quyen");
     if (!allowed) return NextResponse.json({ error: "Không có quyền quản lý quỹ" }, { status: 403 });
 
+    const expense = await prisma.expense.findUnique({ where: { id: Number(id) } });
+
     await prisma.expense.delete({ where: { id: Number(id) } });
+
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thủ quỹ",
+      userLop: (session as { assignedLop?: string })?.assignedLop,
+      action: "DELETE",
+      target: "Expense",
+      targetId: Number(id),
+      details: `Xóa khoản chi "${expense?.danhSachChi || id}" (${(expense?.thanhTien || 0).toLocaleString("vi-VN")} đ)`,
+      oldValue: expense,
+      req: _req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error(e);

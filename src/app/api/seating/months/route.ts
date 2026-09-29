@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function GET(req: NextRequest) {
   try {
@@ -78,6 +79,20 @@ export async function POST(req: NextRequest) {
         slogan,
         slotsData: sourceSlotsData,
       },
+    });
+
+    logActivity({
+      userId: session.user?.id ? Number(session.user.id) : null,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: currentLop,
+      action: "CREATE",
+      target: "SeatingChartMonth",
+      targetId: created.id,
+      details: `Khởi tạo sơ đồ chỗ ngồi mới cho "${targetMonth}" - Lớp ${currentLop}${copyFromMonth ? ` (sao chép từ ${copyFromMonth})` : ""}`,
+      newValue: created,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json({ success: true, data: created, message: `Đã tạo sơ đồ cho ${targetMonth}` });

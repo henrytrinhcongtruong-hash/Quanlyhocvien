@@ -38,6 +38,7 @@ export interface LogActivityParams {
   targetId?: string | number | null;
   details?: string | null;
   oldValue?: unknown;
+  previousValue?: unknown;
   newValue?: unknown;
   status?: "SUCCESS" | "FAILED" | "WARNING";
   req?: NextRequest | Request | null;
@@ -87,12 +88,13 @@ export function logActivity(params: LogActivityParams): void {
         const ip = params.ipAddress || extractClientIp(params.req);
         const ua = params.userAgent || extractUserAgent(params.req);
 
+        const rawOld = params.oldValue !== undefined ? params.oldValue : params.previousValue;
         let oldValStr: string | null = null;
-        if (params.oldValue !== undefined && params.oldValue !== null) {
+        if (rawOld !== undefined && rawOld !== null) {
           oldValStr =
-            typeof params.oldValue === "string"
-              ? params.oldValue
-              : JSON.stringify(params.oldValue);
+            typeof rawOld === "string"
+              ? rawOld
+              : JSON.stringify(rawOld);
         }
 
         let newValStr: string | null = null;

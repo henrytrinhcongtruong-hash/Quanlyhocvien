@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission, getScopeFilter } from "@/lib/permissions";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,11 +25,16 @@ export async function GET(req: NextRequest) {
 
     const where: Record<string, unknown> = {};
     if (studentId) where.studentId = Number(studentId);
-    if (ngay) where.ngay = new Date(ngay);
-    if (from || to) {
+    if (ngay) {
+      const startOfDay = new Date(ngay.length === 10 ? `${ngay}T00:00:00.000` : ngay);
+      const endOfDay = new Date(ngay.length === 10 ? `${ngay}T23:59:59.999` : ngay);
+      where.ngay = { gte: startOfDay, lte: endOfDay };
+    } else if (from || to) {
+      const fromDate = from ? new Date(from.length === 10 ? `${from}T00:00:00.000` : from) : undefined;
+      const toDate = to ? new Date(to.length === 10 ? `${to}T23:59:59.999` : to) : undefined;
       where.ngay = {
-        ...(from ? { gte: new Date(from) } : {}),
-        ...(to ? { lte: new Date(to) } : {}),
+        ...(fromDate ? { gte: fromDate } : {}),
+        ...(toDate ? { lte: toDate } : {}),
       };
     }
     if (toFilter !== null && toFilter.length > 0) {
@@ -71,7 +77,7 @@ export async function POST(req: NextRequest) {
     // Lấy thông tin tổ của học sinh
     const student = await prisma.student.findUnique({
       where: { id: Number(studentId) },
-      select: { to: true },
+      select: { id: true, hoTen: true, to: true, lop: true },
     });
     if (!student) return NextResponse.json({ error: "Không tìm thấy học sinh" }, { status: 404 });
 
@@ -98,6 +104,20 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Tổ trưởng",
+      userLop: student.lop || (session as { assignedLop?: string })?.assignedLop,
+      action: "UPDATE",
+      target: "Attendance",
+      targetId: student.id,
+      details: `Điểm danh học sinh "${student.hoTen}" (Tổ ${student.to}, Lớp ${student.lop}) ngày ${new Date(ngay).toLocaleDateString("vi-VN")}: ${loai}${ghiChu ? ` - Ghi chú: ${ghiChu}` : ""}`,
+      newValue: { studentId: student.id, ngay, loai, ghiChu },
+      req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json(attendance, { status: 201 });
   } catch (e) {
     console.error(e);
@@ -121,7 +141,27 @@ export async function DELETE(req: NextRequest) {
     const { allowed } = await checkPermission(userId, "diem_danh", "toan_quyen", record.toId);
     if (!allowed) return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
 
+    const student = await prisma.student.findUnique({
+      where: { id: record.studentId },
+      select: { hoTen: true, to: true, lop: true },
+    });
+
     await prisma.attendance.delete({ where: { id: Number(id) } });
+
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Tổ trưởng",
+      userLop: student?.lop || (session as { assignedLop?: string })?.assignedLop,
+      action: "DELETE",
+      target: "Attendance",
+      targetId: record.id,
+      details: `Xóa lượt điểm danh ngày ${new Date(record.ngay).toLocaleDateString("vi-VN")} của học sinh "${student?.hoTen || record.studentId}" (${record.loai})`,
+      oldValue: record,
+      req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error(e);

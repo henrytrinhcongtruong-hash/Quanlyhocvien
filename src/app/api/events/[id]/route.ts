@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logActivity } from "@/lib/auditLogger";
 
 // PUT /api/events/[id] - Cập nhật sự kiện
 export async function PUT(
@@ -50,6 +51,20 @@ export async function PUT(
       }
     }
 
+    logActivity({
+      userId: session.user?.id ? Number(session.user.id) : null,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: (session as { assignedLop?: string })?.assignedLop,
+      action: "UPDATE",
+      target: "Event",
+      targetId: updated.id,
+      details: `Cập nhật sự kiện "${updated.tenSuKien}" (Trạng thái: ${updated.trangThai})`,
+      newValue: updated,
+      req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("Update event error:", error);
@@ -71,9 +86,28 @@ export async function DELETE(
     const { id } = await params;
     const eventId = Number(id);
 
+    const targetEvent = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!targetEvent) {
+      return NextResponse.json({ error: "Sự kiện không tồn tại" }, { status: 404 });
+    }
+
     // Xóa thành viên sự kiện trước rồi xóa sự kiện
     await prisma.eventMember.deleteMany({ where: { eventId } });
     await prisma.event.delete({ where: { id: eventId } });
+
+    logActivity({
+      userId: session.user?.id ? Number(session.user.id) : null,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: (session as { assignedLop?: string })?.assignedLop,
+      action: "DELETE",
+      target: "Event",
+      targetId: eventId,
+      details: `Xóa sự kiện "${targetEvent.tenSuKien}" (Hạng mục: ${targetEvent.hangMuc || "Chung"})`,
+      previousValue: targetEvent,
+      req,
+      status: "SUCCESS",
+    });
 
     return NextResponse.json({ success: true, message: "Đã xóa sự kiện thành công" });
   } catch (error) {
@@ -81,3 +115,4 @@ export async function DELETE(
     return NextResponse.json({ error: "Lỗi khi xóa sự kiện" }, { status: 500 });
   }
 }
+

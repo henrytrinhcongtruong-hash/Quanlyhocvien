@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { requireSuperAdmin } from "@/lib/permissions";
 import bcrypt from "bcryptjs";
+import { logActivity } from "@/lib/auditLogger";
 
 async function checkUserManagementAccess(req: NextRequest) {
   try {
@@ -119,6 +120,20 @@ export async function PUT(
       },
     });
 
+    logActivity({
+      userId: access.session?.user?.id ? Number(access.session.user.id) : null,
+      userName: access.session?.user?.name || (access.session?.user as { username?: string })?.username || "Admin",
+      userRole: (access.session?.user as { roleLabel?: string })?.roleLabel || (access.isSuperAdmin ? "Admin Tổng" : "GVCN"),
+      userLop: user.assignedLop || access.assignedLop,
+      action: "UPDATE",
+      target: "User",
+      targetId: user.id,
+      details: `Cập nhật thông tin tài khoản "${user.hoTen}" (${user.username})`,
+      newValue: user,
+      req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json(user);
   } catch (error) {
     console.error("Update user error:", error);
@@ -160,6 +175,20 @@ export async function DELETE(
     // Xóa quyền phân quyền trước rồi xóa người dùng
     await prisma.userPermission.deleteMany({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
+
+    logActivity({
+      userId: access.session?.user?.id ? Number(access.session.user.id) : null,
+      userName: access.session?.user?.name || (access.session?.user as { username?: string })?.username || "Admin",
+      userRole: (access.session?.user as { roleLabel?: string })?.roleLabel || (access.isSuperAdmin ? "Admin Tổng" : "GVCN"),
+      userLop: targetUser.assignedLop || access.assignedLop,
+      action: "DELETE",
+      target: "User",
+      targetId: userId,
+      details: `Xóa tài khoản người dùng "${targetUser.hoTen}" (${targetUser.username})`,
+      previousValue: targetUser,
+      req,
+      status: "SUCCESS",
+    });
 
     return NextResponse.json({ success: true, message: "Đã xóa tài khoản người dùng thành công" });
   } catch (error) {

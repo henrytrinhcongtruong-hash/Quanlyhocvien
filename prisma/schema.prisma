@@ -28,6 +28,7 @@ model Student {
   feeCollections FeeCollection[]
   attendances    Attendance[]
   dutyRosters    DutyRoster[]
+  dutyPenalties  DutyPenalty[]
   eventMembers   EventMember[]
 
   @@index([to])
@@ -114,6 +115,28 @@ model DutyRoster {
 
   @@index([tuan])
   @@index([studentId])
+}
+
+// =========================================
+// DANH SÁCH VI PHẠM & PHẠT QUÉT LỚP
+// =========================================
+model DutyPenalty {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  lop       String   @default("11AT3")
+  lyDo      String   // Lý do vi phạm (Đi trễ, Nói chuyện, Không làm bài...)
+  ngay      DateTime @default(now())
+  ghiChu    String?
+  trangThai String   @default("Chưa quét") // "Chưa quét" | "Đã hoàn thành"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([lop])
+  @@index([ngay])
+  @@index([trangThai])
 }
 
 // =========================================
@@ -326,3 +349,69 @@ model ActivitySummary {
   @@unique([timeBucket])
   @@index([timeBucket])
 }
+
+// =========================================
+// ÔN THI & NGÂN HÀNG ĐỀ TRẮC NGHIỆM
+// =========================================
+model QuizSet {
+  id               Int              @id @default(autoincrement())
+  title            String           // Tên bộ đề: "Đề ôn tập Giữa Kỳ II", "Khảo sát trắc nghiệm Toán"...
+  subject          String           // "Toán Học", "Ngữ Văn", "Tiếng Anh", "Vật Lý", "Hóa Học", "Sinh Học", "Lịch Sử", "Địa Lý", "Tin Học"...
+  grade            String           @default("12") // "10" | "11" | "12"
+  lop              String           @default("ALL") // "12T2" | "12A2" | "ALL"
+  duration         Int              @default(45) // Thời gian làm bài tính bằng phút
+  description      String?          // Mô tả / hướng dẫn làm bài
+  shuffleQuestions Boolean          @default(true) // Đảo thứ tự câu hỏi
+  shuffleOptions   Boolean          @default(true) // Đảo thứ tự phương án A,B,C,D
+  isActive         Boolean          @default(true) // Trạng thái mở cho học sinh làm bài
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  questions        QuizQuestion[]
+  submissions      QuizSubmission[]
+
+  @@index([subject])
+  @@index([lop])
+  @@index([isActive])
+}
+
+model QuizQuestion {
+  id            Int      @id @default(autoincrement())
+  quizSetId     Int
+  content       String   // Nội dung câu hỏi
+  type          String   @default("MULTIPLE_CHOICE") // "MULTIPLE_CHOICE" | "TRUE_FALSE" | "SHORT_ANSWER"
+  options       String   // JSON string mảng các phương án: ["A. ...", "B. ...", "C. ...", "D. ..."]
+  correctAnswer String   // Đáp án đúng: "A", "B", "C", "D" hoặc chuỗi trả lời
+  explanation   String?  // Lời giải thích chi tiết
+  orderIndex    Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  quizSet       QuizSet  @relation(fields: [quizSetId], references: [id], onDelete: Cascade)
+
+  @@index([quizSetId])
+  @@index([orderIndex])
+}
+
+model QuizSubmission {
+  id             Int       @id @default(autoincrement())
+  quizSetId      Int
+  studentId      Int?      // Khóa ngoại liên kết bảng Student (nếu có)
+  studentName    String    // Họ tên học sinh nộp bài
+  studentClass   String    @default("12T2") // Lớp
+  score          Float     // Điểm số thang điểm 10 (VD: 8.5)
+  totalQuestions Int       // Tổng số câu hỏi
+  correctCount   Int       // Số câu làm đúng
+  answers        String    // JSON string lưu toàn bộ đáp án của học sinh
+  timeSpent      Int       // Thời gian hoàn thành tính bằng giây
+  suspiciousLogs String?   // Ghi nhận cảnh báo nếu rời tab (nếu có)
+  submittedAt    DateTime  @default(now())
+
+  quizSet        QuizSet   @relation(fields: [quizSetId], references: [id], onDelete: Cascade)
+
+  @@index([quizSetId])
+  @@index([studentId])
+  @@index([studentClass])
+  @@index([submittedAt])
+}
+

@@ -448,21 +448,26 @@ export default function AdminQuyPage() {
             Thiết lập mức thu theo từng lớp, theo dõi đóng tiền và quản lý chi tiêu
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           <button
             className="btn btn-primary btn-sm"
             onClick={() => setBatchModalOpen(true)}
             style={{ background: "linear-gradient(135deg, hsl(213,94%,44%) 0%, hsl(260,80%,58%) 100%)" }}
           >
-            <Settings2 size={14} /> Thiết lập đợt thu quỹ theo lớp
+            <Settings2 size={14} />
+            <span className="hide-on-mobile">Thiết lập đợt thu quỹ theo lớp</span>
+            <span className="hide-on-desktop">Đợt thu</span>
           </button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: "none" }} />
           <button className="btn btn-secondary btn-sm" onClick={() => fileRef.current?.click()} disabled={importing}>
             <Upload size={14} />
-            {importing ? "Đang import..." : "Import Excel"}
+            <span className="hide-on-mobile">{importing ? "Đang import..." : "Import Excel"}</span>
+            <span className="hide-on-desktop">{importing ? "..." : "Import"}</span>
           </button>
           <button className="btn btn-secondary btn-sm" onClick={() => window.open("/api/fees/export", "_blank")}>
-            <Download size={14} /> Export Báo cáo quỹ
+            <Download size={14} />
+            <span className="hide-on-mobile">Export Báo cáo quỹ</span>
+            <span className="hide-on-desktop">Export</span>
           </button>
           {activeTab === "chi" && (
             <button
@@ -488,7 +493,7 @@ export default function AdminQuyPage() {
 
       {/* KPI Cards */}
       {summary && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 22 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: 12, marginBottom: 20 }}>
           <div className="card" style={{ padding: "18px 20px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
@@ -763,105 +768,195 @@ export default function AdminQuyPage() {
                 </button>
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 40 }}>#</th>
-                      <th
-                        style={{ cursor: "pointer", userSelect: "none" }}
-                        onClick={() => {
-                          if (feeSortOrder === "default") handleSetFeeSortOrder("asc");
-                          else if (feeSortOrder === "asc") handleSetFeeSortOrder("desc");
-                          else handleSetFeeSortOrder("default");
+              <>
+                {/* Desktop Table */}
+                <div className="hide-on-mobile" style={{ overflowX: "auto" }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 40 }}>#</th>
+                        <th
+                          style={{ cursor: "pointer", userSelect: "none" }}
+                          onClick={() => {
+                            if (feeSortOrder === "default") handleSetFeeSortOrder("asc");
+                            else if (feeSortOrder === "asc") handleSetFeeSortOrder("desc");
+                            else handleSetFeeSortOrder("default");
+                          }}
+                          title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
+                        >
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <span>Họ và tên</span>
+                            {feeSortOrder === "asc" ? (
+                              <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                                <ArrowUpAZ size={12} /> A-Z
+                              </span>
+                            ) : feeSortOrder === "desc" ? (
+                              <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                                <ArrowDownAZ size={12} /> Z-A
+                              </span>
+                            ) : (
+                              <ArrowUpDown size={12} style={{ color: "var(--text-muted)" }} />
+                            )}
+                          </div>
+                        </th>
+                        <th>Lớp</th>
+                        <th>Tổ</th>
+                        <th>Kỳ thu</th>
+                        <th>Số tiền</th>
+                        <th>Hình thức</th>
+                        <th>Ngày đóng</th>
+                        <th style={{ textAlign: "center", width: 140 }}>Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredFees.map((f, idx) => {
+                        const isPaid = f.trangThai === "Đã Đóng";
+                        return (
+                          <tr key={f.id}>
+                            <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>{idx + 1}</td>
+                            <td style={{ fontWeight: 600 }}>{f.student.hoTen}</td>
+                            <td>
+                              <span className="badge badge-info" style={{ fontSize: "0.75rem", fontWeight: 700 }}>
+                                {f.student.lop}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="badge badge-neutral" style={{ fontSize: "0.75rem" }}>Tổ {f.student.to}</span>
+                            </td>
+                            <td style={{ fontWeight: 600 }}>{f.kyThu}</td>
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ fontWeight: 800, color: "var(--primary)", fontSize: "0.95rem" }}>
+                                  {formatVND(f.soTien)}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setEditingSingleFee(f);
+                                    setSingleAmount(String(f.soTien));
+                                    setSingleNote(f.ghiChu || "");
+                                  }}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    padding: "2px",
+                                    color: "var(--text-muted)",
+                                  }}
+                                  title="Chỉnh sửa số tiền cho riêng học sinh này"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                              </div>
+                            </td>
+                            <td style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>{f.hinhThucDong}</td>
+                            <td style={{ fontSize: "0.82rem" }}>{formatDate(f.ngayDong)}</td>
+                            <td style={{ textAlign: "center" }}>
+                              <button
+                                onClick={() => handleToggleFeeStatus(f)}
+                                className={`badge ${isPaid ? "badge-success" : "badge-danger"}`}
+                                style={{
+                                  cursor: "pointer", border: "none", padding: "5px 12px",
+                                  display: "inline-flex", alignItems: "center", gap: 4,
+                                }}
+                              >
+                                {isPaid ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                                {f.trangThai}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Fee Cards */}
+                <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 8px" }}>
+                  {filteredFees.map((f, idx) => {
+                    const isPaid = f.trangThai === "Đã Đóng";
+                    return (
+                      <div
+                        key={f.id}
+                        style={{
+                          padding: "12px 14px",
+                          borderRadius: 12,
+                          background: "#ffffff",
+                          border: "1px solid var(--border)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 10,
                         }}
-                        title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
                       >
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                          <span>Họ và tên</span>
-                          {feeSortOrder === "asc" ? (
-                            <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
-                              <ArrowUpAZ size={12} /> A-Z
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
+                              #{idx + 1}
                             </span>
-                          ) : feeSortOrder === "desc" ? (
-                            <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
-                              <ArrowDownAZ size={12} /> Z-A
+                            <span style={{ fontWeight: 800, fontSize: "0.92rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {f.student.hoTen}
                             </span>
-                          ) : (
-                            <ArrowUpDown size={12} style={{ color: "var(--text-muted)" }} />
-                          )}
-                        </div>
-                      </th>
-                      <th>Lớp</th>
-                      <th>Tổ</th>
-                      <th>Kỳ thu</th>
-                      <th>Số tiền</th>
-                      <th>Hình thức</th>
-                      <th>Ngày đóng</th>
-                      <th style={{ textAlign: "center", width: 140 }}>Trạng thái</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredFees.map((f, idx) => {
-                      const isPaid = f.trangThai === "Đã Đóng";
-                      return (
-                        <tr key={f.id}>
-                          <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>{idx + 1}</td>
-                          <td style={{ fontWeight: 600 }}>{f.student.hoTen}</td>
-                          <td>
-                            <span className="badge badge-info" style={{ fontSize: "0.75rem", fontWeight: 700 }}>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
+                            <span className="badge badge-info" style={{ fontSize: "0.68rem", padding: "1px 5px" }}>
                               {f.student.lop}
                             </span>
-                          </td>
-                          <td>
-                            <span className="badge badge-neutral" style={{ fontSize: "0.75rem" }}>Tổ {f.student.to}</span>
-                          </td>
-                          <td style={{ fontWeight: 600 }}>{f.kyThu}</td>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ fontWeight: 800, color: "var(--primary)", fontSize: "0.95rem" }}>
-                                {formatVND(f.soTien)}
-                              </span>
-                              <button
-                                onClick={() => {
-                                  setEditingSingleFee(f);
-                                  setSingleAmount(String(f.soTien));
-                                  setSingleNote(f.ghiChu || "");
-                                }}
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  padding: "2px",
-                                  color: "var(--text-muted)",
-                                }}
-                                title="Chỉnh sửa số tiền cho riêng học sinh này"
-                              >
-                                <Edit2 size={12} />
-                              </button>
-                            </div>
-                          </td>
-                          <td style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>{f.hinhThucDong}</td>
-                          <td style={{ fontSize: "0.82rem" }}>{formatDate(f.ngayDong)}</td>
-                          <td style={{ textAlign: "center" }}>
+                            <span className="badge badge-neutral" style={{ fontSize: "0.68rem", padding: "1px 5px" }}>
+                              T{f.student.to}
+                            </span>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                              • {f.kyThu}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                            <span style={{ fontWeight: 800, color: "var(--primary)", fontSize: "0.92rem" }}>
+                              {formatVND(f.soTien)}
+                            </span>
                             <button
-                              onClick={() => handleToggleFeeStatus(f)}
-                              className={`badge ${isPaid ? "badge-success" : "badge-danger"}`}
-                              style={{
-                                cursor: "pointer", border: "none", padding: "5px 12px",
-                                display: "inline-flex", alignItems: "center", gap: 4,
+                              onClick={() => {
+                                setEditingSingleFee(f);
+                                setSingleAmount(String(f.soTien));
+                                setSingleNote(f.ghiChu || "");
                               }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: "2px",
+                                color: "var(--text-muted)",
+                              }}
+                              title="Chỉnh sửa số tiền"
                             >
-                              {isPaid ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                              {f.trangThai}
+                              <Edit2 size={12} />
                             </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          </div>
+                        </div>
+
+                        {/* Toggle Button */}
+                        <button
+                          onClick={() => handleToggleFeeStatus(f)}
+                          className={`badge ${isPaid ? "badge-success" : "badge-danger"}`}
+                          style={{
+                            cursor: "pointer",
+                            border: "none",
+                            padding: "7px 10px",
+                            borderRadius: 8,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isPaid ? <CheckCircle size={13} /> : <XCircle size={13} />}
+                          {f.trangThai}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -909,64 +1004,143 @@ export default function AdminQuyPage() {
                 <p>Chưa có khoản chi nào</p>
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 40 }}>#</th>
-                      <th>Danh sách chi</th>
-                      <th>Hạng mục</th>
-                      <th>Số lượng</th>
-                      <th>Đơn giá</th>
-                      <th>Thành tiền</th>
-                      <th>Ngày chi</th>
-                      <th style={{ width: 90 }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredExpenses.map((exp, idx) => (
-                      <tr key={exp.id}>
-                        <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>{idx + 1}</td>
-                        <td style={{ fontWeight: 600 }}>{exp.danhSachChi}</td>
-                        <td>
-                          <span className="badge badge-neutral" style={{ fontSize: "0.75rem" }}>{exp.hangMucChi}</span>
-                        </td>
-                        <td>{exp.soLuong}</td>
-                        <td>{formatVND(exp.donGia)}</td>
-                        <td style={{ fontWeight: 700, color: "var(--danger)" }}>{formatVND(exp.thanhTien)}</td>
-                        <td style={{ fontSize: "0.85rem" }}>{formatDate(exp.ngayChi)}</td>
-                        <td>
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <button
-                              onClick={() => {
-                                setEditingExpense(exp);
-                                setExpForm({
-                                  danhSachChi: exp.danhSachChi,
-                                  hangMucChi: exp.hangMucChi,
-                                  soLuong: String(exp.soLuong),
-                                  donGia: String(exp.donGia),
-                                  ngayChi: new Date(exp.ngayChi).toISOString().split("T")[0],
-                                  ghiChu: exp.ghiChu || "",
-                                });
-                                setExpenseModalOpen(true);
-                              }}
-                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: 4 }}
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteExpense(exp.id)}
-                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", padding: 4 }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
+              <>
+                {/* Desktop Expenses Table */}
+                <div className="hide-on-mobile" style={{ overflowX: "auto" }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 40 }}>#</th>
+                        <th>Danh sách chi</th>
+                        <th>Hạng mục</th>
+                        <th>Số lượng</th>
+                        <th>Đơn giá</th>
+                        <th>Thành tiền</th>
+                        <th>Ngày chi</th>
+                        <th style={{ width: 90 }}>Thao tác</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filteredExpenses.map((exp, idx) => (
+                        <tr key={exp.id}>
+                          <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>{idx + 1}</td>
+                          <td style={{ fontWeight: 600 }}>{exp.danhSachChi}</td>
+                          <td>
+                            <span className="badge badge-neutral" style={{ fontSize: "0.75rem" }}>{exp.hangMucChi}</span>
+                          </td>
+                          <td>{exp.soLuong}</td>
+                          <td>{formatVND(exp.donGia)}</td>
+                          <td style={{ fontWeight: 700, color: "var(--danger)" }}>{formatVND(exp.thanhTien)}</td>
+                          <td style={{ fontSize: "0.85rem" }}>{formatDate(exp.ngayChi)}</td>
+                          <td>
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button
+                                onClick={() => {
+                                  setEditingExpense(exp);
+                                  setExpForm({
+                                    danhSachChi: exp.danhSachChi,
+                                    hangMucChi: exp.hangMucChi,
+                                    soLuong: String(exp.soLuong),
+                                    donGia: String(exp.donGia),
+                                    ngayChi: new Date(exp.ngayChi).toISOString().split("T")[0],
+                                    ghiChu: exp.ghiChu || "",
+                                  });
+                                  setExpenseModalOpen(true);
+                                }}
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)", padding: 4 }}
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteExpense(exp.id)}
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", padding: 4 }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Expenses Cards */}
+                <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 8px" }}>
+                  {filteredExpenses.map((exp, idx) => (
+                    <div
+                      key={exp.id}
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: 12,
+                        background: "#ffffff",
+                        border: "1px solid var(--border)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 10,
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontWeight: 800, fontSize: "0.92rem", color: "var(--text-primary)" }}>
+                          {exp.danhSachChi}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, flexWrap: "wrap" }}>
+                          <span className="badge badge-neutral" style={{ fontSize: "0.68rem", padding: "1px 5px" }}>
+                            {exp.hangMucChi}
+                          </span>
+                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                            SL: {exp.soLuong} • {formatDate(exp.ngayChi)}
+                          </span>
+                        </div>
+                        <div style={{ fontWeight: 800, color: "var(--danger)", fontSize: "0.95rem", marginTop: 4 }}>
+                          {formatVND(exp.thanhTien)}
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                        <button
+                          onClick={() => {
+                            setEditingExpense(exp);
+                            setExpForm({
+                              danhSachChi: exp.danhSachChi,
+                              hangMucChi: exp.hangMucChi,
+                              soLuong: String(exp.soLuong),
+                              donGia: String(exp.donGia),
+                              ngayChi: new Date(exp.ngayChi).toISOString().split("T")[0],
+                              ghiChu: exp.ghiChu || "",
+                            });
+                            setExpenseModalOpen(true);
+                          }}
+                          style={{
+                            background: "var(--primary-light)",
+                            border: "1px solid var(--primary-border)",
+                            borderRadius: 8,
+                            padding: "6px 8px",
+                            cursor: "pointer",
+                            color: "var(--primary)",
+                          }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteExpense(exp.id)}
+                          style={{
+                            background: "#fee2e2",
+                            border: "1px solid #fca5a5",
+                            borderRadius: 8,
+                            padding: "6px 8px",
+                            cursor: "pointer",
+                            color: "#dc2626",
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>

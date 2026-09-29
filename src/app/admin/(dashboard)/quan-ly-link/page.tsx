@@ -428,7 +428,7 @@ export default function QuanLyLinkPage() {
       </div>
 
       {/* Grid 9 Cổng Thông Tin Học Viên */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 14 }}>
         {pages.map((item) => {
           const IconComp = ICON_MAP[item.icon] || Globe;
           const baseUrl = typeof window !== "undefined" ? window.location.origin : "";

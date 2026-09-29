@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
+import { logActivity } from "@/lib/auditLogger";
 
 // GET /api/expenses - Danh sách các khoản chi
 export async function GET(req: NextRequest) {
@@ -62,6 +63,20 @@ export async function POST(req: NextRequest) {
         ngayChi: ngayChi ? new Date(ngayChi) : new Date(),
         ghiChu: ghiChu?.trim() || null,
       },
+    });
+
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thủ quỹ",
+      userLop: (session as { assignedLop?: string })?.assignedLop,
+      action: "CREATE",
+      target: "Expense",
+      targetId: expense.id,
+      details: `Thêm khoản chi "${expense.danhSachChi}" (${expense.thanhTien.toLocaleString("vi-VN")} đ) - Hạng mục: ${expense.hangMucChi}`,
+      newValue: expense,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json(expense, { status: 201 });

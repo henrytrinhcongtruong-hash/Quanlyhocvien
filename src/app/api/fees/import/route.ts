@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
 import { parseFeesFromExcel, parseExpensesFromExcel } from "@/lib/excel";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -81,6 +82,19 @@ export async function POST(req: NextRequest) {
         expenseCount++;
       }
     }
+
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: (session as { assignedLop?: string })?.assignedLop,
+      action: "IMPORT",
+      target: "FeeCollection",
+      details: `Import file Excel sổ quỹ: ${feeCount} khoản thu học sinh và ${expenseCount} khoản chi quỹ`,
+      newValue: { feeCount, expenseCount },
+      req,
+      status: "SUCCESS",
+    });
 
     return NextResponse.json({ feeCount, expenseCount });
   } catch (e) {

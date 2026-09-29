@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission } from "@/lib/permissions";
 import { getCurrentISOWeek, THU_ORDER } from "@/lib/format";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
     const rosters = await prisma.dutyRoster.findMany({
       where,
       include: {
-        student: { select: { id: true, hoTen: true, tenGoi: true, to: true, lop: true } },
+        student: { select: { id: true, hoTen: true, tenGoi: true, to: true, lop: true, ghiChu: true, gioiTinh: true } },
       },
       orderBy: { thuOrder: "asc" },
     });
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
       {
         thu: string;
         thuOrder: number;
-        items: { id: number; studentId: number; name: string; to: number; lop: string }[];
+        items: { id: number; studentId: number; name: string; to: number; lop: string; ghiChu: string | null; gioiTinh?: string | null }[];
         students: string[];
       }
     > = {};
@@ -47,12 +48,36 @@ export async function GET(req: NextRequest) {
         name: r.student.hoTen,
         to: r.student.to,
         lop: r.student.lop,
+        ghiChu: r.student.ghiChu || null,
+        gioiTinh: r.student.gioiTinh || null,
       });
       grouped[r.thu].students.push(displayName);
     }
 
     const entries = Object.values(grouped).sort((a, b) => a.thuOrder - b.thuOrder);
-    return NextResponse.json({ week, entries, raw: rosters });
+
+    // Tính tổng số ca trực tích lũy và số ca của các tuần trước (phục vụ bù ca công bằng)
+    const allDuties = await prisma.dutyRoster.findMany({
+      where: lop && lop !== "ALL" ? { student: { lop } } : {},
+      select: { studentId: true, tuan: true },
+    });
+
+    const cumulativeDutyCounts: Record<number, number> = {};
+    const priorDutyCounts: Record<number, number> = {};
+    for (const d of allDuties) {
+      cumulativeDutyCounts[d.studentId] = (cumulativeDutyCounts[d.studentId] || 0) + 1;
+      if (d.tuan !== week) {
+        priorDutyCounts[d.studentId] = (priorDutyCounts[d.studentId] || 0) + 1;
+      }
+    }
+
+    return NextResponse.json({
+      week,
+      entries,
+      raw: rosters,
+      cumulativeDutyCounts,
+      priorDutyCounts,
+    });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Lỗi server" }, { status: 500 });
@@ -85,6 +110,20 @@ export async function POST(req: NextRequest) {
         studentId: Number(studentId),
       },
       include: { student: { select: { hoTen: true, tenGoi: true, to: true, lop: true } } },
+    });
+
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Ban cán sự",
+      userLop: entry.student.lop,
+      action: "CREATE",
+      target: "DutyRoster",
+      targetId: entry.id,
+      details: `Phân công học sinh "${entry.student.hoTen}" trực nhật ${entry.thu} (Tuần ${entry.tuan})`,
+      newValue: entry,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json(entry, { status: 201 });
@@ -124,6 +163,20 @@ export async function PUT(req: NextRequest) {
       include: { student: { select: { hoTen: true, tenGoi: true, to: true, lop: true } } },
     });
 
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Ban cán sự",
+      userLop: updated.student.lop,
+      action: "UPDATE",
+      target: "DutyRoster",
+      targetId: updated.id,
+      details: `Đổi phân công học sinh "${updated.student.hoTen}" trực nhật ${updated.thu} (Tuần ${updated.tuan})`,
+      newValue: updated,
+      req,
+      status: "SUCCESS",
+    });
+
     return NextResponse.json(updated);
   } catch (e) {
     console.error(e);
@@ -147,7 +200,26 @@ export async function DELETE(req: NextRequest) {
     const lop = searchParams.get("lop");
 
     if (id) {
+      const duty = await prisma.dutyRoster.findUnique({
+        where: { id: Number(id) },
+        include: { student: { select: { hoTen: true, lop: true } } },
+      });
       await prisma.dutyRoster.delete({ where: { id: Number(id) } });
+
+      logActivity({
+        userId,
+        userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+        userRole: (session.user as { roleLabel?: string })?.roleLabel || "Ban cán sự",
+        userLop: duty?.student?.lop || (session as { assignedLop?: string })?.assignedLop,
+        action: "DELETE",
+        target: "DutyRoster",
+        targetId: Number(id),
+        details: `Xóa ca trực nhật của học sinh "${duty?.student?.hoTen || id}" (${duty?.thu || ""}, Tuần ${duty?.tuan || ""})`,
+        oldValue: duty,
+        req,
+        status: "SUCCESS",
+      });
+
       return NextResponse.json({ success: true });
     }
 
@@ -157,6 +229,19 @@ export async function DELETE(req: NextRequest) {
         deleteWhere.student = { lop };
       }
       const deleted = await prisma.dutyRoster.deleteMany({ where: deleteWhere });
+
+      logActivity({
+        userId,
+        userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+        userRole: (session.user as { roleLabel?: string })?.roleLabel || "Ban cán sự",
+        userLop: lop || (session as { assignedLop?: string })?.assignedLop,
+        action: "DELETE",
+        target: "DutyRoster",
+        details: `Xóa toàn bộ ${deleted.count} ca trực nhật Tuần ${week}${lop && lop !== "ALL" ? ` (Lớp ${lop})` : ""}`,
+        req,
+        status: "SUCCESS",
+      });
+
       return NextResponse.json({ success: true, count: deleted.count });
     }
 

@@ -45,6 +45,42 @@ function PublicSoDoLopContent() {
   const [loading, setLoading] = useState(true);
   const [exportingPdf, setExportingPdf] = useState(false);
 
+  // Responsive Scale & View Mode for Full 4-Dãy View on Mobile (Base width 920px with zero margin discrepancy)
+  const BASE_WIDTH = 920;
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const chartRef = React.useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [chartHeight, setChartHeight] = useState<number>(1240);
+  const [viewMode, setViewMode] = useState<"fit" | "zoom">("fit");
+  const [selectedStudentPopup, setSelectedStudentPopup] = useState<SeatSlotData | null>(null);
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (!containerRef.current) return;
+      const measuredWidth = containerRef.current.clientWidth;
+      if (measuredWidth > 0 && measuredWidth < BASE_WIDTH) {
+        const newScale = measuredWidth / BASE_WIDTH;
+        setScale(newScale);
+      } else {
+        setScale(1);
+      }
+
+      if (chartRef.current) {
+        setChartHeight(chartRef.current.offsetHeight || 1240);
+      }
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    const t = setTimeout(updateScale, 300);
+    const t2 = setTimeout(updateScale, 800);
+    return () => {
+      window.removeEventListener("resize", updateScale);
+      clearTimeout(t);
+      clearTimeout(t2);
+    };
+  }, [slots, loading]);
+
   // Sync class
   useEffect(() => {
     if (urlLop && urlLop !== "ALL") {
@@ -105,7 +141,7 @@ function PublicSoDoLopContent() {
       .finally(() => setLoading(false));
   }, [activeLop, selectedMonth]);
 
-  // 1-Click Direct Full-Height A4 PDF Download
+  // 1-Click Direct Full-Height A4 PDF Download with ALL 4 DÃY
   async function handleDownloadPdf() {
     const element = document.getElementById("seating-chart-print-area");
     if (!element) {
@@ -120,12 +156,27 @@ function PublicSoDoLopContent() {
       const jsPdfModule = await import("jspdf");
       const jsPDF = jsPdfModule.default;
 
+      // Temporarily remove transform on scale-box during capture
+      const scaleBox = document.getElementById("seating-chart-scale-box");
+      const prevTransform = scaleBox ? scaleBox.style.transform : "";
+      const prevPosition = scaleBox ? scaleBox.style.position : "";
+      if (scaleBox) {
+        scaleBox.style.transform = "none";
+        scaleBox.style.position = "relative";
+      }
+
       const canvas = await html2canvas(element, {
         scale: 2.5,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
+        width: 920,
       });
+
+      if (scaleBox) {
+        scaleBox.style.transform = prevTransform;
+        scaleBox.style.position = prevPosition;
+      }
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
@@ -172,44 +223,47 @@ function PublicSoDoLopContent() {
     return (
       <div
         key={slot.id}
+        onClick={() => hasStudent && setSelectedStudentPopup(slot)}
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           userSelect: "none",
           transition: "all 0.15s ease",
+          cursor: hasStudent ? "pointer" : "default",
           opacity: isDimmed ? 0.25 : 1,
           transform: isSearched ? "scale(1.06)" : isMatchingTo && filterTo !== 0 ? "scale(1.02)" : "none",
           zIndex: isSearched ? 10 : 1,
           width: "100%",
         }}
       >
-        {/* RECTANGULAR PHOTO CONTAINER (98px x 104px, Bo tròn nhẹ 4 góc) */}
+        {/* RECTANGULAR PHOTO CONTAINER (maxWidth 92px x 98px, Bo tròn nhẹ 4 góc) */}
         <div
           style={{
-            width: 98,
-            height: 104,
-            borderRadius: 14,
+            width: "100%",
+            maxWidth: 92,
+            height: 98,
+            borderRadius: 12,
             background: hasStudent ? toConfig.bg : "#ffffff",
             border: isSearched
               ? "3px solid #ef4444"
               : filterTo !== 0 && isMatchingTo
               ? `3px solid ${toConfig.border}`
               : hasStudent
-              ? `2.5px solid ${toConfig.border}`
+              ? `2px solid ${toConfig.border}`
               : "2px dashed #94a3b8",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
             boxShadow: isSearched
-              ? "0 0 14px rgba(239,68,68,0.5)"
+              ? "0 0 12px rgba(239,68,68,0.5)"
               : filterTo !== 0 && isMatchingTo
-              ? `0 0 14px ${toConfig.glow}`
+              ? `0 0 12px ${toConfig.glow}`
               : hasStudent
-              ? `0 3px 8px ${toConfig.glow}`
+              ? `0 2px 6px ${toConfig.glow}`
               : "none",
-            marginBottom: 5,
+            marginBottom: 4,
             position: "relative",
             transition: "all 0.15s ease",
           }}
@@ -234,11 +288,11 @@ function PublicSoDoLopContent() {
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 900,
-                  fontSize: "1.45rem",
+                  fontSize: "1.35rem",
                   color: toConfig.text,
                 }}
               >
-                {slot.studentName?.substring(0, 2) || <User size={32} color={toConfig.text} />}
+                {slot.studentName?.substring(0, 2) || <User size={28} color={toConfig.text} />}
               </div>
             )
           ) : (
@@ -255,10 +309,10 @@ function PublicSoDoLopContent() {
                 left: 0,
                 background: toConfig.badgeBg,
                 color: "white",
-                fontSize: "0.68rem",
+                fontSize: "0.65rem",
                 fontWeight: 900,
-                padding: "2px 7px",
-                borderRadius: "11px 0 9px 0",
+                padding: "1px 6px",
+                borderRadius: "10px 0 8px 0",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
               }}
             >
@@ -271,9 +325,9 @@ function PublicSoDoLopContent() {
         <div
           style={{
             width: "100%",
-            maxWidth: 112,
-            minHeight: 46,
-            borderRadius: 14,
+            maxWidth: 96,
+            minHeight: 42,
+            borderRadius: 10,
             border: isSearched
               ? "2px solid #ef4444"
               : filterTo !== 0 && isMatchingTo
@@ -289,21 +343,22 @@ function PublicSoDoLopContent() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "4px 6px",
+            padding: "3px 4px",
             textAlign: "center",
             boxShadow: hasStudent ? `0 2px 5px ${toConfig.glow}` : "none",
+            boxSizing: "border-box",
           }}
         >
           <span
             style={{
-              fontSize: "0.72rem",
+              fontSize: "0.7rem",
               fontWeight: 900,
               color: isSearched
                 ? "#dc2626"
                 : hasStudent
                 ? toConfig.text
                 : "#94a3b8",
-              lineHeight: 1.22,
+              lineHeight: 1.2,
               textTransform: "uppercase",
               wordBreak: "break-word",
               display: "block",
@@ -517,248 +572,454 @@ function PublicSoDoLopContent() {
         </div>
       </div>
 
-      {/* Mobile Swipe Hint Notice */}
-      <div
-        className="no-print"
-        style={{
-          background: "#f0f9ff",
-          border: "1px solid #bae6fd",
-          borderRadius: 10,
-          padding: "7px 12px",
-          marginBottom: 14,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          fontSize: "0.78rem",
-          color: "#0369a1",
-          fontWeight: 600,
-        }}
-      >
-        <span>📱 <strong>Mẹo xem điện thoại:</strong> Vuốt sang ngang ↔️ để xem trọn vẹn 2 dãy bàn (Dãy Trái & Dãy Phải) hoặc chọn lọc theo từng Tổ phía trên!</span>
-      </div>
+      {/* Mobile View Mode Toolbar (Vừa màn hình vs Phóng to) */}
+      {scale < 1 && (
+        <div
+          className="no-print"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: 14,
+            background: "#ffffff",
+            padding: "10px 14px",
+            borderRadius: 14,
+            border: "1.5px solid #e2e8f0",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <LayoutGrid size={16} color="#0284c7" />
+            <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#0f172a" }}>
+              Hiển thị: <strong>Đầy đủ 4 dãy bàn (56 chỗ)</strong>
+            </span>
+          </div>
 
-      {/* Main Seating Chart Poster wrapped in responsive horizontal scroller */}
+          <div
+            style={{
+              display: "flex",
+              background: "#f1f5f9",
+              padding: 3,
+              borderRadius: 10,
+              gap: 4,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setViewMode("fit")}
+              style={{
+                border: "none",
+                padding: "6px 12px",
+                borderRadius: 8,
+                fontSize: "0.78rem",
+                fontWeight: viewMode === "fit" ? 800 : 600,
+                background: viewMode === "fit" ? "#ffffff" : "transparent",
+                color: viewMode === "fit" ? "#0284c7" : "#64748b",
+                boxShadow: viewMode === "fit" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              📱 Vừa màn hình
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode("zoom")}
+              style={{
+                border: "none",
+                padding: "6px 12px",
+                borderRadius: 8,
+                fontSize: "0.78rem",
+                fontWeight: viewMode === "zoom" ? 800 : 600,
+                background: viewMode === "zoom" ? "#ffffff" : "transparent",
+                color: viewMode === "zoom" ? "#0284c7" : "#64748b",
+                boxShadow: viewMode === "zoom" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              🔍 Phóng to 100%
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Seating Chart Poster wrapped in responsive container */}
       {loading ? (
         <div className="skeleton" style={{ height: 600, borderRadius: 20 }} />
       ) : (
-        <div className="seating-scroll-wrapper">
+        <div
+          ref={containerRef}
+          className={viewMode === "zoom" || scale >= 1 ? "seating-scroll-wrapper" : ""}
+          style={{
+            width: "100%",
+            height: viewMode === "fit" && scale < 1 ? Math.ceil(chartHeight * scale) + 6 : "auto",
+            overflowX: viewMode === "zoom" || scale >= 1 ? "auto" : "hidden",
+            overflowY: "hidden",
+            position: "relative",
+          }}
+        >
           <div
-            id="seating-chart-print-area"
-            className="card"
+            id="seating-chart-scale-box"
             style={{
-              background: "#ffffff",
-              backgroundImage: "radial-gradient(#e2e8f0 1.2px, transparent 1.2px)",
-              backgroundSize: "22px 22px",
-              borderRadius: 22,
-              border: "2.5px solid #000000",
-              padding: "24px 22px 20px",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-              minWidth: 880,
-              maxWidth: 960,
-              margin: "0 auto",
+              transform: viewMode === "fit" && scale < 1 ? `scale(${scale})` : "none",
+              transformOrigin: "top left",
+              width: BASE_WIDTH,
+              minWidth: BASE_WIDTH,
+              maxWidth: BASE_WIDTH,
+              position: viewMode === "fit" && scale < 1 ? "absolute" : "relative",
+              left: 0,
+              top: 0,
             }}
           >
-
-
-            {/* 7 Rows Grid */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
-                const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
-                const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
-
-                return (
-                  <div
-                    key={`row-${rowNum}`}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 34px 1fr",
-                      alignItems: "center",
-                      gap: 12,
-                    }}
-                  >
-                    {/* Dãy Trái (4 cột) */}
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(4, 1fr)",
-                        gap: 10,
-                      }}
-                    >
-                      {leftSlots.map((s) => renderSeatCard(s))}
-                    </div>
-
-                    {/* Lối đi */}
-                    <div
-                      style={{
-                        textAlign: "center",
-                        fontSize: "0.72rem",
-                        fontWeight: 900,
-                        color: "#94a3b8",
-                        letterSpacing: "1px",
-                      }}
-                    >
-                      H{rowNum}
-                    </div>
-
-                    {/* Dãy Phải (4 cột) */}
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(4, 1fr)",
-                        gap: 10,
-                      }}
-                    >
-                      {rightSlots.map((s) => renderSeatCard(s))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Teacher's Desk */}
             <div
+              ref={chartRef}
+              id="seating-chart-print-area"
+              className="card"
               style={{
-                marginTop: 18,
-                display: "flex",
-                justifyContent: "flex-end",
-                paddingRight: 16,
+                background: "#ffffff",
+                backgroundImage: "radial-gradient(#e2e8f0 1.2px, transparent 1.2px)",
+                backgroundSize: "22px 22px",
+                borderRadius: 22,
+                border: "2.5px solid #000000",
+                padding: "20px 16px 18px",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+                width: BASE_WIDTH,
+                minWidth: BASE_WIDTH,
+                maxWidth: BASE_WIDTH,
+                boxSizing: "border-box",
+                margin: "0 auto",
               }}
             >
+              {/* Header 4 Dãy Bàn rõ ràng */}
               <div
                 style={{
-                  width: 320,
-                  background: "#ffffff",
-                  border: "3px solid #1e293b",
-                  borderRadius: 18,
-                  padding: "12px 20px",
-                  textAlign: "center",
-                  display: "flex",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 34px 1fr",
                   alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 4px 10px rgba(0,0,0,0.06)",
+                  gap: 12,
+                  marginBottom: 12,
+                  padding: "6px 12px",
+                  background: "#f1f5f9",
+                  borderRadius: 12,
+                  border: "1.5px solid #cbd5e1",
+                  boxSizing: "border-box",
+                }}
+              >
+                <div style={{ textAlign: "center", fontSize: "0.82rem", fontWeight: 900, color: "#0284c7", letterSpacing: "0.5px" }}>
+                  👈 DÃY 1 & DÃY 2 (Cột 1–4)
+                </div>
+                <div style={{ textAlign: "center", fontSize: "0.68rem", fontWeight: 900, color: "#64748b" }}>
+                  LỐI ĐI
+                </div>
+                <div style={{ textAlign: "center", fontSize: "0.82rem", fontWeight: 900, color: "#0284c7", letterSpacing: "0.5px" }}>
+                  👉 DÃY 3 & DÃY 4 (Cột 5–8)
+                </div>
+              </div>
+
+              {/* 7 Rows Grid - Đầy đủ 4 dãy bàn (Dãy 1-2-3-4 = 8 cột ghế) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
+                  const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
+                  const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
+
+                  return (
+                    <div
+                      key={`row-${rowNum}`}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 34px 1fr",
+                        alignItems: "center",
+                        gap: 12,
+                      }}
+                    >
+                      {/* Dãy 1 & Dãy 2 (4 cột) */}
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                          gap: 8,
+                        }}
+                      >
+                        {leftSlots.map((s) => renderSeatCard(s))}
+                      </div>
+
+                      {/* Lối đi chính ở giữa */}
+                      <div
+                        style={{
+                          textAlign: "center",
+                          fontSize: "0.72rem",
+                          fontWeight: 900,
+                          color: "#94a3b8",
+                          letterSpacing: "1px",
+                        }}
+                      >
+                        H{rowNum}
+                      </div>
+
+                      {/* Dãy 3 & Dãy 4 (4 cột) */}
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                          gap: 8,
+                        }}
+                      >
+                        {rightSlots.map((s) => renderSeatCard(s))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Teacher's Desk */}
+              <div
+                style={{
+                  marginTop: 18,
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  paddingRight: 16,
                 }}
               >
                 <div
                   style={{
-                    fontSize: "1.2rem",
-                    fontWeight: 900,
-                    color: "#1e293b",
-                    letterSpacing: "2px",
+                    width: 320,
+                    background: "#ffffff",
+                    border: "3px solid #1e293b",
+                    borderRadius: 18,
+                    padding: "12px 20px",
+                    textAlign: "center",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 10px rgba(0,0,0,0.06)",
                   }}
                 >
-                  TEACHER'S DESK
-                </div>
-              </div>
-            </div>
-
-            {/* Footer Section */}
-            <div
-              style={{
-                marginTop: 20,
-                paddingTop: 16,
-                borderTop: "2.5px solid #000000",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-end",
-                flexWrap: "wrap",
-                gap: 14,
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 280 }}>
-                <div
-                  style={{
-                    fontSize: "1.6rem",
-                    fontWeight: 900,
-                    color: "#000000",
-                    letterSpacing: "-0.5px",
-                    lineHeight: 1.1,
-                }}
-              >
-                {title}
-              </div>
-              {slogan && (
-                <div style={{ fontSize: "0.825rem", color: "#475569", fontStyle: "italic", marginTop: 4 }}>
-                  "{slogan}"
-                </div>
-              )}
-              {/* Chú thích màu sắc 4 Tổ */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#000000", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  Chú thích:
-                </span>
-                {[
-                  { to: 1, name: "Tổ 1", bg: "#e0f2fe", text: "#0369a1", border: "#38bdf8" },
-                  { to: 2, name: "Tổ 2", bg: "#dcfce7", text: "#15803d", border: "#4ade80" },
-                  { to: 3, name: "Tổ 3", bg: "#fef3c7", text: "#b45309", border: "#fcd34d" },
-                  { to: 4, name: "Tổ 4", bg: "#f3e8ff", text: "#7e22ce", border: "#c084fc" },
-                ].map((t) => (
                   <div
-                    key={t.to}
                     style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      padding: "3px 10px",
-                      borderRadius: 8,
-                      background: t.bg,
-                      border: `1.5px solid ${t.border}`,
-                      color: t.text,
-                      fontSize: "0.78rem",
-                      fontWeight: 800,
+                      fontSize: "1.2rem",
+                      fontWeight: 900,
+                      color: "#1e293b",
+                      letterSpacing: "2px",
                     }}
                   >
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: t.text,
-                      }}
-                    />
-                    {t.name}
+                    TEACHER'S DESK
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 220 }}>
-              <div
-                style={{
-                  border: "2.5px solid #000000",
-                  borderRadius: 16,
-                  padding: "6px 16px",
-                  fontSize: "0.9rem",
-                  fontWeight: 900,
-                  color: "#000000",
-                  background: "#ffffff",
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                <span>Class:</span>
-                <span style={{ color: "#0284c7" }}>{activeLop}</span>
+                </div>
               </div>
 
+              {/* Footer Section */}
               <div
                 style={{
-                  border: "2.5px solid #000000",
-                  borderRadius: 16,
-                  padding: "6px 16px",
-                  fontSize: "0.9rem",
-                  fontWeight: 900,
-                  color: "#000000",
-                  background: "#ffffff",
+                  marginTop: 20,
+                  paddingTop: 16,
+                  borderTop: "2.5px solid #000000",
                   display: "flex",
                   justifyContent: "space-between",
-                  gap: 8,
+                  alignItems: "flex-end",
+                  flexWrap: "wrap",
+                  gap: 14,
                 }}
               >
-                <span>Teacher:</span>
-                <span style={{ color: "#0284c7" }}>{gvcn}</span>
+                <div style={{ flex: 1, minWidth: 280 }}>
+                  <div
+                    style={{
+                      fontSize: "1.6rem",
+                      fontWeight: 900,
+                      color: "#000000",
+                      letterSpacing: "-0.5px",
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {title}
+                  </div>
+                  {slogan && (
+                    <div style={{ fontSize: "0.825rem", color: "#475569", fontStyle: "italic", marginTop: 4 }}>
+                      "{slogan}"
+                    </div>
+                  )}
+                  {/* Chú thích màu sắc 4 Tổ */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#000000", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      Chú thích:
+                    </span>
+                    {[
+                      { to: 1, name: "Tổ 1", bg: "#e0f2fe", text: "#0369a1", border: "#38bdf8" },
+                      { to: 2, name: "Tổ 2", bg: "#dcfce7", text: "#15803d", border: "#4ade80" },
+                      { to: 3, name: "Tổ 3", bg: "#fef3c7", text: "#b45309", border: "#fcd34d" },
+                      { to: 4, name: "Tổ 4", bg: "#f3e8ff", text: "#7e22ce", border: "#c084fc" },
+                    ].map((t) => (
+                      <div
+                        key={t.to}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "3px 10px",
+                          borderRadius: 8,
+                          background: t.bg,
+                          border: `1.5px solid ${t.border}`,
+                          color: t.text,
+                          fontSize: "0.78rem",
+                          fontWeight: 800,
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            background: t.text,
+                          }}
+                        />
+                        {t.name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 220 }}>
+                  <div
+                    style={{
+                      border: "2.5px solid #000000",
+                      borderRadius: 16,
+                      padding: "6px 16px",
+                      fontSize: "0.9rem",
+                      fontWeight: 900,
+                      color: "#000000",
+                      background: "#ffffff",
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span>Class:</span>
+                    <span style={{ color: "#0284c7" }}>{activeLop}</span>
+                  </div>
+
+                  <div
+                    style={{
+                      border: "2.5px solid #000000",
+                      borderRadius: 16,
+                      padding: "6px 16px",
+                      fontSize: "0.9rem",
+                      fontWeight: 900,
+                      color: "#000000",
+                      background: "#ffffff",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 8,
+                    }}
+                  >
+                    <span>Teacher:</span>
+                    <span style={{ color: "#0284c7" }}>{gvcn}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Student Details Popup Modal on Mobile / Click */}
+      {selectedStudentPopup && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setSelectedStudentPopup(null)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 20,
+              padding: "20px 22px",
+              maxWidth: 340,
+              width: "100%",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              border: "2px solid #e2e8f0",
+              textAlign: "center",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                width: 110,
+                height: 120,
+                borderRadius: 16,
+                margin: "0 auto 12px",
+                background: TO_COLORS[selectedStudentPopup.to || 1]?.bg || "#e0f2fe",
+                border: `3px solid ${TO_COLORS[selectedStudentPopup.to || 1]?.border || "#38bdf8"}`,
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              }}
+            >
+              {selectedStudentPopup.studentPhoto ? (
+                <img
+                  src={selectedStudentPopup.studentPhoto}
+                  alt={selectedStudentPopup.studentName || ""}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                <User size={48} color={TO_COLORS[selectedStudentPopup.to || 1]?.text || "#0369a1"} />
+              )}
+            </div>
+
+            <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#0f172a", textTransform: "uppercase", marginBottom: 6 }}>
+              {selectedStudentPopup.studentName || "Chỗ Trống"}
+            </div>
+
+            {selectedStudentPopup.studentName && (
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 14 }}>
+                <span
+                  style={{
+                    background: TO_COLORS[selectedStudentPopup.to || 1]?.badgeBg || "#0284c7",
+                    color: "white",
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    padding: "3px 10px",
+                    borderRadius: 8,
+                  }}
+                >
+                  Tổ {selectedStudentPopup.to || 1}
+                </span>
+                <span
+                  style={{
+                    background: "#f1f5f9",
+                    color: "#334155",
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    padding: "3px 10px",
+                    borderRadius: 8,
+                  }}
+                >
+                  Hàng H{selectedStudentPopup.row} • Dãy {Math.ceil(selectedStudentPopup.col / 2)} (Cột {selectedStudentPopup.col})
+                </span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              style={{ width: "100%", borderRadius: 10, padding: "8px 0", fontWeight: 700 }}
+              onClick={() => setSelectedStudentPopup(null)}
+            >
+              Đóng
+            </button>
+          </div>
         </div>
       )}
     </div>

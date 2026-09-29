@@ -7,10 +7,12 @@ import {
   Users, Plus, Search, Filter, Edit2, Trash2, Upload,
   Download, ChevronLeft, ChevronRight, X, Save, AlertCircle,
   User, CheckCircle, School, ArrowUpDown, ArrowUpAZ, ArrowDownAZ,
+  FileSpreadsheet, FileUp, Lock,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { compareVietnameseNames } from "@/lib/utils";
 import { compressImage } from "@/lib/imageUtils";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 // ==================
 // TYPES
@@ -42,7 +44,7 @@ const EMPTY_FORM: FormData = {
   hoTen: "", tenGoi: "", ngaySinh: "", gioiTinh: "Nam", to: "1", lop: "12T2", ghiChu: "", avatar: null,
 };
 
-const PER_PAGE = 20;
+const PER_PAGE = 30;
 
 // ==================
 // MAIN PAGE
@@ -51,12 +53,13 @@ export default function HocSinhPage() {
   const searchParams = useSearchParams();
   const urlLop = searchParams.get("lop");
   const { data: session } = useSession();
+  const { canEdit, loading: permsLoading } = useUserPermissions();
+  const canManageStudents = canEdit("hoc_sinh");
 
   const isSuperAdmin = !!(session as { isSuperAdmin?: boolean })?.isSuperAdmin;
   const assignedLop = (session as { assignedLop?: string })?.assignedLop || "12T2";
 
-  const [students, setStudents] = useState<Student[]>([]);
-  const [total, setTotal] = useState(0);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -100,9 +103,15 @@ export default function HocSinhPage() {
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
-  // File upload
+  // File upload & Import Modal
   const fileRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importTargetClassMode, setImportTargetClassMode] = useState<"auto" | "existing" | "new">("auto");
+  const [importSelectedClass, setImportSelectedClass] = useState("");
+  const [importNewClassName, setImportNewClassName] = useState("");
+  const [importError, setImportError] = useState("");
 
   function showToast(msg: string, type: "success" | "error" = "success") {
     setToast({ msg, type });
@@ -158,35 +167,23 @@ export default function HocSinhPage() {
   }, [urlLop, isSuperAdmin, assignedLop]);
 
   // ==================
-  // FETCH — parallel classes + students
+  // FETCH — students of active class
   // ==================
   const fetchStudents = async () => {
     setLoading(true);
     const activeClass = !isSuperAdmin ? assignedLop : filterLop;
-    const params = new URLSearchParams({
-      page: String(page),
-      perPage: String(PER_PAGE),
-    });
-    if (search) params.set("search", search);
-    if (filterTo > 0) params.set("to", String(filterTo));
+    const params = new URLSearchParams();
     if (activeClass && activeClass !== "ALL") params.set("lop", activeClass);
 
     try {
-      const [studentRes, classRes] = await Promise.all([
-        fetch(`/api/students?${params}`),
-        fetch("/api/classes"),
-      ]);
-      const [data, classData] = await Promise.all([
-        studentRes.json(), classRes.json(),
-      ]);
-      setStudents(data.data || []);
-      setTotal(data.total || 0);
-      if (classData.data && classData.data.length > 0) setClassList(classData.data);
+      const res = await fetch(`/api/students?${params.toString()}`);
+      const data = await res.json();
+      setAllStudents(data.data || []);
     } catch {
-      setStudents([]);
-      setTotal(0);
+      setAllStudents([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -196,7 +193,7 @@ export default function HocSinhPage() {
   useEffect(() => {
     fetchStudents();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, filterTo, filterLop]);
+  }, [filterLop, assignedLop, isSuperAdmin]);
 
   // ==================
   // MODAL
@@ -287,10 +284,10 @@ export default function HocSinhPage() {
       if (res.ok) {
         const savedStudent: Student = await res.json();
         if (editing) {
-          setStudents((prev) => prev.map((s) => (s.id === editing.id ? savedStudent : s)));
+          setAllStudents((prev) => prev.map((s) => (s.id === editing.id ? savedStudent : s)));
           showToast("Đã cập nhật học sinh.");
         } else {
-          setStudents((prev) => [savedStudent, ...prev]);
+          setAllStudents((prev) => [savedStudent, ...prev]);
           showToast("Đã thêm học sinh mới.");
         }
         setModalOpen(false);
@@ -311,7 +308,7 @@ export default function HocSinhPage() {
     setDeleting(true);
 
     // Optimistic UI: Remove from list in 0ms!
-    setStudents((prev) => prev.filter((s) => s.id !== targetId));
+    setAllStudents((prev) => prev.filter((s) => s.id !== targetId));
     setDeleteId(null);
     setDeleting(false);
     showToast("Đã xóa học sinh.");
@@ -328,35 +325,109 @@ export default function HocSinhPage() {
     }
   }
 
-  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImporting(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch("/api/students/import", { method: "POST", body: formData });
-    if (res.ok) {
-      const d = await res.json();
-      showToast(`Đã import ${d.count} học sinh thành công.`);
-      fetchStudents();
-    } else {
-      showToast("Import thất bại. Kiểm tra lại file Excel.", "error");
+  function openImportModal() {
+    setImportFile(null);
+    setImportError("");
+    const defaultMode = filterLop !== "ALL" ? "existing" : "auto";
+    setImportTargetClassMode(defaultMode);
+    setImportSelectedClass(filterLop !== "ALL" ? filterLop : (classList[0] || "12T2"));
+    setImportNewClassName("");
+    setImportModalOpen(true);
+  }
+
+  async function handleExecuteImport() {
+    if (!importFile) {
+      setImportError("Vui lòng chọn file Excel để import.");
+      return;
     }
-    setImporting(false);
-    if (fileRef.current) fileRef.current.value = "";
+    setImporting(true);
+    setImportError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", importFile);
+
+      let targetLop = "";
+      if (importTargetClassMode === "new") {
+        targetLop = importNewClassName.trim().toUpperCase();
+        if (!targetLop) {
+          setImportError("Vui lòng nhập tên lớp mới (ví dụ: 10A1, 11B2...).");
+          setImporting(false);
+          return;
+        }
+      } else if (importTargetClassMode === "existing") {
+        targetLop = importSelectedClass;
+      }
+
+      if (targetLop) {
+        formData.append("lop", targetLop);
+      }
+
+      const res = await fetch("/api/students/import", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success !== false) {
+        showToast(data.message || `Đã import ${data.count} học sinh thành công!`);
+        setImportModalOpen(false);
+
+        // Refresh class list & switch to newly imported class
+        const cRes = await fetch("/api/classes");
+        const cData = await cRes.json();
+        if (cData.data && cData.data.length > 0) {
+          setClassList(cData.data);
+        }
+
+        const finalClass = data.lop || targetLop;
+        if (finalClass && finalClass !== "ALL") {
+          setFilterLop(finalClass);
+        } else {
+          fetchStudents();
+        }
+      } else {
+        setImportError(data.error || "Import thất bại. Vui lòng kiểm tra lại file Excel.");
+      }
+    } catch {
+      setImportError("Lỗi kết nối máy chủ khi import.");
+    } finally {
+      setImporting(false);
+    }
   }
 
   function handleExport() {
-    window.open("/api/students/export", "_blank");
+    const activeClass = !isSuperAdmin ? assignedLop : filterLop;
+    const param = activeClass && activeClass !== "ALL" ? `?lop=${encodeURIComponent(activeClass)}` : "";
+    window.open(`/api/students/export${param}`, "_blank");
   }
 
-  const totalPages = Math.ceil(total / PER_PAGE);
-  const byTo = [1, 2, 3, 4].map((t) => students.filter((s) => s.to === t).length);
+  const byTo = [1, 2, 3, 4].map((t) => allStudents.filter((s) => s.to === t).length);
+
+  const filteredStudents = React.useMemo(() => {
+    return allStudents.filter((s) => {
+      if (filterTo > 0 && s.to !== filterTo) return false;
+      if (search.trim()) {
+        const query = search.toLowerCase().trim();
+        const matchName = s.hoTen.toLowerCase().includes(query);
+        const matchNick = s.tenGoi?.toLowerCase().includes(query);
+        if (!matchName && !matchNick) return false;
+      }
+      return true;
+    });
+  }, [allStudents, filterTo, search]);
 
   const sortedStudents = React.useMemo(() => {
-    if (sortOrder === "default") return students;
-    return [...students].sort((a, b) => compareVietnameseNames(a.hoTen, b.hoTen, sortOrder));
-  }, [students, sortOrder]);
+    if (sortOrder === "default") return filteredStudents;
+    return [...filteredStudents].sort((a, b) => compareVietnameseNames(a.hoTen, b.hoTen, sortOrder));
+  }, [filteredStudents, sortOrder]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedStudents.length / PER_PAGE));
+
+  const pagedStudents = React.useMemo(() => {
+    const start = (page - 1) * PER_PAGE;
+    return sortedStudents.slice(start, start + PER_PAGE);
+  }, [sortedStudents, page]);
 
   return (
     <div className="animate-fade-in">
@@ -386,6 +457,30 @@ export default function HocSinhPage() {
         </div>
       )}
 
+      {/* Read-only banner */}
+      {!canManageStudents && !permsLoading && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "10px 16px",
+            borderRadius: 12,
+            background: "#eff6ff",
+            border: "1px solid #bfdbfe",
+            marginBottom: 16,
+            color: "#1d4ed8",
+            fontSize: "0.85rem",
+            fontWeight: 600,
+          }}
+        >
+          <Lock size={15} color="#2563eb" style={{ flexShrink: 0 }} />
+          <span>
+            Chế độ chỉ xem: Bạn đang xem danh sách hồ sơ học sinh. Quyền thêm mới, chỉnh sửa hoặc import thuộc về Giáo Viên Chủ Nhiệm hoặc Admin.
+          </span>
+        </div>
+      )}
+
       {/* Page header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22, flexWrap: "wrap", gap: 12 }}>
         <div>
@@ -393,28 +488,36 @@ export default function HocSinhPage() {
             Quản lý học sinh {filterLop !== "ALL" ? `— Lớp ${filterLop}` : "Toàn trường"}
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
-            {total} học sinh • 4 tổ
+            {filteredStudents.length === allStudents.length
+              ? `${allStudents.length} học sinh • 4 tổ`
+              : `${filteredStudents.length} / ${allStudents.length} học sinh • 4 tổ`}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: "none" }} id="import-excel" />
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={() => fileRef.current?.click()}
-            disabled={importing}
-          >
-            <Upload size={14} />
-            {importing ? "Đang import..." : "Import Excel"}
-          </button>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          {canManageStudents && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={openImportModal}
+              disabled={importing}
+              id="btn-import-excel"
+            >
+              <Upload size={14} />
+              <span className="hide-on-mobile">Import Excel</span>
+              <span className="hide-on-desktop">Import</span>
+            </button>
+          )}
           <button className="btn btn-secondary btn-sm" onClick={handleExport}>
             <Download size={14} />
             Export
           </button>
-          <button className="btn btn-primary btn-sm" onClick={openAdd}>
-            <Plus size={14} />
-            Thêm học sinh
-          </button>
-          {filterLop !== "ALL" && (
+          {canManageStudents && (
+            <button className="btn btn-primary btn-sm" onClick={openAdd}>
+              <Plus size={14} />
+              <span className="hide-on-mobile">Thêm học sinh</span>
+              <span className="hide-on-desktop">Thêm HS</span>
+            </button>
+          )}
+          {canManageStudents && filterLop !== "ALL" && (
             <button
               className="btn btn-sm"
               style={{
@@ -433,24 +536,34 @@ export default function HocSinhPage() {
               title={`Xóa bỏ hoàn toàn lớp ${filterLop} và dữ liệu liên quan`}
             >
               <Trash2 size={14} color="#dc2626" />
-              Xóa lớp {filterLop}
+              <span className="hide-on-mobile">Xóa lớp {filterLop}</span>
+              <span className="hide-on-desktop">Xóa</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Tổng hợp theo tổ */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+      {/* Tổng hợp theo tổ - Horizontal scrollable chips on mobile */}
+      <div className="mobile-chips-bar" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {[1, 2, 3, 4].map((t, i) => (
           <div
             key={t}
             className="card"
-            style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", border: filterTo === t ? "2px solid var(--primary)" : undefined }}
+            style={{
+              padding: "7px 12px",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flexShrink: 0,
+              cursor: "pointer",
+              border: filterTo === t ? "2px solid var(--primary)" : undefined,
+              background: filterTo === t ? "var(--primary-light)" : "#ffffff",
+            }}
             onClick={() => setFilterTo(filterTo === t ? 0 : t)}
           >
-            <Users size={14} color="var(--primary)" />
-            <span style={{ fontWeight: 700, fontSize: "0.875rem" }}>Tổ {t}:</span>
-            <span style={{ fontWeight: 800, color: "var(--primary)", fontSize: "1rem" }}>{byTo[i]}</span>
+            <Users size={13} color="var(--primary)" />
+            <span style={{ fontWeight: 700, fontSize: "0.82rem" }}>Tổ {t}:</span>
+            <span style={{ fontWeight: 800, color: "var(--primary)", fontSize: "0.95rem" }}>{byTo[i]}</span>
           </div>
         ))}
       </div>
@@ -536,156 +649,318 @@ export default function HocSinhPage() {
         )}
       </div>
 
-      {/* Table */}
+      {/* Table & Mobile Cards */}
       <div className="card" style={{ overflow: "hidden" }}>
         {loading ? (
-          <div style={{ padding: 32 }}>
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="skeleton" style={{ height: 42, marginBottom: 6, borderRadius: 6 }} />
+          <div style={{ padding: 24 }}>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="skeleton" style={{ height: 48, marginBottom: 8, borderRadius: 8 }} />
             ))}
           </div>
         ) : sortedStudents.length === 0 ? (
-          <div style={{ padding: 64, textAlign: "center", color: "var(--text-muted)" }}>
+          <div style={{ padding: 48, textAlign: "center", color: "var(--text-muted)" }}>
             <Users size={40} style={{ margin: "0 auto 12px", display: "block", opacity: 0.3 }} />
             <p style={{ fontWeight: 600 }}>Không tìm thấy học sinh nào</p>
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th style={{ width: 40 }}>#</th>
-                  <th
-                    style={{ cursor: "pointer", userSelect: "none" }}
-                    onClick={() => {
-                      if (sortOrder === "default") handleSetSortOrder("asc");
-                      else if (sortOrder === "asc") handleSetSortOrder("desc");
-                      else handleSetSortOrder("default");
+          <>
+            {/* Desktop Table View */}
+            <div className="hide-on-mobile" style={{ overflowX: "auto" }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 40 }}>#</th>
+                    <th
+                      style={{ cursor: "pointer", userSelect: "none" }}
+                      onClick={() => {
+                        if (sortOrder === "default") handleSetSortOrder("asc");
+                        else if (sortOrder === "asc") handleSetSortOrder("desc");
+                        else handleSetSortOrder("default");
+                      }}
+                      title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
+                    >
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <span>Họ và tên</span>
+                        {sortOrder === "asc" ? (
+                          <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                            <ArrowUpAZ size={12} /> A-Z
+                          </span>
+                        ) : sortOrder === "desc" ? (
+                          <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
+                            <ArrowDownAZ size={12} /> Z-A
+                          </span>
+                        ) : (
+                          <ArrowUpDown size={12} style={{ color: "var(--text-muted)" }} />
+                        )}
+                      </div>
+                    </th>
+                    <th>Tên gọi</th>
+                    <th>Lớp</th>
+                    <th>Tổ</th>
+                    <th>Giới tính</th>
+                    <th>Ghi chú</th>
+                    <th style={{ width: 90 }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedStudents.map((s, idx) => {
+                    const rowNum = (page - 1) * PER_PAGE + idx + 1;
+                    return (
+                      <tr key={s.id}>
+                        <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
+                          {rowNum}
+                        </td>
+                      <td style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: "50%",
+                              background: s.avatar ? "transparent" : (s.gioiTinh === "Nữ" ? "#fce7f3" : "#e0f2fe"),
+                              color: s.gioiTinh === "Nữ" ? "#db2777" : "#0284c7",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontWeight: 800,
+                              fontSize: "0.75rem",
+                              overflow: "hidden",
+                              flexShrink: 0,
+                              border: "1px solid var(--border)",
+                            }}
+                          >
+                            {s.avatar ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={s.avatar} alt={s.hoTen} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                              s.hoTen.substring(0, 1)
+                            )}
+                          </div>
+                          <span>{s.hoTen}</span>
+                        </div>
+                      </td>
+                      <td style={{ color: "var(--text-secondary)" }}>{s.tenGoi || "—"}</td>
+                      <td>
+                        <span className="badge badge-info" style={{ fontSize: "0.75rem", fontWeight: 700 }}>
+                          {s.lop}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge badge-neutral" style={{ fontSize: "0.75rem" }}>Tổ {s.to}</span>
+                      </td>
+                      <td>
+                        <span style={{
+                          fontSize: "0.8rem", fontWeight: 600,
+                          color: s.gioiTinh === "Nữ" ? "hsl(330,70%,50%)" : "var(--info)",
+                        }}>
+                          {s.gioiTinh}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                        {s.ghiChu || "—"}
+                      </td>
+                      <td>
+                        {canManageStudents ? (
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button
+                              onClick={() => openEdit(s)}
+                              style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--primary)", display: "flex", alignItems: "center" }}
+                              title="Sửa"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteId(s.id)}
+                              style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--danger)", display: "flex", alignItems: "center" }}
+                              title="Xóa"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                            <Lock size={11} /> Chỉ xem
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards View (No horizontal scroll needed!) */}
+            <div className="hide-on-desktop" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 8px" }}>
+              {pagedStudents.map((s, idx) => {
+                const rowNum = (page - 1) * PER_PAGE + idx + 1;
+                return (
+                  <div
+                    key={s.id}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 12,
+                      background: "#ffffff",
+                      border: "1px solid var(--border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
                     }}
-                    title="Bấm để đổi chiều sắp xếp tên: A-Z -> Z-A -> Mặc định"
                   >
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <span>Họ và tên</span>
-                      {sortOrder === "asc" ? (
-                        <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
-                          <ArrowUpAZ size={12} /> A-Z
-                        </span>
-                      ) : sortOrder === "desc" ? (
-                        <span className="badge badge-primary" style={{ padding: "1px 6px", fontSize: "0.7rem" }}>
-                          <ArrowDownAZ size={12} /> Z-A
-                        </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, width: 22 }}>
+                        {rowNum}
+                      </div>
+                    {/* Avatar */}
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        background: s.avatar ? "transparent" : (s.gioiTinh === "Nữ" ? "#fce7f3" : "#e0f2fe"),
+                        color: s.gioiTinh === "Nữ" ? "#db2777" : "#0284c7",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: "0.8rem",
+                        overflow: "hidden",
+                        flexShrink: 0,
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      {s.avatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={s.avatar} alt={s.hoTen} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
-                        <ArrowUpDown size={12} style={{ color: "var(--text-muted)" }} />
+                        s.hoTen.substring(0, 1)
                       )}
                     </div>
-                  </th>
-                  <th>Tên gọi</th>
-                  <th>Lớp</th>
-                  <th>Tổ</th>
-                  <th>Giới tính</th>
-                  <th>Ghi chú</th>
-                  <th style={{ width: 90 }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedStudents.map((s, idx) => (
-                  <tr key={s.id}>
-                    <td style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
-                      {(page - 1) * PER_PAGE + idx + 1}
-                    </td>
-                    <td style={{ fontWeight: 700, color: "var(--text-primary)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div
-                          style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: "50%",
-                            background: s.avatar ? "transparent" : (s.gioiTinh === "Nữ" ? "#fce7f3" : "#e0f2fe"),
-                            color: s.gioiTinh === "Nữ" ? "#db2777" : "#0284c7",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontWeight: 800,
-                            fontSize: "0.75rem",
-                            overflow: "hidden",
-                            flexShrink: 0,
-                            border: "1px solid var(--border)",
-                          }}
-                        >
-                          {s.avatar ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={s.avatar} alt={s.hoTen} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          ) : (
-                            s.hoTen.substring(0, 1)
-                          )}
-                        </div>
-                        <span>{s.hoTen}</span>
+
+                    {/* Info */}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                        <span style={{ fontWeight: 800, fontSize: "0.9rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {s.hoTen}
+                        </span>
+                        {s.tenGoi && (
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", flexShrink: 0 }}>
+                            ({s.tenGoi})
+                          </span>
+                        )}
                       </div>
-                    </td>
-                    <td style={{ color: "var(--text-secondary)" }}>{s.tenGoi || "—"}</td>
-                    <td>
-                      <span className="badge badge-info" style={{ fontSize: "0.75rem", fontWeight: 700 }}>
-                        {s.lop}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-neutral" style={{ fontSize: "0.75rem" }}>Tổ {s.to}</span>
-                    </td>
-                    <td>
-                      <span style={{
-                        fontSize: "0.8rem", fontWeight: 600,
-                        color: s.gioiTinh === "Nữ" ? "hsl(330,70%,50%)" : "var(--info)",
-                      }}>
-                        {s.gioiTinh}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                      {s.ghiChu || "—"}
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", gap: 4 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
+                        <span className="badge badge-info" style={{ fontSize: "0.68rem", padding: "1px 5px" }}>
+                          {s.lop}
+                        </span>
+                        <span className="badge badge-neutral" style={{ fontSize: "0.68rem", padding: "1px 5px" }}>
+                          T{s.to}
+                        </span>
+                        <span style={{ fontSize: "0.7rem", fontWeight: 700, color: s.gioiTinh === "Nữ" ? "hsl(330,70%,50%)" : "var(--info)" }}>
+                          {s.gioiTinh}
+                        </span>
+                        {s.ghiChu && (
+                          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            • {s.ghiChu}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
+                    {canManageStudents ? (
+                      <>
                         <button
                           onClick={() => openEdit(s)}
-                          style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--primary)", display: "flex", alignItems: "center" }}
+                          style={{
+                            background: "var(--primary-light)",
+                            border: "1px solid var(--primary-border)",
+                            borderRadius: 8,
+                            padding: "6px 8px",
+                            cursor: "pointer",
+                            color: "var(--primary)",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
                           title="Sửa"
                         >
-                          <Edit2 size={14} />
+                          <Edit2 size={13} />
                         </button>
                         <button
                           onClick={() => setDeleteId(s.id)}
-                          style={{ background: "none", border: "none", cursor: "pointer", padding: "5px 7px", borderRadius: 6, color: "var(--danger)", display: "flex", alignItems: "center" }}
+                          style={{
+                            background: "#fee2e2",
+                            border: "1px solid #fca5a5",
+                            borderRadius: 8,
+                            padding: "6px 8px",
+                            cursor: "pointer",
+                            color: "#dc2626",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
                           title="Xóa"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={13} />
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                        <Lock size={10} /> Chỉ xem
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </>
+      )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderTop: "1px solid var(--border)" }}>
-            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-              {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, total)} / {total}
-            </span>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => setPage(page - 1)} disabled={page === 1}>
+        {/* Pagination & Footer */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 16px",
+            borderTop: "1px solid var(--border)",
+            flexWrap: "wrap",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+            {totalPages <= 1
+              ? `Tổng số: ${sortedStudents.length} học sinh`
+              : `Đang xem ${(page - 1) * PER_PAGE + 1}–${Math.min(page * PER_PAGE, sortedStudents.length)} / ${sortedStudents.length} học sinh (30 HS / trang)`}
+          </div>
+
+          {totalPages > 1 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                title="Trang trước"
+              >
                 <ChevronLeft size={14} />
               </button>
-              <span style={{ padding: "5px 12px", fontSize: "0.85rem", fontWeight: 600 }}>
+              <span style={{ padding: "4px 10px", fontSize: "0.85rem", fontWeight: 600 }}>
                 {page} / {totalPages}
               </span>
-              <button className="btn btn-secondary btn-sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                title="Trang sau"
+              >
                 <ChevronRight size={14} />
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ====== ADD/EDIT MODAL ====== */}
@@ -1012,6 +1287,312 @@ export default function HocSinhPage() {
                 disabled={deletingClass}
               >
                 {deletingClass ? "Đang xóa dữ liệu..." : `Xác nhận xóa Lớp ${classToDelete}`}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ====== IMPORT EXCEL MODAL ====== */}
+      {importModalOpen && typeof document !== "undefined" && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 16px",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            overflowY: "auto",
+          }}
+          onClick={() => !importing && setImportModalOpen(false)}
+        >
+          <div
+            style={{
+              position: "relative",
+              background: "white",
+              borderRadius: 20,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+              padding: "28px 26px",
+              width: "100%",
+              maxWidth: 520,
+              maxHeight: "calc(100vh - 40px)",
+              margin: "auto",
+              border: "1px solid var(--border)",
+              animation: "slideUp 0.2s ease-out",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, background: "rgba(16, 185, 129, 0.12)",
+                  display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981"
+                }}>
+                  <FileSpreadsheet size={24} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "var(--text)" }}>
+                    Import danh sách học sinh
+                  </h3>
+                  <p style={{ margin: "2px 0 0", fontSize: "0.825rem", color: "var(--text-muted)" }}>
+                    Hỗ trợ file Excel (.xlsx, .xls) hoặc .csv
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => !importing && setImportModalOpen(false)}
+                style={{
+                  background: "transparent", border: "none", cursor: "pointer",
+                  color: "var(--text-muted)", padding: 4, borderRadius: 6
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Step 1: Chọn lớp đích */}
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: 8, color: "var(--text)" }}>
+                1. Lớp học áp dụng
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <label style={{
+                  display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem",
+                  padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)",
+                  background: importTargetClassMode === "auto" ? "rgba(59, 130, 246, 0.05)" : "transparent",
+                  cursor: "pointer"
+                }}>
+                  <input
+                    type="radio"
+                    name="importClassMode"
+                    checked={importTargetClassMode === "auto"}
+                    onChange={() => setImportTargetClassMode("auto")}
+                  />
+                  <span><strong>Tự động nhận diện</strong> (từ cột LỚP, tên sheet hoặc tiêu đề file)</span>
+                </label>
+
+                <label style={{
+                  display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem",
+                  padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)",
+                  background: importTargetClassMode === "existing" ? "rgba(59, 130, 246, 0.05)" : "transparent",
+                  cursor: "pointer"
+                }}>
+                  <input
+                    type="radio"
+                    name="importClassMode"
+                    checked={importTargetClassMode === "existing"}
+                    onChange={() => setImportTargetClassMode("existing")}
+                  />
+                  <span>Gán vào lớp có sẵn:</span>
+                  {importTargetClassMode === "existing" && (
+                    <select
+                      className="form-control"
+                      style={{ padding: "4px 8px", fontSize: "0.85rem", width: "auto", marginLeft: "auto" }}
+                      value={importSelectedClass}
+                      onChange={(e) => setImportSelectedClass(e.target.value)}
+                    >
+                      {classList.map((c) => (
+                        <option key={c} value={c}>Lớp {c}</option>
+                      ))}
+                    </select>
+                  )}
+                </label>
+
+                <label style={{
+                  display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem",
+                  padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)",
+                  background: importTargetClassMode === "new" ? "rgba(59, 130, 246, 0.05)" : "transparent",
+                  cursor: "pointer"
+                }}>
+                  <input
+                    type="radio"
+                    name="importClassMode"
+                    checked={importTargetClassMode === "new"}
+                    onChange={() => setImportTargetClassMode("new")}
+                  />
+                  <span>Tạo lớp mới:</span>
+                  {importTargetClassMode === "new" && (
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="VD: 10A1, 11B2..."
+                      style={{ padding: "4px 8px", fontSize: "0.85rem", width: 140, marginLeft: "auto", textTransform: "uppercase" }}
+                      value={importNewClassName}
+                      onChange={(e) => setImportNewClassName(e.target.value.toUpperCase())}
+                      autoFocus
+                    />
+                  )}
+                </label>
+              </div>
+            </div>
+
+            {/* Step 2: Chọn File */}
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: 8, color: "var(--text)" }}>
+                2. Chọn file Excel danh sách
+              </label>
+
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    setImportFile(f);
+                    setImportError("");
+                  }
+                }}
+              />
+
+              {!importFile ? (
+                <div
+                  onClick={() => fileRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const f = e.dataTransfer.files?.[0];
+                    if (f) {
+                      setImportFile(f);
+                      setImportError("");
+                    }
+                  }}
+                  style={{
+                    border: "2px dashed var(--border)",
+                    borderRadius: 14,
+                    padding: "24px 16px",
+                    textAlign: "center",
+                    cursor: "pointer",
+                    background: "var(--bg-card)",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <div style={{
+                    width: 44, height: 44, borderRadius: "50%", background: "var(--primary-light)",
+                    display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px",
+                    color: "var(--primary)"
+                  }}>
+                    <FileUp size={22} />
+                  </div>
+                  <div style={{ fontWeight: 600, fontSize: "0.9rem", marginBottom: 4 }}>
+                    Bấm để chọn file hoặc kéo thả vào đây
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                    Hỗ trợ định dạng .xlsx, .xls, .csv (tối đa 5MB)
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    padding: "12px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "rgba(16, 185, 129, 0.04)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
+                    <CheckCircle size={20} color="#10b981" />
+                    <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{importFile.name}</div>
+                      <div style={{ fontSize: "0.775rem", color: "var(--text-muted)" }}>
+                        {(importFile.size / 1024).toFixed(1)} KB
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: "0.775rem", padding: "4px 8px" }}
+                    onClick={() => {
+                      setImportFile(null);
+                      if (fileRef.current) fileRef.current.value = "";
+                    }}
+                  >
+                    Chọn file khác
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Note & Template download */}
+            <div style={{
+              background: "var(--bg-subtle, #f8fafc)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: "12px 14px",
+              marginBottom: 18,
+              fontSize: "0.8rem",
+              lineHeight: 1.5,
+              color: "var(--text-muted)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+                <span style={{ fontWeight: 600, color: "var(--text)" }}>💡 Gợi ý định dạng:</span>
+                <a
+                  href="/api/students/template"
+                  download
+                  style={{
+                    color: "var(--primary)",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4
+                  }}
+                >
+                  <Download size={13} /> Tải file mẫu chuẩn (.xlsx)
+                </a>
+              </div>
+              <div>
+                Hệ thống tự động tương thích danh sách từ <strong>vnEdu, SMAS</strong>, tự động nhận diện cột Họ tên, ghép Họ và tên nếu tách riêng, và tự động chia đều 4 tổ nếu file chưa có cột Tổ.
+              </div>
+            </div>
+
+            {/* Error message */}
+            {importError && (
+              <div style={{
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 10,
+                padding: "10px 14px",
+                marginBottom: 18,
+                fontSize: "0.825rem",
+                color: "#b91c1c",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+              }}>
+                <AlertCircle size={16} color="#dc2626" style={{ flexShrink: 0, marginTop: 2 }} />
+                <span>{importError}</span>
+              </div>
+            )}
+
+            {/* Footer actions */}
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setImportModalOpen(false)}
+                disabled={importing}
+              >
+                Hủy
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleExecuteImport}
+                disabled={importing || !importFile}
+                style={{ minWidth: 140, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+              >
+                {importing ? "Đang import..." : "Bắt đầu Import"}
               </button>
             </div>
           </div>

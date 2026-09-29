@@ -1,0 +1,8 @@
+{
+  "latestVersionCode": 13,
+  "latestVersionName": "1.8.2",
+  "apkUrl": "https://quanlyhocvien-fs84.vercel.app/downloads/QuanLyHocVien_v1.8.2.apk",
+  "changelog": "• Ghi nhận đầy đủ lịch sử hoạt động cho toàn bộ cán sự (Tổ trưởng, Lớp phó, Thủ quỹ, GVCN)\n• Cố định danh sách 30 học sinh/trang và tối ưu phân trang mượt mà\n• Đồng bộ toàn diện dữ liệu thời gian thực và tối ưu hiệu năng R8",
+  "forceUpdate": false,
+  "releaseDate": "2026-09-28"
+}

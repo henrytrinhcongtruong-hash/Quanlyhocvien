@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { DEFAULT_STUDENT_PAGES } from "../route";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -62,6 +63,20 @@ export async function POST(req: NextRequest) {
         },
       });
     }
+
+    logActivity({
+      userId: session.user?.id ? Number(session.user.id) : null,
+      userName: lockedBy,
+      userRole: userRole || (isSuperAdmin ? "Admin Tổng" : "GVCN"),
+      action: shouldLock ? "LOCK_ALL_PAGES" : "UNLOCK_ALL_PAGES",
+      target: "PageLock",
+      details: shouldLock
+        ? `Khóa toàn bộ tất cả ${DEFAULT_STUDENT_PAGES.length} trang học viên: ${lockReason || "Nâng cấp toàn diện"}`
+        : `Mở khóa toàn bộ tất cả ${DEFAULT_STUDENT_PAGES.length} trang học viên`,
+      newValue: { lockAll: shouldLock, lockReason, lockUntil },
+      req,
+      status: "SUCCESS",
+    });
 
     return NextResponse.json({
       success: true,

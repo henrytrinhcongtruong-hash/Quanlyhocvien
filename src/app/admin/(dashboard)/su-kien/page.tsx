@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   Star,
@@ -19,10 +19,22 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 
+function normalizeVN(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .trim();
+}
+
 interface Student {
   id: number;
   hoTen: string;
+  tenGoi?: string | null;
   to: number;
+  lop?: string;
 }
 
 interface EventMember {
@@ -75,6 +87,30 @@ export default function AdminSuKienPage() {
   const [editing, setEditing] = useState<EventItem | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
+  const [selectedToFilter, setSelectedToFilter] = useState<number | "ALL">("ALL");
+
+  // Selected student object & filtered list for Modal
+  const selectedLeadStudentObj = useMemo(() => {
+    if (!form.leadStudentId) return null;
+    return students.find((s) => s.id === Number(form.leadStudentId));
+  }, [students, form.leadStudentId]);
+
+  const filteredModalStudents = useMemo(() => {
+    let list = students;
+    if (selectedToFilter !== "ALL") {
+      list = list.filter((s) => s.to === selectedToFilter);
+    }
+    if (!studentSearchQuery.trim()) return list;
+    const q = normalizeVN(studentSearchQuery);
+    return list.filter((s) => {
+      const nameNorm = normalizeVN(s.hoTen);
+      const nickNorm = s.tenGoi ? normalizeVN(s.tenGoi) : "";
+      const toStr = `to ${s.to}`;
+      const lopStr = s.lop ? `lop ${s.lop.toLowerCase()}` : "";
+      return nameNorm.includes(q) || nickNorm.includes(q) || toStr.includes(q) || lopStr.includes(q);
+    });
+  }, [students, studentSearchQuery, selectedToFilter]);
 
   // Delete State
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -114,6 +150,8 @@ export default function AdminSuKienPage() {
   function openAdd() {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setStudentSearchQuery("");
+    setSelectedToFilter("ALL");
     setModalOpen(true);
   }
 
@@ -129,6 +167,8 @@ export default function AdminSuKienPage() {
       trangThai: evt.trangThai || "Sắp diễn ra",
       leadStudentId: lead ? String(lead.studentId) : "",
     });
+    setStudentSearchQuery("");
+    setSelectedToFilter("ALL");
     setModalOpen(true);
   }
 
@@ -537,19 +577,211 @@ export default function AdminSuKienPage() {
               </div>
 
               <div>
-                <label className="label">Học sinh phụ trách chính (Lead)</label>
-                <select
-                  className="select"
-                  value={form.leadStudentId}
-                  onChange={(e) => setForm((f) => ({ ...f, leadStudentId: e.target.value }))}
-                >
-                  <option value="">-- Chọn học sinh phụ trách --</option>
-                  {students.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.hoTen} (Tổ {s.to})
-                    </option>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <label className="label" style={{ margin: 0 }}>Học sinh phụ trách chính (Lead)</label>
+                  {selectedLeadStudentObj ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: "0.78rem", color: "var(--primary)", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                        <CheckCircle size={13} /> {selectedLeadStudentObj.hoTen} (Tổ {selectedLeadStudentObj.to})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, leadStudentId: "" }))}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "var(--danger)",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          padding: "0 4px",
+                        }}
+                      >
+                        (Bỏ chọn)
+                      </button>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Chưa chọn</span>
+                  )}
+                </div>
+
+                {/* Ô tìm kiếm tên học sinh */}
+                <div style={{ position: "relative", marginBottom: 8 }}>
+                  <Search
+                    size={16}
+                    style={{
+                      position: "absolute",
+                      left: 12,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "var(--text-muted)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="🔍 Gõ tìm tên học sinh phụ trách (ví dụ: An, Duy, Linh, Tổ 1...)"
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                    style={{
+                      paddingLeft: 36,
+                      paddingRight: studentSearchQuery ? 34 : 12,
+                      borderRadius: 10,
+                      fontSize: "0.88rem",
+                      background: "var(--bg-muted)",
+                      width: "100%",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  {studentSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setStudentSearchQuery("")}
+                      style={{
+                        position: "absolute",
+                        right: 10,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        color: "var(--text-muted)",
+                        cursor: "pointer",
+                        padding: 2,
+                      }}
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Bộ lọc nhanh theo Tổ */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+                  {(["ALL", 1, 2, 3, 4] as const).map((toVal) => (
+                    <button
+                      key={toVal}
+                      type="button"
+                      onClick={() => setSelectedToFilter(toVal)}
+                      style={{
+                        padding: "3px 10px",
+                        borderRadius: 20,
+                        border: selectedToFilter === toVal ? "1px solid var(--primary)" : "1px solid var(--border)",
+                        background: selectedToFilter === toVal ? "var(--primary)" : "var(--bg-muted)",
+                        color: selectedToFilter === toVal ? "#ffffff" : "var(--text-secondary)",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {toVal === "ALL" ? "Tất cả tổ" : `Tổ ${toVal}`}
+                    </button>
                   ))}
-                </select>
+                </div>
+
+                {/* Danh sách học sinh cuộn mượt mà */}
+                <div
+                  style={{
+                    maxHeight: 180,
+                    overflowY: "auto",
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    padding: 6,
+                    background: "white",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                  }}
+                >
+                  {filteredModalStudents.length === 0 ? (
+                    <div style={{ padding: "20px 12px", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                      Không tìm thấy học sinh nào khớp với &ldquo;{studentSearchQuery}&rdquo;
+                    </div>
+                  ) : (
+                    filteredModalStudents.map((s) => {
+                      const isSelected = form.leadStudentId === String(s.id);
+                      const toColors: Record<number, { bg: string; text: string; border: string }> = {
+                        1: { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" },
+                        2: { bg: "#f0fdf4", text: "#15803d", border: "#bbf7d0" },
+                        3: { bg: "#fefce8", text: "#a16207", border: "#fef08a" },
+                        4: { bg: "#faf5ff", text: "#7e22ce", border: "#e9d5ff" },
+                      };
+                      const toStyle = toColors[s.to] || toColors[1];
+
+                      return (
+                        <div
+                          key={s.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setForm((f) => ({ ...f, leadStudentId: "" }));
+                            } else {
+                              setForm((f) => ({ ...f, leadStudentId: String(s.id) }));
+                            }
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "8px 12px",
+                            borderRadius: 8,
+                            cursor: "pointer",
+                            background: isSelected ? "var(--primary-light)" : "transparent",
+                            border: isSelected ? "1px solid var(--primary)" : "1px solid transparent",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = "var(--bg-muted)";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span
+                              style={{
+                                background: toStyle.bg,
+                                color: toStyle.text,
+                                border: `1px solid ${toStyle.border}`,
+                                padding: "2px 8px",
+                                borderRadius: 6,
+                                fontSize: "0.72rem",
+                                fontWeight: 800,
+                              }}
+                            >
+                              Tổ {s.to}
+                            </span>
+                            <div>
+                              <div style={{ fontWeight: isSelected ? 800 : 600, fontSize: "0.88rem", color: isSelected ? "var(--primary)" : "var(--text-primary)" }}>
+                                {s.hoTen}
+                              </div>
+                              {s.lop && (
+                                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                  Lớp {s.lop} {s.tenGoi ? `• Tên gọi: ${s.tenGoi}` : ""}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {isSelected && (
+                            <div
+                              style={{
+                                width: 22,
+                                height: 22,
+                                borderRadius: "50%",
+                                background: "var(--primary)",
+                                color: "white",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <CheckCircle size={14} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
               <div>

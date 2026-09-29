@@ -18,7 +18,9 @@ export function middleware(req: NextRequest) {
   const isStaticAsset =
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
-    pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|css|js|woff|woff2|ttf)$/);
+    pathname.startsWith("/downloads/") ||
+    pathname === "/app-version.json" ||
+    pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|css|js|woff|woff2|ttf|json|apk)$/);
 
   if (isAuthPage || isApi || isStaticAsset) {
     return NextResponse.next();

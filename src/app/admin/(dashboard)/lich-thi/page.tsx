@@ -452,13 +452,14 @@ export default function LichThiAdminPage() {
           </div>
           <button className="btn btn-primary btn-sm" onClick={openAdd}>
             <Plus size={14} />
-            Thêm lịch thi mới
+            <span className="hide-on-mobile">Thêm lịch thi mới</span>
+            <span className="hide-on-desktop">Thêm</span>
           </button>
         </div>
       </div>
 
       {/* Metrics Bar */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: 12, marginBottom: 20 }}>
         <div className="card" style={{ padding: "16px 18px", borderLeft: "4px solid var(--primary)" }}>
           <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
             Tổng số bài thi & KT
@@ -574,7 +575,7 @@ export default function LichThiAdminPage() {
 
       {/* Content Rendering */}
       {loading ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))", gap: 14 }}>
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="skeleton" style={{ height: 200, borderRadius: 14 }} />
           ))}
@@ -592,7 +593,7 @@ export default function LichThiAdminPage() {
         </div>
       ) : viewMode === "cards" ? (
         /* CARDS GRID VIEW */
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))", gap: 14 }}>
           {filteredExams.map((item) => {
             const color = getSubjectColor(item.monHoc);
             return (

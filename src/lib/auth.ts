@@ -3,6 +3,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/auditLogger";
 
 // Ensure auth secret exists with robust fallback
 const authSecret =
@@ -70,6 +71,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (user && user.isActive) {
             const isValid = await bcrypt.compare(pwd, user.passwordHash);
             if (isValid) {
+              logActivity({
+                userId: user.id,
+                userName: user.hoTen,
+                userRole: user.roleLabel || "Thành viên",
+                userLop: user.assignedLop || "12T2",
+                action: "LOGIN",
+                target: "Auth",
+                targetId: user.id,
+                details: `Tài khoản "${user.hoTen}" (${user.roleLabel || "Thành viên"}, Lớp ${user.assignedLop || "12T2"}) đăng nhập thành công`,
+                status: "SUCCESS",
+              });
               return {
                 id: String(user.id),
                 name: user.hoTen,
@@ -83,6 +95,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           // Fallback verify for core admin account if hash differs
           if (uname === "admin" && pwd === "admin123") {
+            logActivity({
+              userId: 1,
+              userName: "Admin Hệ Thống",
+              userRole: "Admin Tổng",
+              userLop: "12T2",
+              action: "LOGIN",
+              target: "Auth",
+              targetId: 1,
+              details: `Quản trị viên "Admin Hệ Thống" đăng nhập thành công vào hệ thống`,
+              status: "SUCCESS",
+            });
             return {
               id: "1",
               name: "Admin Hệ Thống",
@@ -93,11 +116,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             };
           }
 
+          logActivity({
+            userName: uname,
+            userRole: "Guest",
+            action: "LOGIN",
+            target: "Auth",
+            details: `Đăng nhập thất bại: Tài khoản "${uname}" sai mật khẩu hoặc đã bị khóa`,
+            status: "FAILED",
+          });
+
           return null;
         } catch (err) {
           console.error("Auth DB Error:", err);
           // Failsafe fallback for core admin if DB is transiently unreachable
           if (uname === "admin" && pwd === "admin123") {
+            logActivity({
+              userId: 1,
+              userName: "Admin Hệ Thống",
+              userRole: "Admin Tổng",
+              userLop: "12T2",
+              action: "LOGIN",
+              target: "Auth",
+              targetId: 1,
+              details: `Quản trị viên "Admin Hệ Thống" đăng nhập qua kênh dự phòng`,
+              status: "SUCCESS",
+            });
             return {
               id: "1",
               name: "Admin Hệ Thống",

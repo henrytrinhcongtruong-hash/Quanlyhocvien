@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { checkPermission, getScopeFilter } from "@/lib/permissions";
+import { logActivity } from "@/lib/auditLogger";
 
 export async function GET(req: NextRequest) {
   try {
@@ -82,6 +83,20 @@ export async function POST(req: NextRequest) {
           : undefined,
       },
       include: { members: { include: { student: { select: { hoTen: true, to: true } } } } },
+    });
+
+    logActivity({
+      userId,
+      userName: session.user.name || (session.user as { username?: string })?.username || "Thành viên",
+      userRole: (session.user as { roleLabel?: string })?.roleLabel || "Thành viên",
+      userLop: (session as { assignedLop?: string })?.assignedLop,
+      action: "CREATE",
+      target: "Event",
+      targetId: event.id,
+      details: `Tạo sự kiện mới "${event.tenSuKien}" (Hạng mục: ${event.hangMuc || "Chung"})`,
+      newValue: event,
+      req,
+      status: "SUCCESS",
     });
 
     return NextResponse.json(event, { status: 201 });
