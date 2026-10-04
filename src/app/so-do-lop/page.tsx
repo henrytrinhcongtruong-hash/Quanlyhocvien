@@ -37,6 +37,12 @@ function PublicSoDoLopContent() {
   const [monthList, setMonthList] = useState<string[]>(["Tháng 09/2025"]);
   const [filterTo, setFilterTo] = useState<number>(0); // 0 = All, 1, 2, 3, 4
   const [slots, setSlots] = useState<SeatSlotData[]>([]);
+  const totalRows = React.useMemo(() => {
+    return Math.max(7, ...slots.map((s) => s.row || 0));
+  }, [slots]);
+  const rowsList = React.useMemo(() => {
+    return Array.from({ length: totalRows }, (_, i) => i + 1);
+  }, [totalRows]);
   const [students, setStudents] = useState<{ id: number; hoTen: string; to: number }[]>([]);
   const [title, setTitle] = useState("SƠ ĐỒ LỚP 12T2");
   const [gvcn, setGvcn] = useState("KIM LIÊN");
@@ -113,13 +119,12 @@ function PublicSoDoLopContent() {
           const studentsList = chartData.students || [];
           setStudents(studentsList);
           let loadedSlots: SeatSlotData[] = chartData.chart.slots || [];
-          if (loadedSlots.length < 56) {
-            const empty = generateEmptySlots();
-            loadedSlots = empty.map((e) => {
-              const found = loadedSlots.find((l) => l.row === e.row && l.col === e.col);
-              return found || e;
-            });
-          }
+          const maxRow = Math.max(7, ...loadedSlots.map((s) => s.row || 0));
+          const empty = generateEmptySlots(maxRow);
+          loadedSlots = empty.map((e) => {
+            const found = loadedSlots.find((l) => l.row === e.row && l.col === e.col);
+            return found || e;
+          });
 
           // Backfill 'to' from students list if available
           loadedSlots = loadedSlots.map((s) => {
@@ -593,7 +598,7 @@ function PublicSoDoLopContent() {
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <LayoutGrid size={16} color="#0284c7" />
             <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#0f172a" }}>
-              Hiển thị: <strong>Đầy đủ 4 dãy bàn (56 chỗ)</strong>
+              Hiển thị: <strong>Đầy đủ 4 dãy bàn ({slots.length} chỗ • {totalRows} hàng)</strong>
             </span>
           </div>
 
@@ -720,9 +725,9 @@ function PublicSoDoLopContent() {
                 </div>
               </div>
 
-              {/* 7 Rows Grid - Đầy đủ 4 dãy bàn (Dãy 1-2-3-4 = 8 cột ghế) */}
+              {/* Rows Grid - Đầy đủ 4 dãy bàn (Dãy 1-2-3-4 = 8 cột ghế, linh hoạt số hàng) */}
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
+                {rowsList.map((rowNum) => {
                   const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
                   const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
 

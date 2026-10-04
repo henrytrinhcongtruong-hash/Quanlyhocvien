@@ -30,11 +30,12 @@ export const TO_THEMES: Record<
   4: { name: "Tổ 4", bg: "#f3e8ff", text: "#7e22ce", border: "#c084fc", glow: "rgba(147, 51, 234, 0.35)", badgeBg: "#9333ea" },
 };
 
-// 56 slots trống hoàn toàn (2 dãy đều 7 hàng x 4 cột = 28 chỗ mỗi dãy)
-export function generateEmptySlots(): SeatSlotData[] {
+// Khởi tạo slots trống (mặc định 7 hàng x 8 cột = 56 chỗ, hỗ trợ tùy biến 8, 9... hàng ngang)
+export function generateEmptySlots(totalRows: number = 7): SeatSlotData[] {
   const slots: SeatSlotData[] = [];
+  const rows = Math.max(1, totalRows);
 
-  for (let r = 1; r <= 7; r++) {
+  for (let r = 1; r <= rows; r++) {
     // Dãy Trái (Cột 1 -> 4)
     for (let c = 1; c <= 4; c++) {
       slots.push({

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -9,6 +9,9 @@ import {
   Upload,
   User,
   Plus,
+  Minus,
+  PlusCircle,
+  MinusCircle,
   Trash2,
   Save,
   Printer,
@@ -71,6 +74,16 @@ export default function AdminSoDoLopPage() {
   const [gvcn, setGvcn] = useState("KIM LIÊN");
   const [slogan, setSlogan] = useState("12T2 – CÙNG NHAU VƯỢT VŨ MÔN, CÙNG NHAU CHIẾN THẮNG! 100% ĐẬU TỐT NGHIỆP – WE ARE WINNERS! 🏆");
   const [slots, setSlots] = useState<SeatSlotData[]>([]);
+
+  // Số hàng ghế linh hoạt (tối thiểu 7 hàng, tự động mở rộng theo slots data e.g. 8, 9 hàng...)
+  const totalRows = useMemo(() => {
+    if (!slots || slots.length === 0) return 7;
+    return Math.max(7, ...slots.map((s) => s.row || 0));
+  }, [slots]);
+
+  const rowsList = useMemo(() => {
+    return Array.from({ length: totalRows }, (_, i) => i + 1);
+  }, [totalRows]);
   const [students, setStudents] = useState<StudentOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -191,13 +204,12 @@ export default function AdminSoDoLopPage() {
         setStudents(loadedStudents);
 
         let loadedSlots: SeatSlotData[] = chartData.chart.slots || [];
-        if (loadedSlots.length < 56) {
-          const empty = generateEmptySlots();
-          loadedSlots = empty.map((e) => {
-            const found = loadedSlots.find((l) => l.row === e.row && l.col === e.col);
-            return found || e;
-          });
-        }
+        const maxRow = Math.max(7, ...loadedSlots.map((s) => s.row || 0));
+        const empty = generateEmptySlots(maxRow);
+        loadedSlots = empty.map((e) => {
+          const found = loadedSlots.find((l) => l.row === e.row && l.col === e.col);
+          return found || e;
+        });
 
         // Backfill 'to' from student list if available
         loadedSlots = loadedSlots.map((s) => {
@@ -287,13 +299,13 @@ export default function AdminSoDoLopPage() {
 
   // Clear all seats to blank
   async function handleClearAllSlots() {
-    if (!confirm(`Bạn có chắc muốn LÀM TRỐNG TOÀN BỘ 56 vị trí chỗ ngồi của Lớp ${selectedLop} (${selectedMonth}) không?`)) return;
+    if (!confirm(`Bạn có chắc muốn LÀM TRỐNG TOÀN BỘ ${slots.length} vị trí chỗ ngồi (${totalRows} hàng) của Lớp ${selectedLop} (${selectedMonth}) không?`)) return;
     setClearing(true);
     try {
-      const empty = generateEmptySlots();
+      const empty = generateEmptySlots(totalRows);
       setSlots(empty);
       await handleSaveChart(empty);
-      showToast("Đã làm trống toàn bộ sơ đồ 56 chỗ ngồi");
+      showToast(`Đã làm trống toàn bộ sơ đồ (${empty.length} chỗ ngồi)`);
     } catch {
       showToast("Lỗi làm trống sơ đồ", "error");
     } finally {
@@ -601,33 +613,103 @@ export default function AdminSoDoLopPage() {
     showToast("Đã để trống vị trí");
   }
 
+  // ====== DYNAMIC ROWS MANAGEMENT (THÊM / BỚT HÀNG NGANG) ======
+  function handleAddRow() {
+    const nextRow = totalRows + 1;
+    const newSlots: SeatSlotData[] = [];
+
+    // Dãy Trái (Cột 1 -> 4)
+    for (let c = 1; c <= 4; c++) {
+      newSlots.push({
+        id: `slot-r${nextRow}-c${c}`,
+        row: nextRow,
+        col: c,
+        block: "left",
+        studentName: null,
+        studentPhoto: null,
+        to: null,
+      });
+    }
+
+    // Dãy Phải (Cột 5 -> 8)
+    for (let c = 5; c <= 8; c++) {
+      newSlots.push({
+        id: `slot-r${nextRow}-c${c}`,
+        row: nextRow,
+        col: c,
+        block: "right",
+        studentName: null,
+        studentPhoto: null,
+        to: null,
+      });
+    }
+
+    const updated = [...slots, ...newSlots];
+    setSlots(updated);
+    handleSaveChart(updated);
+    showToast(`Đã thêm Hàng ${nextRow} thành công (Tổng cộng: ${nextRow} hàng, ${updated.length} chỗ)!`);
+  }
+
+  function handleRemoveLastRow() {
+    if (totalRows <= 7) {
+      showToast("Sơ đồ lớp duy trì tối thiểu 7 hàng ghế tiêu chuẩn", "error");
+      return;
+    }
+
+    const lastRow = totalRows;
+    const occupiedInLastRow = slots.filter((s) => s.row === lastRow && (s.studentName || s.studentId));
+
+    if (occupiedInLastRow.length > 0) {
+      const names = occupiedInLastRow.map((s) => s.studentName).filter(Boolean).join(", ");
+      if (!confirm(`Hàng ${lastRow} hiện đang có ${occupiedInLastRow.length} học sinh ngồi (${names}). Bạn có chắc chắn muốn xóa Hàng ${lastRow} không?`)) {
+        return;
+      }
+    } else {
+      if (!confirm(`Bạn có chắc muốn xóa Hàng ${lastRow} (8 chỗ ngồi) không?`)) {
+        return;
+      }
+    }
+
+    const updated = slots.filter((s) => s.row !== lastRow);
+    setSlots(updated);
+    handleSaveChart(updated);
+    showToast(`Đã xóa Hàng ${lastRow} thành công (Còn lại: ${lastRow - 1} hàng, ${updated.length} chỗ)!`);
+  }
+
   // ====== ROTATION TOOLS ======
   function handleRotateRows() {
-    if (!confirm("Bạn có muốn xoay vòng các hàng ghế (Dời tiến 1 hàng cho cả 2 dãy) không?")) return;
+    if (!confirm(`Bạn có muốn xoay vòng ${totalRows} hàng ghế (Dời tiến 1 hàng cho cả 2 dãy) không?`)) return;
 
     setSlots((prev) => {
       const newSlots = [...prev];
+      const maxR = Math.max(7, ...newSlots.map((s) => s.row || 0));
+      const rowNumbers = Array.from({ length: maxR }, (_, i) => i + 1);
+
       for (let c = 1; c <= 8; c++) {
-        const colSeats = [1, 2, 3, 4, 5, 6, 7].map((r) => newSlots.find((s) => s.row === r && s.col === c)!);
-        const lastSeat = { ...colSeats[6] };
-        for (let r = 6; r >= 1; r--) {
-          const prevSeat = colSeats[r - 1];
-          colSeats[r].studentName = prevSeat.studentName;
-          colSeats[r].studentPhoto = prevSeat.studentPhoto;
-          colSeats[r].studentId = prevSeat.studentId;
-          colSeats[r].to = prevSeat.to;
+        const colSeats = rowNumbers.map((r) => newSlots.find((s) => s.row === r && s.col === c));
+        if (colSeats.some((s) => !s)) continue;
+
+        const lastSeat = { ...colSeats[maxR - 1]! };
+        for (let r = maxR - 1; r >= 1; r--) {
+          const curr = colSeats[r]!;
+          const prevSeat = colSeats[r - 1]!;
+          curr.studentName = prevSeat.studentName;
+          curr.studentPhoto = prevSeat.studentPhoto;
+          curr.studentId = prevSeat.studentId;
+          curr.to = prevSeat.to;
         }
-        colSeats[0].studentName = lastSeat.studentName;
-        colSeats[0].studentPhoto = lastSeat.studentPhoto;
-        colSeats[0].studentId = lastSeat.studentId;
-        colSeats[0].to = lastSeat.to;
+        const first = colSeats[0]!;
+        first.studentName = lastSeat.studentName;
+        first.studentPhoto = lastSeat.studentPhoto;
+        first.studentId = lastSeat.studentId;
+        first.to = lastSeat.to;
       }
 
       handleSaveChart(newSlots);
       return newSlots;
     });
 
-    showToast("Đã xoay vòng 7 hàng ghế thành công!");
+    showToast(`Đã xoay vòng ${totalRows} hàng ghế thành công!`);
   }
 
   function handleSwapBlocks() {
@@ -635,7 +717,8 @@ export default function AdminSoDoLopPage() {
 
     setSlots((prev) => {
       const newSlots = [...prev];
-      for (let r = 1; r <= 7; r++) {
+      const maxR = Math.max(7, ...newSlots.map((s) => s.row || 0));
+      for (let r = 1; r <= maxR; r++) {
         for (let i = 0; i < 4; i++) {
           const leftSeat = newSlots.find((s) => s.row === r && s.col === 1 + i);
           const rightSeat = newSlots.find((s) => s.row === r && s.col === 5 + i);
@@ -1027,7 +1110,7 @@ export default function AdminSoDoLopPage() {
               Sơ Đồ Lớp Học — Lớp {selectedLop}
             </h1>
             <p style={{ color: "var(--text-muted)", fontSize: "0.78rem", margin: "2px 0 0" }}>
-              56 chỗ • Kéo thả / Chạm để đổi vị trí
+              {slots.length} chỗ ({totalRows} hàng ngang) • Kéo thả / Chạm để đổi vị trí
             </p>
           </div>
         </div>
@@ -1159,12 +1242,47 @@ export default function AdminSoDoLopPage() {
         </div>
 
         {/* Quick Rotation Buttons */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          {/* Nút Thêm / Bớt Hàng Ngang */}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{
+              fontSize: "0.78rem",
+              padding: "4px 9px",
+              color: "#0284c7",
+              borderColor: "#bae6fd",
+              background: "#f0f9ff",
+              fontWeight: 700,
+            }}
+            onClick={handleAddRow}
+            title={`Thêm hàng ngang mới (Hàng ${totalRows + 1})`}
+          >
+            <PlusCircle size={13} /> Thêm hàng ({totalRows + 1})
+          </button>
+          {totalRows > 7 && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              style={{
+                fontSize: "0.78rem",
+                padding: "4px 8px",
+                color: "#e11d48",
+                borderColor: "#fecdd3",
+                background: "#fff1f2",
+              }}
+              onClick={handleRemoveLastRow}
+              title={`Xóa hàng ghế cuối cùng (Hàng ${totalRows})`}
+            >
+              <MinusCircle size={13} /> Bớt hàng ({totalRows})
+            </button>
+          )}
+
           <button
             className="btn btn-secondary btn-sm"
             style={{ fontSize: "0.78rem", padding: "4px 8px" }}
             onClick={handleRotateRows}
-            title="Dời tiến 7 hàng ghế 1 bậc"
+            title={`Dời tiến ${totalRows} hàng ghế 1 bậc`}
           >
             <RotateCw size={12} /> Xoay hàng
           </button>
@@ -1217,7 +1335,7 @@ export default function AdminSoDoLopPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <LayoutGrid size={16} color="#0284c7" />
             <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#0f172a" }}>
-              Hiển thị: <strong>Đầy đủ 4 dãy bàn (56 chỗ)</strong>
+              Hiển thị: <strong>Đầy đủ 4 dãy bàn ({slots.length} chỗ • {totalRows} hàng)</strong>
             </span>
             {selectedSlotForSwap && (
               <span style={{ color: "#0284c7", fontWeight: 800, fontSize: "0.78rem", marginLeft: 8 }}>
@@ -1346,9 +1464,9 @@ export default function AdminSoDoLopPage() {
               </div>
             </div>
 
-            {/* Main 7 Rows Grid Layout - Đầy đủ 4 dãy bàn (Dãy 1-2-3-4 = 8 cột ghế) */}
+            {/* Main Rows Grid Layout - Đầy đủ 4 dãy bàn (Dãy 1-2-3-4 = 8 cột ghế, linh hoạt số hàng) */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {[1, 2, 3, 4, 5, 6, 7].map((rowNum) => {
+              {rowsList.map((rowNum) => {
                 const leftSlots = slots.filter((s) => s.row === rowNum && s.block === "left");
                 const rightSlots = slots.filter((s) => s.row === rowNum && s.block === "right");
 
@@ -1399,6 +1517,102 @@ export default function AdminSoDoLopPage() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Thanh công cụ Thêm / Bớt Hàng Ngang trực tiếp dưới sơ đồ */}
+            <div
+              className="no-print"
+              style={{
+                marginTop: 14,
+                marginBottom: 4,
+                padding: "10px 14px",
+                background: "#f8fafc",
+                borderRadius: 14,
+                border: "1.5px dashed #cbd5e1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span
+                  style={{
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    color: "#334155",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <LayoutGrid size={15} color="#0284c7" />
+                  Quy mô lớp: <strong>{totalRows} hàng ngang</strong> ({slots.length} chỗ ngồi)
+                </span>
+                {totalRows > 7 && (
+                  <span
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      color: "#0284c7",
+                      background: "#e0f2fe",
+                      padding: "2px 8px",
+                      borderRadius: 10,
+                    }}
+                  >
+                    +{totalRows - 7} hàng mở rộng
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {totalRows > 7 && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveLastRow}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                      padding: "6px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #fecdd3",
+                      background: "#fff1f2",
+                      color: "#e11d48",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    title={`Xóa hàng ${totalRows}`}
+                  >
+                    <Trash2 size={13} /> Xóa Hàng {totalRows}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleAddRow}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "6px 14px",
+                    borderRadius: 8,
+                    border: "1px solid #0284c7",
+                    background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
+                    color: "#ffffff",
+                    fontSize: "0.78rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 6px rgba(2,132,199,0.3)",
+                    transition: "all 0.15s ease",
+                  }}
+                  title={`Thêm hàng ngang thứ ${totalRows + 1} (8 bàn)`}
+                >
+                  <PlusCircle size={14} /> + Thêm Hàng Ngang (Hàng {totalRows + 1})
+                </button>
+              </div>
             </div>
 
             {/* ========================================================= */}

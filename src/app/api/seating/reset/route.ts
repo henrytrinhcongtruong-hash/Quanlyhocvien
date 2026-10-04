@@ -15,11 +15,21 @@ export async function POST(req: NextRequest) {
     const lop = searchParams.get("lop") || "12T2";
     const month = searchParams.get("month") || "Tháng 09/2025";
 
-    const emptySlots = generateEmptySlots();
-
     const existing = await prisma.seatingChart.findFirst({
       where: { lop, month },
     });
+
+    let currentRows = 7;
+    if (existing?.slotsData) {
+      try {
+        const parsed = JSON.parse(existing.slotsData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          currentRows = Math.max(7, ...parsed.map((s: { row?: number }) => s.row || 0));
+        }
+      } catch {}
+    }
+
+    const emptySlots = generateEmptySlots(currentRows);
 
     if (existing) {
       await prisma.seatingChart.update({
@@ -48,12 +58,12 @@ export async function POST(req: NextRequest) {
       userLop: lop,
       action: "UPDATE",
       target: "SeatingChart",
-      details: `Làm trống toàn bộ sơ đồ 56 chỗ ngồi Lớp ${lop} (${month})`,
+      details: `Làm trống toàn bộ sơ đồ ${emptySlots.length} chỗ ngồi (${currentRows} hàng) Lớp ${lop} (${month})`,
       req,
       status: "SUCCESS",
     });
 
-    return NextResponse.json({ success: true, message: "Đã làm trống toàn bộ sơ đồ 56 chỗ ngồi" });
+    return NextResponse.json({ success: true, message: `Đã làm trống toàn bộ sơ đồ ${emptySlots.length} chỗ ngồi (${currentRows} hàng)` });
   } catch (error) {
     console.error("Reset seating chart error:", error);
     return NextResponse.json({ error: "Lỗi làm trống sơ đồ" }, { status: 500 });
