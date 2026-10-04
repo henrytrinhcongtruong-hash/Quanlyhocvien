@@ -614,40 +614,33 @@ export default function AdminSoDoLopPage() {
   }
 
   // ====== DYNAMIC ROWS MANAGEMENT (THÊM / BỚT HÀNG NGANG) ======
+  // Quy ước: Hàng 1 = hàng SÁT BÀN GIÁO VIÊN (dưới cùng), hàng cuối = xa bàn GV nhất (trên cùng).
+  // Dữ liệu lưu: row nhỏ = hiển thị ở trên cùng. Nhãn hiển thị = totalRows - row + 1.
   function handleAddRow() {
-    const nextRow = totalRows + 1;
+    const newLabel = totalRows + 1;
+    // Hàng mới nằm trên cùng (storage row 1) → đẩy các hàng cũ xuống 1 bậc, nhãn hiển thị của chúng giữ nguyên
+    const shifted: SeatSlotData[] = slots.map((s) => {
+      const r = (s.row || 0) + 1;
+      return { ...s, row: r, id: `slot-r${r}-c${s.col}` };
+    });
     const newSlots: SeatSlotData[] = [];
-
-    // Dãy Trái (Cột 1 -> 4)
-    for (let c = 1; c <= 4; c++) {
+    for (let c = 1; c <= 8; c++) {
       newSlots.push({
-        id: `slot-r${nextRow}-c${c}`,
-        row: nextRow,
+        id: `slot-r1-c${c}`,
+        row: 1,
         col: c,
-        block: "left",
+        block: c <= 4 ? "left" : "right",
         studentName: null,
         studentPhoto: null,
         to: null,
       });
     }
 
-    // Dãy Phải (Cột 5 -> 8)
-    for (let c = 5; c <= 8; c++) {
-      newSlots.push({
-        id: `slot-r${nextRow}-c${c}`,
-        row: nextRow,
-        col: c,
-        block: "right",
-        studentName: null,
-        studentPhoto: null,
-        to: null,
-      });
-    }
-
-    const updated = [...slots, ...newSlots];
+    const updated = [...newSlots, ...shifted];
     setSlots(updated);
+    setSelectedSlotForSwap(null);
     handleSaveChart(updated);
-    showToast(`Đã thêm Hàng ${nextRow} thành công (Tổng cộng: ${nextRow} hàng, ${updated.length} chỗ)!`);
+    showToast(`Đã thêm Hàng ${newLabel} (xa bàn giáo viên nhất) – Tổng cộng ${newLabel} hàng, ${updated.length} chỗ!`);
   }
 
   function handleRemoveLastRow() {
@@ -656,24 +649,30 @@ export default function AdminSoDoLopPage() {
       return;
     }
 
-    const lastRow = totalRows;
-    const occupiedInLastRow = slots.filter((s) => s.row === lastRow && (s.studentName || s.studentId));
+    const lastLabel = totalRows; // Hàng xa bàn GV nhất = storage row 1 (trên cùng)
+    const occupiedInLastRow = slots.filter((s) => s.row === 1 && (s.studentName || s.studentId));
 
     if (occupiedInLastRow.length > 0) {
       const names = occupiedInLastRow.map((s) => s.studentName).filter(Boolean).join(", ");
-      if (!confirm(`Hàng ${lastRow} hiện đang có ${occupiedInLastRow.length} học sinh ngồi (${names}). Bạn có chắc chắn muốn xóa Hàng ${lastRow} không?`)) {
+      if (!confirm(`Hàng ${lastLabel} hiện đang có ${occupiedInLastRow.length} học sinh ngồi (${names}). Bạn có chắc chắn muốn xóa Hàng ${lastLabel} không?`)) {
         return;
       }
     } else {
-      if (!confirm(`Bạn có chắc muốn xóa Hàng ${lastRow} (8 chỗ ngồi) không?`)) {
+      if (!confirm(`Bạn có chắc muốn xóa Hàng ${lastLabel} (8 chỗ ngồi) không?`)) {
         return;
       }
     }
 
-    const updated = slots.filter((s) => s.row !== lastRow);
+    const updated: SeatSlotData[] = slots
+      .filter((s) => s.row !== 1)
+      .map((s) => {
+        const r = (s.row || 0) - 1;
+        return { ...s, row: r, id: `slot-r${r}-c${s.col}` };
+      });
     setSlots(updated);
+    setSelectedSlotForSwap(null);
     handleSaveChart(updated);
-    showToast(`Đã xóa Hàng ${lastRow} thành công (Còn lại: ${lastRow - 1} hàng, ${updated.length} chỗ)!`);
+    showToast(`Đã xóa Hàng ${lastLabel} thành công (Còn lại: ${lastLabel - 1} hàng, ${updated.length} chỗ)!`);
   }
 
   // ====== ROTATION TOOLS ======
@@ -1464,6 +1463,8 @@ export default function AdminSoDoLopPage() {
               </div>
             </div>
 
+            {/* Wrapper: thanh Thêm/Bớt hàng hiển thị PHÍA TRÊN sơ đồ vì hàng mới nằm ở trên cùng (xa bàn GV) */}
+            <div style={{ display: "flex", flexDirection: "column" }}>
             {/* Main Rows Grid Layout - Đầy đủ 4 dãy bàn (Dãy 1-2-3-4 = 8 cột ghế, linh hoạt số hàng) */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {rowsList.map((rowNum) => {
@@ -1501,7 +1502,7 @@ export default function AdminSoDoLopPage() {
                         letterSpacing: "1px",
                       }}
                     >
-                      H{rowNum}
+                      H{totalRows - rowNum + 1}
                     </div>
 
                     {/* Dãy 3 & Dãy 4 (4 cột bàn) */}
@@ -1519,12 +1520,14 @@ export default function AdminSoDoLopPage() {
               })}
             </div>
 
-            {/* Thanh công cụ Thêm / Bớt Hàng Ngang trực tiếp dưới sơ đồ */}
+            {/* Thanh công cụ Thêm / Bớt Hàng Ngang (hiển thị phía trên sơ đồ) */}
             <div
               className="no-print"
+              data-html2canvas-ignore="true"
               style={{
-                marginTop: 14,
-                marginBottom: 4,
+                order: -1,
+                marginTop: 0,
+                marginBottom: 14,
                 padding: "10px 14px",
                 background: "#f8fafc",
                 borderRadius: 14,
@@ -1613,6 +1616,7 @@ export default function AdminSoDoLopPage() {
                   <PlusCircle size={14} /> + Thêm Hàng Ngang (Hàng {totalRows + 1})
                 </button>
               </div>
+            </div>
             </div>
 
             {/* ========================================================= */}
@@ -1814,7 +1818,7 @@ export default function AdminSoDoLopPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 10, flexShrink: 0 }}>
               <div>
                 <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "#0284c7" }}>
-                  Xếp chỗ: Hàng {editSlotModal.row} — {editSlotModal.block === "left" ? "Dãy Trái" : "Dãy Phải"} (Cột {editSlotModal.col})
+                  Xếp chỗ: Hàng {totalRows - editSlotModal.row + 1} — {editSlotModal.block === "left" ? "Dãy Trái" : "Dãy Phải"} (Cột {editSlotModal.col})
                 </h3>
                 <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", margin: 0, marginTop: 2 }}>
                   Chọn học sinh, lọc theo Tổ hoặc tải ảnh đại diện

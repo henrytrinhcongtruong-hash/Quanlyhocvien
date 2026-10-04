@@ -762,7 +762,7 @@ function PublicSoDoLopContent() {
                           letterSpacing: "1px",
                         }}
                       >
-                        H{rowNum}
+                        H{totalRows - rowNum + 1}
                       </div>
 
                       {/* Dãy 3 & Dãy 4 (4 cột) */}
@@ -1011,7 +1011,7 @@ function PublicSoDoLopContent() {
                     borderRadius: 8,
                   }}
                 >
-                  Hàng H{selectedStudentPopup.row} • Dãy {Math.ceil(selectedStudentPopup.col / 2)} (Cột {selectedStudentPopup.col})
+                  Hàng H{totalRows - selectedStudentPopup.row + 1} • Dãy {Math.ceil(selectedStudentPopup.col / 2)} (Cột {selectedStudentPopup.col})
                 </span>
               </div>
             )}
