@@ -96,6 +96,7 @@ export default function AdminSoDoLopPage() {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const chartRef = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [leftOffset, setLeftOffset] = useState(0);
   const [chartHeight, setChartHeight] = useState(1240);
   const [viewMode, setViewMode] = useState<"fit" | "zoom">("fit");
 
@@ -104,10 +105,16 @@ export default function AdminSoDoLopPage() {
       if (!containerRef.current) return;
       const measuredWidth = containerRef.current.clientWidth;
       if (measuredWidth > 0 && measuredWidth < BASE_WIDTH) {
-        const newScale = measuredWidth / BASE_WIDTH;
+        // Dự phòng 2px để không bị cọ viền hoặc lệch sang một bên
+        const safeWidth = Math.max(0, measuredWidth - 2);
+        const newScale = safeWidth / BASE_WIDTH;
+        const actualWidth = BASE_WIDTH * newScale;
+        const offset = Math.max(0, (measuredWidth - actualWidth) / 2);
         setScale(newScale);
+        setLeftOffset(offset);
       } else {
         setScale(1);
+        setLeftOffset(0);
       }
 
       if (chartRef.current) {
@@ -117,8 +124,8 @@ export default function AdminSoDoLopPage() {
 
     updateScale();
     window.addEventListener("resize", updateScale);
-    const t = setTimeout(updateScale, 300);
-    const t2 = setTimeout(updateScale, 800);
+    const t = setTimeout(updateScale, 150);
+    const t2 = setTimeout(updateScale, 600);
     return () => {
       window.removeEventListener("resize", updateScale);
       clearTimeout(t);
@@ -1357,7 +1364,7 @@ export default function AdminSoDoLopPage() {
             minWidth: BASE_WIDTH,
             maxWidth: BASE_WIDTH,
             position: viewMode === "fit" && scale < 1 ? "absolute" : "relative",
-            left: 0,
+            left: viewMode === "fit" && scale < 1 ? leftOffset : 0,
             top: 0,
           }}
         >

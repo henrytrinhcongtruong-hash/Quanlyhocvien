@@ -137,6 +137,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
         }}
       >
         <div
+          className="public-header-content"
           style={{
             maxWidth: 1400,
             margin: "0 auto",
@@ -587,7 +588,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content or Maintenance Screen */}
-      <main style={{ flex: 1, padding: "20px 24px" }}>
+      <main className="public-main" style={{ flex: 1 }}>
         {pageLockInfo?.isLocked && !isSuperAdmin && !userRole.toLowerCase().includes("gvcn") && !userRole.toLowerCase().includes("admin") ? (
           <MaintenanceScreen
             pageTitle={pageLockInfo.title || "Trang này"}
@@ -621,6 +622,22 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
       </footer>
 
       <style>{`
+        .public-main {
+          padding: 20px 24px;
+          width: 100%;
+          max-width: 100vw;
+          overflow-x: hidden;
+          box-sizing: border-box;
+        }
+        @media (max-width: 768px) {
+          .public-main {
+            padding: 12px 10px !important;
+          }
+          .public-header-content {
+            padding: 0 12px !important;
+            height: 54px !important;
+          }
+        }
         @media (max-width: 1100px) {
           .desktop-nav { display: none !important; }
           .mobile-menu-btn { display: flex !important; }

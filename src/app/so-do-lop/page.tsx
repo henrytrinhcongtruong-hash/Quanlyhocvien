@@ -57,6 +57,7 @@ function PublicSoDoLopContent() {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const chartRef = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [leftOffset, setLeftOffset] = useState(0);
   const [chartHeight, setChartHeight] = useState<number>(1240);
   const [viewMode, setViewMode] = useState<"fit" | "zoom">("fit");
   const [selectedStudentPopup, setSelectedStudentPopup] = useState<SeatSlotData | null>(null);
@@ -66,10 +67,16 @@ function PublicSoDoLopContent() {
       if (!containerRef.current) return;
       const measuredWidth = containerRef.current.clientWidth;
       if (measuredWidth > 0 && measuredWidth < BASE_WIDTH) {
-        const newScale = measuredWidth / BASE_WIDTH;
+        // Dự phòng 2px để không bị cắt pixel mép viền trên mobile
+        const safeWidth = Math.max(0, measuredWidth - 2);
+        const newScale = safeWidth / BASE_WIDTH;
+        const actualWidth = BASE_WIDTH * newScale;
+        const offset = Math.max(0, (measuredWidth - actualWidth) / 2);
         setScale(newScale);
+        setLeftOffset(offset);
       } else {
         setScale(1);
+        setLeftOffset(0);
       }
 
       if (chartRef.current) {
@@ -79,8 +86,8 @@ function PublicSoDoLopContent() {
 
     updateScale();
     window.addEventListener("resize", updateScale);
-    const t = setTimeout(updateScale, 300);
-    const t2 = setTimeout(updateScale, 800);
+    const t = setTimeout(updateScale, 150);
+    const t2 = setTimeout(updateScale, 600);
     return () => {
       window.removeEventListener("resize", updateScale);
       clearTimeout(t);
@@ -429,7 +436,7 @@ function PublicSoDoLopContent() {
                   Sơ Đồ Chỗ Ngồi Lớp {activeLop}
                 </h1>
                 <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.78rem", margin: "2px 0 0" }}>
-                  56 chỗ • 4 Tổ • Phân bố trực quan
+                  {slots.length} chỗ ({totalRows} hàng ngang) • 4 Tổ • Phân bố trực quan
                 </p>
               </div>
             </div>
@@ -639,7 +646,7 @@ function PublicSoDoLopContent() {
               minWidth: BASE_WIDTH,
               maxWidth: BASE_WIDTH,
               position: viewMode === "fit" && scale < 1 ? "absolute" : "relative",
-              left: 0,
+              left: viewMode === "fit" && scale < 1 ? leftOffset : 0,
               top: 0,
             }}
           >
