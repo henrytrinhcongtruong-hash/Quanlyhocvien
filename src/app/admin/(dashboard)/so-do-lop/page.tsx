@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
+import { exportSeatingChartPdf } from "@/lib/seatingPdf";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -323,75 +324,17 @@ export default function AdminSoDoLopPage() {
 
     setExportingPdf(true);
     try {
-      const html2canvasModule = await import("html2canvas");
-      const html2canvas = html2canvasModule.default;
-      const jsPdfModule = await import("jspdf");
-      const jsPDF = jsPdfModule.default;
-
-      // Temporarily remove transform on scale-box during capture
-      const scaleBox = document.getElementById("seating-chart-scale-box");
-      const prevTransform = scaleBox ? scaleBox.style.transform : "";
-      const prevPosition = scaleBox ? scaleBox.style.position : "";
-      if (scaleBox) {
-        scaleBox.style.transform = "none";
-        scaleBox.style.position = "relative";
-      }
-
-      const canvas = await html2canvas(element, {
-        scale: 2.5,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        width: 920,
-      });
-
-      if (scaleBox) {
-        scaleBox.style.transform = prevTransform;
-        scaleBox.style.position = prevPosition;
-      }
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const marginX = 4;
-      const marginY = 4;
-      const maxW = pageWidth - marginX * 2;  // 202mm
-      const maxH = pageHeight - marginY * 2; // 289mm
-
-      // Preserve aspect ratio — scale canvas to fit A4 without distortion
-      const canvasRatio = canvas.width / canvas.height;
-      const pageRatio = maxW / maxH;
-
-      let renderWidth: number;
-      let renderHeight: number;
-
-      if (canvasRatio > pageRatio) {
-        // Canvas is wider than page ratio → fit by width
-        renderWidth = maxW;
-        renderHeight = maxW / canvasRatio;
-      } else {
-        // Canvas is taller than page ratio → fit by height
-        renderHeight = maxH;
-        renderWidth = maxH * canvasRatio;
-      }
-
-      // Center the image on the page
-      const offsetX = marginX + (maxW - renderWidth) / 2;
-      const offsetY = marginY + (maxH - renderHeight) / 2;
-
-      pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight);
-      pdf.save(`So_do_lop_${selectedLop}_A4_${selectedMonth.replace(/[\s/]+/g, "_")}.pdf`);
-      showToast("Đã xuất file PDF A4 chuẩn tràn trang thành công!");
+      const fileName = `So_do_lop_${selectedLop}_A4_${selectedMonth.replace(/[\s/]+/g, "_")}.pdf`;
+      const result = await exportSeatingChartPdf(element, fileName, `Sơ đồ lớp ${selectedLop}`);
+      if (result === "cancelled") return;
+      showToast(
+        result === "opened"
+          ? "Đã mở file PDF A4 — hãy bấm Chia sẻ/Lưu để giữ file!"
+          : "Đã xuất file PDF A4 chuẩn tràn trang thành công!"
+      );
     } catch (error) {
       console.error("PDF export error:", error);
-      showToast("Đang mở hộp thoại in...", "success");
-      window.print();
+      showToast("Không tạo được file PDF trên thiết bị này. Vui lòng thử lại hoặc dùng máy tính.", "error");
     } finally {
       setExportingPdf(false);
     }
@@ -1437,8 +1380,10 @@ export default function AdminSoDoLopPage() {
               margin: "0 auto",
             }}
           >
-            {/* Header 4 Dãy Bàn rõ ràng */}
+            {/* Header 4 Dãy Bàn rõ ràng — chỉ hiển thị trên màn hình, KHÔNG xuất ra PDF / bản in */}
             <div
+              className="no-print"
+              data-html2canvas-ignore="true"
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 34px 1fr",

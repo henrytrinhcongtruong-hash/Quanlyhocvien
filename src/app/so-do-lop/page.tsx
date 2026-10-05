@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, Suspense } from "react";
+import { exportSeatingChartPdf } from "@/lib/seatingPdf";
 import { useSearchParams } from "next/navigation";
 import PublicLayout from "@/components/layout/PublicLayout";
 import {
@@ -156,52 +157,14 @@ function PublicSoDoLopContent() {
 
     setExportingPdf(true);
     try {
-      const html2canvasModule = await import("html2canvas");
-      const html2canvas = html2canvasModule.default;
-      const jsPdfModule = await import("jspdf");
-      const jsPDF = jsPdfModule.default;
-
-      // Temporarily remove transform on scale-box during capture
-      const scaleBox = document.getElementById("seating-chart-scale-box");
-      const prevTransform = scaleBox ? scaleBox.style.transform : "";
-      const prevPosition = scaleBox ? scaleBox.style.position : "";
-      if (scaleBox) {
-        scaleBox.style.transform = "none";
-        scaleBox.style.position = "relative";
+      const fileName = `So_do_lop_${activeLop}_A4_${selectedMonth.replace(/[\s/]+/g, "_")}.pdf`;
+      const result = await exportSeatingChartPdf(element, fileName, `Sơ đồ lớp ${activeLop}`);
+      if (result === "opened") {
+        alert("Đã mở file PDF ở tab mới — anh/chị bấm Chia sẻ hoặc Lưu để giữ file nhé!");
       }
-
-      const canvas = await html2canvas(element, {
-        scale: 2.5,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        width: 920,
-      });
-
-      if (scaleBox) {
-        scaleBox.style.transform = prevTransform;
-        scaleBox.style.position = prevPosition;
-      }
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const marginX = 4;
-      const marginY = 4;
-      const renderWidth = pageWidth - marginX * 2; // 202mm
-      const renderHeight = pageHeight - marginY * 2; // 289mm
-
-      pdf.addImage(imgData, "PNG", marginX, marginY, renderWidth, renderHeight);
-      pdf.save(`So_do_lop_${activeLop}_A4_${selectedMonth.replace(/[\s/]+/g, "_")}.pdf`);
     } catch (error) {
       console.error("PDF export error:", error);
-      window.print();
+      alert("Không tạo được file PDF trên thiết bị này. Vui lòng thử lại hoặc mở bằng máy tính.");
     } finally {
       setExportingPdf(false);
     }
@@ -699,8 +662,10 @@ function PublicSoDoLopContent() {
                 margin: "0 auto",
               }}
             >
-              {/* Header 4 Dãy Bàn rõ ràng */}
+              {/* Header 4 Dãy Bàn — chỉ hiển thị trên màn hình, KHÔNG xuất ra PDF / bản in */}
               <div
+                className="no-print"
+                data-html2canvas-ignore="true"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 34px 1fr",
